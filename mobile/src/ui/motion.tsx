@@ -15,10 +15,10 @@ export const haptic = {
 };
 
 // Fade + rise in on mount; `delay` staggers lists.
-export function FadeIn({ children, delay = 0, from = 14, style }: { children: ReactNode; delay?: number; from?: number; style?: StyleProp<ViewStyle> }) {
+export function FadeIn({ children, delay = 0, from = 8, style }: { children: ReactNode; delay?: number; from?: number; style?: StyleProp<ViewStyle> }) {
   const [v] = useState(() => new Animated.Value(0));
   useEffect(() => {
-    Animated.timing(v, { toValue: 1, duration: 420, delay, easing: Easing.out(Easing.cubic), useNativeDriver: native }).start();
+    Animated.timing(v, { toValue: 1, duration: 320, delay, easing: Easing.out(Easing.cubic), useNativeDriver: native }).start();
   }, [delay, v]);
   return (
     <Animated.View style={[style, { opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [from, 0] }) }] }]}>
@@ -28,7 +28,7 @@ export function FadeIn({ children, delay = 0, from = 14, style }: { children: Re
 }
 
 // Pressable that springs down on touch and gives a selection haptic.
-export function PressScale({ children, style, onPress, disabled, scaleTo = 0.97, ...rest }: PressableProps & { style?: StyleProp<ViewStyle>; scaleTo?: number; children: ReactNode }) {
+export function PressScale({ children, style, onPress, disabled, scaleTo = 0.98, ...rest }: PressableProps & { style?: StyleProp<ViewStyle>; scaleTo?: number; children: ReactNode }) {
   const [s] = useState(() => new Animated.Value(1));
   const to = (v: number) => Animated.spring(s, { toValue: v, useNativeDriver: native, speed: 40, bounciness: v === 1 ? 8 : 0 }).start();
   const flat = { ...(StyleSheet.flatten(style) ?? {}) } as Record<string, unknown>;

@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useMemo, useState } from "react";
 import { Animated, PanResponder, Platform, StyleSheet, Text, View } from "react-native";
 import { haptic } from "@/ui/motion";
@@ -53,7 +54,7 @@ export function SwipeToConfirm({ label, icon, onConfirm, disabled }: { label: st
 
   return (
     <View
-      style={[s.track, disabled && { backgroundColor: "#B9B4AA" }]}
+      style={s.track}
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       accessible
       accessibilityRole="adjustable"
@@ -62,22 +63,23 @@ export function SwipeToConfirm({ label, icon, onConfirm, disabled }: { label: st
       accessibilityActions={[{ name: "activate", label: "Confirm" }]}
       onAccessibilityAction={() => { if (!disabled && !fired) { setFired(true); onConfirm(); } }}
     >
+      <LinearGradient colors={disabled ? [c.line, c.line] : [c.rauschDeep, c.rauschEnd]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={StyleSheet.absoluteFill} />
       <Animated.View style={[s.fill, { width: fill }]} />
       <Animated.View style={[s.labelWrap, { opacity: fade }]} pointerEvents="none">
         <Text style={s.label} numberOfLines={1}>{label}</Text>
         <MaterialCommunityIcons name="chevron-double-right" size={20} color="rgba(255,255,255,0.7)" />
       </Animated.View>
       <Animated.View {...responder.panHandlers} style={[s.knob, { transform: [{ translateX: x }] }]}>
-        <MaterialCommunityIcons name={armed ? "check-bold" : icon} size={24} color={c.accent} />
+        <MaterialCommunityIcons name={armed ? "check-bold" : icon} size={24} color={disabled ? c.muted : c.rauschDeep} />
       </Animated.View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  track: { height: KNOB + PAD * 2, borderRadius: radius.lg, backgroundColor: c.accent, justifyContent: "center", overflow: "hidden" },
-  fill: { position: "absolute", left: 0, top: 0, bottom: 0, backgroundColor: "#0A6F60", borderRadius: radius.lg },
+  track: { height: KNOB + PAD * 2, borderRadius: radius.md, justifyContent: "center", overflow: "hidden" },
+  fill: { position: "absolute", left: 0, top: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.14)", borderRadius: radius.md },
   labelWrap: { position: "absolute", left: KNOB + 20, right: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
-  label: { color: "#fff", fontSize: 16, fontWeight: "800", flexShrink: 1 },
-  knob: { position: "absolute", left: PAD, width: KNOB, height: KNOB, borderRadius: radius.md, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
+  label: { color: "#fff", fontSize: 16, fontWeight: "600", flexShrink: 1 },
+  knob: { position: "absolute", left: PAD, width: KNOB, height: KNOB, borderRadius: radius.sm, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
 });

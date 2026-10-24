@@ -11,7 +11,7 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
           <Stack.Screen name="index" />
-          <Stack.Screen name="tile/[id]" options={{ presentation: "modal" }} />
+          <Stack.Screen name="tile/[id]" />
         </Stack>
       </ExpireProvider>
     </SafeAreaProvider>

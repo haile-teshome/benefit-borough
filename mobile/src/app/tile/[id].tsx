@@ -1,22 +1,23 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, type ScrollViewInstance, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, ScrollView, type ScrollViewInstance, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { AppState, DispatchResult, Span, Verdict } from "../../../../lib/types";
 import { api, usd } from "@/api";
 import { ActionRun } from "@/components/ActionRun";
-import { CatIcon, Chip, DaysChip } from "@/components/bits";
-import { CostBars } from "@/components/CostBars";
-import { SwipeToConfirm } from "@/components/SwipeToConfirm";
+import { ConfirmSheet } from "@/components/ConfirmSheet";
+import { shortTitle } from "@/components/ListingRow";
+import { CircleButton, Divider, Highlight, LinkButton, PrimaryButton, SectionTitle, Thumb } from "@/components/ui";
 import { useExpire } from "@/state";
 import { FadeIn, haptic, PressScale, Shake } from "@/ui/motion";
-import { CAT, c, radius, shadow, type } from "@/ui/theme";
+import { CAT, c, radius, type } from "@/ui/theme";
 
 // Deep-linked tiles have no history to pop; fall back to the board.
 const close = () => (router.canGoBack() ? router.back() : router.replace("/"));
 
 const CART_PRESETS = ["Sunscreen SPF 50, Aloe vera gel", "Electric toothbrush", "Reading glasses"];
+const fmt = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
 export default function TileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,13 +25,14 @@ export default function TileScreen() {
   const insets = useSafeAreaInsets();
   const tile = state?.tiles.find((t) => t.id === id);
   const [refreshed, setRefreshed] = useState(false);
+  const [sheet, setSheet] = useState(false);
   const [running, setRunning] = useState(false);
   const [lines, setLines] = useState<string[]>([]);
   const [result, setResult] = useState<DispatchResult | null>(null);
   const [error, setError] = useState("");
   const [cart, setCart] = useState(CART_PRESETS[0]);
   const [checking, setChecking] = useState(false);
-  const [showSources, setShowSources] = useState(false);
+  const [allSources, setAllSources] = useState(false);
   const scroller = useRef<ScrollViewInstance>(null);
 
   // Opened by deep link or with stale state: fetch once before deciding the tile doesn't exist.
@@ -41,8 +43,8 @@ export default function TileScreen() {
   if (!state || !tile) {
     return (
       <View style={[s.screen, { padding: 24, gap: 12, justifyContent: "center", alignItems: "center" }]}>
-        {refreshed ? <Text style={[type.body, { color: c.muted, textAlign: "center" }]}>That tile isn’t on your board yet. Scan your documents first.</Text> : <ActivityIndicator color={c.accent} />}
-        <Pressable onPress={close} hitSlop={12}><Text style={{ color: c.accent, fontWeight: "700", fontSize: 16 }}>Back</Text></Pressable>
+        {refreshed ? <Text style={[type.body, { color: c.muted, textAlign: "center" }]}>That isn’t on your board yet. Scan your documents first.</Text> : <ActivityIndicator color={c.ink} />}
+        <LinkButton label="Back" onPress={close} />
       </View>
     );
   }
@@ -52,12 +54,15 @@ export default function TileScreen() {
   const verdict = state.reviews[t.id];
   const cartVerdict = state.reviews[`cart:${t.balanceIds[0]}`];
   const done = state.done.includes(t.id);
+  const entry = state.ledger.find((l) => l.tileId === t.id);
   const actionable = t.live && t.action.kind !== "none";
   const approved = verdict?.verdict === "approve";
+  const worst = t.candidates.reduce((a, b) => (b.costToUser > a.costToUser ? b : a), t.candidates[0]);
+  const best = t.candidates.find((x) => x.id === t.recommendation) ?? worst;
+  const sources = allSources ? t.sources : t.sources.slice(0, 1);
 
   async function run() {
-    haptic.press();
-    setError(""); setLines([]); setResult(null); setRunning(true);
+    setSheet(false); setError(""); setLines([]); setResult(null); setRunning(true);
     try {
       const r = await api.dispatch(t.id);
       for (const line of r.result.transcript) {
@@ -93,135 +98,139 @@ export default function TileScreen() {
 
   return (
     <View style={s.screen}>
-      <ScrollView ref={scroller} contentContainerStyle={[s.content, { paddingBottom: actionable && !done ? 210 + insets.bottom : 40 + insets.bottom }]} keyboardShouldPersistTaps="handled">
-        <View style={s.grabber} />
-        <View style={s.topRow}>
-          <CatIcon category={t.category} size={40} />
-          <View style={{ flex: 1 }}>
-            <Text style={[type.label, { color: meta.color }]}>{meta.label}</Text>
-            <Text style={[type.small, { color: c.muted }]}>Deadline {new Date(`${t.deadline}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}</Text>
-          </View>
-          <DaysChip days={t.daysLeft} />
-          <Pressable onPress={close} hitSlop={12} style={s.close} accessibilityLabel="Close">
-            <MaterialCommunityIcons name="close" size={20} color={c.ink2} />
-          </Pressable>
+      <View style={s.nav}>
+        <CircleButton icon="chevron-left" onPress={close} label="Back" />
+      </View>
+
+      <ScrollView ref={scroller} contentContainerStyle={[s.content, { paddingBottom: actionable && !done ? 120 + insets.bottom : 40 + insets.bottom }]} keyboardShouldPersistTaps="handled">
+        <FadeIn style={{ gap: 14 }}>
+          <Thumb category={t.category} size={56} />
+          <Text style={type.title}>{shortTitle(t.title)}</Text>
+          <Text style={type.small}>
+            {meta.label} · Deadline {fmt(t.deadline)} · <Text style={t.daysLeft <= 30 && !done ? { color: c.rausch, fontWeight: "600" } : undefined}>{t.daysLeft} days left</Text>
+          </Text>
+        </FadeIn>
+
+        <Divider space={24} />
+
+        <FadeIn delay={60} style={{ gap: 22 }}>
+          {done && entry ? (
+            <Highlight icon="check-circle-outline" tone="good" title={`Rescued ${usd(entry.amount)}`} text={`Confirmed · ${entry.confirmation}`} />
+          ) : (
+            <Highlight icon="lightbulb-on-outline" title={t.headline} />
+          )}
+          {verdict && actionable && (
+            <Highlight
+              icon={approved ? "shield-check-outline" : "shield-off-outline"}
+              tone={approved ? undefined : "bad"}
+              title={approved ? "Reviewer approved" : `Blocked by rule ${verdict.rule_cited}`}
+              text={verdict.reason}
+            />
+          )}
+          <Highlight icon="file-document-outline" title="From your documents" text="Every number here links to the line it came from." />
+        </FadeIn>
+
+        <Divider space={24} />
+
+        <SectionTitle sub={t.candidates.length > 1 ? "What each choice costs you" : undefined}>Your options</SectionTitle>
+        <View style={{ gap: 12 }}>
+          {t.candidates.map((x) => {
+            const rec = x.id === t.recommendation;
+            return (
+              <View key={x.id} style={[s.option, rec && s.optionRec]}>
+                <View style={{ flex: 1, gap: 4 }}>
+                  {rec && t.candidates.length > 1 && <Text style={s.recTag}>Recommended</Text>}
+                  <Text style={type.h3}>{x.label}</Text>
+                  <Text style={type.small}>{x.detail}</Text>
+                </View>
+                <Text style={[s.price, !rec && { color: c.muted }]}>{usd(x.costToUser)}</Text>
+              </View>
+            );
+          })}
         </View>
 
-        <FadeIn><Text style={s.headline}>{t.headline}</Text></FadeIn>
+        <Divider space={24} />
 
-        {actionable && t.action.savings > 0 && (
-          <FadeIn delay={80} style={s.saveBanner}>
-            <MaterialCommunityIcons name={done ? "check-decagram" : "trending-down"} size={22} color={c.accent} />
-            <Text style={s.saveText}>{done ? `Rescued ${usd(t.action.savings)}` : `You save ${usd(t.action.savings)}`}</Text>
-          </FadeIn>
-        )}
-
-        <FadeIn delay={120} style={s.card}>
-          <Text style={s.cardTitle}>Your options</Text>
-          <CostBars tile={t} />
-        </FadeIn>
-
-        <FadeIn delay={180} style={s.twoUp}>
-          <Note icon="scale-balance" title="Tradeoff" text={t.tradeoff} tone="plain" />
-          <Note icon="alert-circle-outline" title={`If you do nothing · ${usd(t.doNothingCost)}`} text={t.doNothing} tone={t.doNothingCost > 0 ? "warn" : "plain"} />
-        </FadeIn>
-
-        {verdict && actionable && (
-          <FadeIn delay={240}>
-            <VerdictCard v={verdict} title="Reviewer" />
-          </FadeIn>
-        )}
+        <SectionTitle>Things to know</SectionTitle>
+        <View style={{ gap: 22 }}>
+          <Highlight icon="scale-balance" title="Tradeoff" text={t.tradeoff} />
+          <Highlight icon="calendar-alert" title={`If you do nothing · ${usd(t.doNothingCost)}`} text={t.doNothing} />
+        </View>
 
         {t.category === "fsa" && (
-          <FadeIn delay={280} style={s.card}>
-            <Text style={s.cardTitle}>Test the Reviewer</Text>
-            <Text style={[type.small, { color: c.muted }]}>Try spending this balance. Expire refuses purchases you don’t need.</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+          <>
+            <Divider space={24} />
+            <SectionTitle sub="Try spending this balance. Expire refuses purchases you don’t need.">Try the Reviewer</SectionTitle>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} style={{ marginHorizontal: -24 }}>
+              <View style={{ width: 16 }} />
               {CART_PRESETS.map((p) => (
-                <PressScale key={p} onPress={() => { setCart(p); checkCart(p); }} style={[s.preset, cart === p && s.presetOn]}>
-                  <Text style={[type.small, { fontWeight: "600", color: cart === p ? "#fff" : c.ink2 }]}>{p}</Text>
+                <PressScale key={p} onPress={() => { setCart(p); checkCart(p); }} style={[s.pill, cart === p && s.pillOn]}>
+                  <Text style={[type.small, { color: c.ink, fontWeight: cart === p ? "600" : "400" }]}>{p}</Text>
                 </PressScale>
               ))}
+              <View style={{ width: 16 }} />
             </ScrollView>
             <View style={s.inputRow}>
               <TextInput value={cart} onChangeText={setCart} style={s.input} placeholder="Items, comma separated" placeholderTextColor={c.muted} onSubmitEditing={() => checkCart()} returnKeyType="send" />
-              <PressScale onPress={() => checkCart()} disabled={checking} style={s.askBtn} accessibilityLabel="Ask the Reviewer">
-                {checking ? <ActivityIndicator color="#fff" size="small" /> : <MaterialCommunityIcons name="shield-search" size={22} color="#fff" />}
-              </PressScale>
+              <PrimaryButton label="Check" onPress={() => checkCart()} loading={checking} style={{ alignSelf: "stretch" }} />
             </View>
             {cartVerdict && (
               <Shake trigger={cartVerdict.at}>
-                <VerdictCard v={cartVerdict} title="Reviewer on this cart" big />
+                <CartVerdict v={cartVerdict} />
               </Shake>
             )}
-          </FadeIn>
+          </>
         )}
 
-        <FadeIn delay={320} style={s.card}>
-          <Pressable onPress={() => { haptic.tap(); setShowSources((v) => !v); }} style={s.srcHead} hitSlop={6}>
-            <MaterialCommunityIcons name="file-search-outline" size={18} color={c.ink2} />
-            <Text style={[s.cardTitle, { flex: 1, marginBottom: 0 }]}>Where these numbers come from · {t.sources.length}</Text>
-            <MaterialCommunityIcons name={showSources ? "chevron-up" : "chevron-down"} size={22} color={c.muted} />
-          </Pressable>
-          {showSources && t.sources.map((sp, i) => <SourceView key={i} span={sp} docs={state.docs} />)}
-        </FadeIn>
+        <Divider space={24} />
 
-        {error ? <Text style={{ color: c.bad, fontWeight: "700", textAlign: "center" }}>{error}</Text> : null}
+        <SectionTitle>Sources</SectionTitle>
+        <View style={{ gap: 12 }}>
+          {sources.map((sp, i) => <SourceView key={i} span={sp} docs={state.docs} />)}
+        </View>
+        {t.sources.length > 1 && (
+          <View style={{ marginTop: 16 }}>
+            <PressScale onPress={() => setAllSources((v) => !v)} style={s.outline}>
+              <Text style={type.h3}>{allSources ? "Show less" : `Show all ${t.sources.length} sources`}</Text>
+            </PressScale>
+          </View>
+        )}
+
+        {error ? <Text style={{ color: c.bad, fontWeight: "600", textAlign: "center", marginTop: 16 }}>{error}</Text> : null}
       </ScrollView>
 
       {actionable && !done && (
-        <View style={[s.bar, { paddingBottom: insets.bottom + 12 }]}>
-          <View style={s.plan}>
-            <MaterialCommunityIcons name={approved ? "shield-check" : "shield-off"} size={18} color={approved ? c.accent : c.bad} />
-            <Text style={[type.small, { color: c.ink, flex: 1 }]} numberOfLines={2}>
-              <Text style={{ fontWeight: "800" }}>{approved ? "Expire will: " : "Blocked: "}</Text>
-              {approved ? `${t.action.summary}. Nothing else will be said or paid.` : verdict?.reason}
-            </Text>
-          </View>
-          {approved && (
-            <View style={s.fee}>
-              <MaterialCommunityIcons name="hand-coin-outline" size={15} color={c.accent} />
-              <Text style={s.feeText}>Fee: $0. Expire never takes a cut of what it saves you.</Text>
+        <View style={[s.footer, { paddingBottom: insets.bottom + 12 }]}>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
+              {worst.id !== best.id && <Text style={s.footStrike}>{usd(worst.costToUser)}</Text>}
+              <Text style={s.footPrice}>{usd(best.costToUser)}</Text>
             </View>
-          )}
-          <SwipeToConfirm
-            label={approved ? `Slide to ${t.action.kind === "book_call" ? "book" : "send"} · save ${usd(t.action.savings)}` : "Blocked by the Reviewer"}
-            icon={t.action.kind === "book_call" ? "phone" : "send"}
+            <Text style={s.footSave}>You save {usd(t.action.savings)}</Text>
+          </View>
+          <PrimaryButton
+            label={approved ? (t.action.kind === "book_call" ? "Book" : "Send") : "Blocked"}
             disabled={!approved}
-            onConfirm={run}
+            onPress={() => { haptic.press(); setSheet(true); }}
           />
         </View>
       )}
 
+      <ConfirmSheet tile={t} visible={sheet} onCancel={() => setSheet(false)} onConfirm={run} />
       {running && <ActionRun tile={t} lines={lines} result={result} onDone={() => { setRunning(false); close(); }} />}
     </View>
   );
 }
 
-function Note({ icon, title, text, tone }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; title: string; text: string; tone: "plain" | "warn" }) {
-  const warn = tone === "warn";
-  return (
-    <View style={[s.note, warn && { backgroundColor: c.warnSoft }]}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-        <MaterialCommunityIcons name={icon} size={16} color={warn ? c.warn : c.ink2} />
-        <Text style={[type.label, { color: warn ? c.warn : c.ink2, flex: 1 }]} numberOfLines={2}>{title}</Text>
-      </View>
-      <Text style={[type.small, { color: c.ink }]}>{text}</Text>
-    </View>
-  );
-}
-
-function VerdictCard({ v, title, big }: { v: Verdict; title: string; big?: boolean }) {
+function CartVerdict({ v }: { v: Verdict }) {
   const ok = v.verdict === "approve";
   return (
-    <View style={[s.verdict, ok ? { backgroundColor: c.accentSoft } : { backgroundColor: c.badSoft, borderColor: c.bad, borderWidth: 2 }]}>
+    <View style={[s.verdict, { borderColor: ok ? c.good : c.bad, backgroundColor: ok ? c.goodSoft : c.badSoft }]}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <MaterialCommunityIcons name={ok ? "shield-check" : "shield-off"} size={big ? 26 : 22} color={ok ? c.accent : c.bad} />
-        <Text style={[type.label, { color: ok ? c.accent : c.bad, flex: 1 }]}>{title}</Text>
-        <Chip text={ok ? "Approved" : `Rejected · rule ${v.rule_cited ?? "?"}`} fg="#fff" bg={ok ? c.accent : c.bad} />
+        <MaterialCommunityIcons name={ok ? "shield-check-outline" : "shield-off-outline"} size={22} color={ok ? c.good : c.bad} />
+        <Text style={[type.h3, { color: ok ? c.good : c.bad }]}>{ok ? "Approved" : `Declined · rule ${v.rule_cited ?? "?"}`}</Text>
       </View>
-      <Text style={[big ? { fontSize: 18, lineHeight: 25, fontWeight: "700" } : type.body, { color: ok ? "#0A5A4D" : c.bad }]}>{v.reason}</Text>
-      <Text style={[type.small, { color: ok ? c.accent : c.bad, opacity: 0.75 }]}>{v.engine === "claude" ? "Claude Reviewer + rule checks" : "Rule checks"}</Text>
+      <Text style={[type.body, { color: c.ink }]}>{v.reason}</Text>
     </View>
   );
 }
@@ -233,11 +242,11 @@ function SourceView({ span, docs }: { span: Span; docs: AppState["docs"] }) {
   const endIdx = doc.text.indexOf("\n", span.end);
   const lineEnd = endIdx < 0 ? doc.text.length : endIdx;
   return (
-    <FadeIn from={6} style={s.src}>
-      <Text style={[type.small, { color: c.muted, marginBottom: 4 }]}>{doc.name}</Text>
-      <Text style={s.mono}>
+    <FadeIn from={4} style={s.src}>
+      <Text style={[type.tiny, { marginBottom: 6 }]}>{doc.name.replace(/\.txt$/, "")}</Text>
+      <Text style={[type.small, { color: c.ink }]}>
         {doc.text.slice(lineStart, span.start)}
-        <Text style={{ backgroundColor: c.mark }}>{doc.text.slice(span.start, span.end)}</Text>
+        <Text style={{ backgroundColor: c.mark, fontWeight: "600" }}>{doc.text.slice(span.start, span.end)}</Text>
         {doc.text.slice(span.end, lineEnd)}
       </Text>
     </FadeIn>
@@ -246,31 +255,21 @@ function SourceView({ span, docs }: { span: Span; docs: AppState["docs"] }) {
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: c.bg },
-  content: { padding: 16, gap: 14 },
-  grabber: { alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: "#D5D0C6" },
-  topRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4 },
-  close: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#E9E6E0", alignItems: "center", justifyContent: "center" },
-  headline: { ...type.h1, color: c.ink, lineHeight: 34 },
-  saveBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: c.accentSoft, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 12 },
-  saveText: { fontSize: 20, fontWeight: "800", color: c.accent },
-  card: { backgroundColor: c.panel, borderRadius: radius.lg, padding: 16, gap: 10, ...shadow },
-  cardTitle: { ...type.h3, color: c.ink, marginBottom: 2 },
-  twoUp: { flexDirection: "row", gap: 10 },
-  note: { flex: 1, backgroundColor: c.panel, borderRadius: radius.md, padding: 12, gap: 6, ...shadow },
-  verdict: { borderRadius: radius.lg, padding: 16, gap: 8 },
-  preset: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#EEECE7" },
-  presetOn: { backgroundColor: c.ink },
-  inputRow: { flexDirection: "row", gap: 8 },
-  input: { flex: 1, height: 50, borderWidth: 1, borderColor: c.line, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 12, fontSize: 15, color: c.ink, backgroundColor: c.bg },
-  askBtn: { width: 50, height: 50, borderRadius: radius.md, backgroundColor: c.ink, alignItems: "center", justifyContent: "center" },
-  srcHead: { flexDirection: "row", alignItems: "center", gap: 8 },
-  src: { backgroundColor: c.bg, borderRadius: radius.sm, padding: 10 },
-  mono: { fontFamily: "Menlo", fontSize: 12.5, lineHeight: 18, color: c.ink },
-  bar: { position: "absolute", left: 0, right: 0, bottom: 0, gap: 10, backgroundColor: c.panel, paddingHorizontal: 16, paddingTop: 14, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, ...shadow, shadowOpacity: 0.12, shadowOffset: { width: 0, height: -4 } },
-  plan: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
-  fee: { flexDirection: "row", gap: 6, alignItems: "center", alignSelf: "flex-start", backgroundColor: c.accentSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  feeText: { fontSize: 12, fontWeight: "700", color: c.accent },
-  btn: { flex: 1, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", backgroundColor: c.accent, borderRadius: radius.md, paddingVertical: 17, paddingHorizontal: 14 },
-  btnGhost: { backgroundColor: "#EEECE7" },
-  btnText: { color: "#fff", fontWeight: "800", fontSize: 16 },
+  nav: { position: "absolute", top: 14, left: 16, zIndex: 2 },
+  content: { paddingHorizontal: 24, paddingTop: 64 },
+  option: { flexDirection: "row", gap: 16, borderWidth: 1, borderColor: c.line, borderRadius: radius.md, padding: 16 },
+  optionRec: { borderWidth: 2, borderColor: c.ink, padding: 15 },
+  recTag: { fontSize: 12, fontWeight: "600", color: c.ink, backgroundColor: c.soft, alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, overflow: "hidden" },
+  price: { fontSize: 18, fontWeight: "600", color: c.ink, fontVariant: ["tabular-nums"] },
+  pill: { borderWidth: 1, borderColor: c.line, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: "#fff" },
+  pillOn: { borderColor: c.ink, backgroundColor: c.soft },
+  inputRow: { flexDirection: "row", gap: 8, marginTop: 14 },
+  input: { flex: 1, borderWidth: 1, borderColor: c.line, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 13, fontSize: 16, color: c.ink },
+  verdict: { borderWidth: 1, borderRadius: radius.md, padding: 16, gap: 8, marginTop: 14 },
+  src: { borderWidth: StyleSheet.hairlineWidth, borderColor: c.line, borderRadius: radius.md, padding: 14 },
+  outline: { borderWidth: 1, borderColor: c.ink, borderRadius: radius.sm, paddingVertical: 13, alignItems: "center" },
+  footer: { position: "absolute", left: 0, right: 0, bottom: 0, flexDirection: "row", alignItems: "center", gap: 16, backgroundColor: "#fff", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line, paddingHorizontal: 24, paddingTop: 14 },
+  footPrice: { fontSize: 18, fontWeight: "600", color: c.ink, fontVariant: ["tabular-nums"] },
+  footStrike: { fontSize: 15, fontWeight: "400", color: c.muted, textDecorationLine: "line-through" },
+  footSave: { fontSize: 14, color: c.ink, textDecorationLine: "underline", marginTop: 2 },
 });
