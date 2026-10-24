@@ -1,12 +1,14 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { StyleSheet, Text, View } from "react-native";
+import type { Tile } from "../../../lib/types";
 import type { Integrations } from "@/api";
 import { usd } from "@/api";
+import { Timeline } from "@/components/Timeline";
 import { Bar, useCountUp } from "@/ui/motion";
 import { c, radius, type } from "@/ui/theme";
 
-export function Hero({ atStake, rescued, total, horizon, integrations }: { atStake: number; rescued: number; total: number; horizon: number; integrations: Integrations | null }) {
+export function Hero({ atStake, rescued, total, horizon, integrations, tiles, done }: { atStake: number; rescued: number; total: number; horizon: number; integrations: Integrations | null; tiles: Tile[]; done: Set<string> }) {
   const stake = useCountUp(Math.round(atStake), 1200);
   const saved = useCountUp(Math.round(rescued), 900);
   return (
@@ -20,6 +22,7 @@ export function Hero({ atStake, rescued, total, horizon, integrations }: { atSta
       </View>
       <Text style={s.k}>Expiring in the next {horizon} days</Text>
       <Text style={s.big}>{usd(stake)}</Text>
+      <Timeline tiles={tiles} done={done} />
       <View style={{ marginTop: 14, gap: 8 }}>
         <Bar value={total ? rescued / total : 0} color={c.mint} track="rgba(255,255,255,0.14)" height={10} delay={300} />
         <View style={s.row}>

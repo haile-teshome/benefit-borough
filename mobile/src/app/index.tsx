@@ -88,7 +88,7 @@ export default function Board() {
           <ScanView docs={state.docs} phase={phase} onScan={scan} />
         ) : (
           <>
-            <FadeIn><Hero atStake={atStake} rescued={rescued} total={tiles.reduce((sum, t) => sum + t.atStake, 0)} horizon={horizon} integrations={integrations} /></FadeIn>
+            <FadeIn><Hero atStake={atStake} rescued={rescued} total={tiles.reduce((sum, t) => sum + t.atStake, 0)} horizon={horizon} integrations={integrations} tiles={tiles} done={done} /></FadeIn>
 
             {actNow.length > 0 && <SectionLabel text="Act now" count={actNow.length} />}
             {actNow.map((t) => <TileCard key={t.id} tile={t} verdict={state.reviews[t.id]} done={false} index={i++} onPress={() => open(t)} />)}

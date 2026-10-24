@@ -8,6 +8,7 @@ import { api, usd } from "@/api";
 import { ActionRun } from "@/components/ActionRun";
 import { CatIcon, Chip, DaysChip } from "@/components/bits";
 import { CostBars } from "@/components/CostBars";
+import { SwipeToConfirm } from "@/components/SwipeToConfirm";
 import { useExpire } from "@/state";
 import { FadeIn, haptic, PressScale, Shake } from "@/ui/motion";
 import { CAT, c, radius, shadow, type } from "@/ui/theme";
@@ -23,7 +24,6 @@ export default function TileScreen() {
   const insets = useSafeAreaInsets();
   const tile = state?.tiles.find((t) => t.id === id);
   const [refreshed, setRefreshed] = useState(false);
-  const [confirming, setConfirming] = useState(false);
   const [running, setRunning] = useState(false);
   const [lines, setLines] = useState<string[]>([]);
   const [result, setResult] = useState<DispatchResult | null>(null);
@@ -57,7 +57,7 @@ export default function TileScreen() {
 
   async function run() {
     haptic.press();
-    setConfirming(false); setError(""); setLines([]); setResult(null); setRunning(true);
+    setError(""); setLines([]); setResult(null); setRunning(true);
     try {
       const r = await api.dispatch(t.id);
       for (const line of r.result.transcript) {
@@ -91,11 +91,9 @@ export default function TileScreen() {
     }
   }
 
-  const actionLabel = t.action.kind === "book_call" ? "Book it" : `Send ${usd(Number(t.action.payload.amount))}`;
-
   return (
     <View style={s.screen}>
-      <ScrollView ref={scroller} contentContainerStyle={[s.content, { paddingBottom: actionable && !done ? 150 + insets.bottom : 40 + insets.bottom }]} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scroller} contentContainerStyle={[s.content, { paddingBottom: actionable && !done ? 210 + insets.bottom : 40 + insets.bottom }]} keyboardShouldPersistTaps="handled">
         <View style={s.grabber} />
         <View style={s.topRow}>
           <CatIcon category={t.category} size={40} />
@@ -173,25 +171,25 @@ export default function TileScreen() {
 
       {actionable && !done && (
         <View style={[s.bar, { paddingBottom: insets.bottom + 12 }]}>
-          {confirming ? (
-            <FadeIn from={20} style={{ gap: 12 }}>
-              <Text style={[type.body, { color: c.ink }]}>
-                <Text style={{ fontWeight: "800" }}>Expire will: </Text>{t.action.summary}. Nothing else will be said or paid.
-              </Text>
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <PressScale onPress={() => setConfirming(false)} style={[s.btn, s.btnGhost]}><Text style={[s.btnText, { color: c.ink }]}>Cancel</Text></PressScale>
-                <PressScale onPress={run} style={[s.btn, { flex: 2 }]}>
-                  <MaterialCommunityIcons name="check" size={20} color="#fff" />
-                  <Text style={s.btnText}>Confirm</Text>
-                </PressScale>
-              </View>
-            </FadeIn>
-          ) : (
-            <PressScale onPress={() => { haptic.press(); setConfirming(true); }} disabled={!approved} style={[s.btn, !approved && { backgroundColor: "#B9B4AA" }]}>
-              <MaterialCommunityIcons name={t.action.kind === "book_call" ? "phone" : "send"} size={20} color="#fff" />
-              <Text style={s.btnText} numberOfLines={1}>{approved ? `${actionLabel} · save ${usd(t.action.savings)}` : "Blocked by the Reviewer"}</Text>
-            </PressScale>
+          <View style={s.plan}>
+            <MaterialCommunityIcons name={approved ? "shield-check" : "shield-off"} size={18} color={approved ? c.accent : c.bad} />
+            <Text style={[type.small, { color: c.ink, flex: 1 }]} numberOfLines={2}>
+              <Text style={{ fontWeight: "800" }}>{approved ? "Expire will: " : "Blocked: "}</Text>
+              {approved ? `${t.action.summary}. Nothing else will be said or paid.` : verdict?.reason}
+            </Text>
+          </View>
+          {approved && (
+            <View style={s.fee}>
+              <MaterialCommunityIcons name="hand-coin-outline" size={15} color={c.accent} />
+              <Text style={s.feeText}>Fee: $0. Expire never takes a cut of what it saves you.</Text>
+            </View>
           )}
+          <SwipeToConfirm
+            label={approved ? `Slide to ${t.action.kind === "book_call" ? "book" : "send"} · save ${usd(t.action.savings)}` : "Blocked by the Reviewer"}
+            icon={t.action.kind === "book_call" ? "phone" : "send"}
+            disabled={!approved}
+            onConfirm={run}
+          />
         </View>
       )}
 
@@ -268,7 +266,10 @@ const s = StyleSheet.create({
   srcHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   src: { backgroundColor: c.bg, borderRadius: radius.sm, padding: 10 },
   mono: { fontFamily: "Menlo", fontSize: 12.5, lineHeight: 18, color: c.ink },
-  bar: { position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: c.panel, paddingHorizontal: 16, paddingTop: 14, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, ...shadow, shadowOpacity: 0.12, shadowOffset: { width: 0, height: -4 } },
+  bar: { position: "absolute", left: 0, right: 0, bottom: 0, gap: 10, backgroundColor: c.panel, paddingHorizontal: 16, paddingTop: 14, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, ...shadow, shadowOpacity: 0.12, shadowOffset: { width: 0, height: -4 } },
+  plan: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
+  fee: { flexDirection: "row", gap: 6, alignItems: "center", alignSelf: "flex-start", backgroundColor: c.accentSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  feeText: { fontSize: 12, fontWeight: "700", color: c.accent },
   btn: { flex: 1, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", backgroundColor: c.accent, borderRadius: radius.md, paddingVertical: 17, paddingHorizontal: 14 },
   btnGhost: { backgroundColor: "#EEECE7" },
   btnText: { color: "#fff", fontWeight: "800", fontSize: 16 },
