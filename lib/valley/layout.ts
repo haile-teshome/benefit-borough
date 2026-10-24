@@ -22,13 +22,14 @@ export function mailboxPosition(farm: number): [number, number, number] {
   return [o.x + 6.5, 0, o.z - 6];
 }
 
-export const CROP_LOOK: Record<string, { name: string; fruit: string; leaf: string }> = {
-  deductible: { name: "Clinic Berry", fruit: "#D94141", leaf: "#3C8D40" },
-  dental: { name: "Tooth Lily", fruit: "#F7F3E8", leaf: "#4B9A52" },
-  dining: { name: "Cafeteria Corn", fruit: "#F2C14E", leaf: "#5BA34B" },
-  fsa: { name: "Piggy Pumpkin", fruit: "#F29BB2", leaf: "#4E9A4A" },
-  card_credit: { name: "Travel Sunflower", fruit: "#8E6BD9", leaf: "#4E9A4A" },
-  tax_window: { name: "Enrollment Signpost", fruit: "#C8A06A", leaf: "#7A5A36" },
+// Each crop is a paper plant; the band is the colored header printed on its pages.
+export const CROP_LOOK: Record<string, { name: string; band: string }> = {
+  deductible: { name: "Claim Fern", band: "#D2413A" },
+  dental: { name: "Molar Lily", band: "#3E8ED0" },
+  dining: { name: "Meal-Plan Maize", band: "#E0A526" },
+  fsa: { name: "Pretax Pumpkin", band: "#3FA66B" },
+  card_credit: { name: "Mileage Marigold", band: "#8E5BD0" },
+  tax_window: { name: "Enrollment Calendar", band: "#D2413A" },
 };
 
 export const usd = (n: number) => "$" + Math.round(n).toLocaleString("en-US");

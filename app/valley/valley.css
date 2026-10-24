@@ -1,98 +1,153 @@
-@import url("https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,800;1,9..144,700&family=DM+Mono:wght@500&family=Inter:wght@400;600&display=swap");
 
+/* Expire Valley: a valley grown out of paperwork. Stationery, ink and rubber stamps. */
 :root {
-  --wood: #8a5a2b;
-  --wood-dark: #5c3a1a;
-  --wood-light: #d9a066;
-  --paper: #f6e7bf;
-  --ink: #3b2614;
-  --good: #2f7d3a;
-  --bad: #b23a2a;
-  --gold: #f2b33d;
+  --paper: #fbf6ea;
+  --paper-2: #f3ead4;
+  --ink: #1f2a44;
+  --ink-2: #4a5470;
+  --rule: rgba(62, 90, 150, 0.18);
+  --stamp: #d2413a;
+  --ok: #2e7d4f;
+  --gold: #e0a526;
+  --display: "Fraunces", Georgia, serif;
+  --mono: "DM Mono", ui-monospace, Menlo, monospace;
 }
 
 body { margin: 0; overflow: hidden; background: #bfe3f5; }
-.ev-root { position: fixed; inset: 0; font: 15px/1.4 ui-sans-serif, -apple-system, "Segoe UI", sans-serif; color: var(--ink); }
-.ev-loading { position: fixed; inset: 0; display: grid; place-items: center; font: 700 22px "Pixelify Sans", sans-serif; color: var(--wood-dark); background: #bfe3f5; }
+.ev-root { position: fixed; inset: 0; font: 15px/1.45 "Inter", ui-sans-serif, -apple-system, sans-serif; color: var(--ink); }
+.ev-loading { position: fixed; inset: 0; display: grid; place-items: center; font: 700 22px var(--display); color: var(--ink); background: var(--paper); padding: 24px; text-align: center; }
 
+/* Index card: ruled paper with a red margin line and a soft lift. */
 .ev-panel {
-  background: var(--paper);
-  border: 4px solid var(--wood);
-  border-radius: 8px;
-  box-shadow: inset 0 0 0 3px var(--wood-light), 0 5px 0 var(--wood-dark), 0 10px 24px rgba(0,0,0,0.18);
-  padding: 10px 14px;
+  background:
+    linear-gradient(90deg, transparent 22px, rgba(210, 65, 58, 0.35) 22px, rgba(210, 65, 58, 0.35) 23px, transparent 23px),
+    repeating-linear-gradient(180deg, transparent 0 23px, var(--rule) 23px 24px),
+    var(--paper);
+  border-radius: 4px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06), 0 10px 26px rgba(31, 42, 68, 0.22);
+  padding: 12px 16px 12px 34px;
 }
-.ev-title { font: 700 20px/1.1 "Pixelify Sans", sans-serif; letter-spacing: 0.3px; }
-.ev-sub { font-size: 13px; color: #7a5a3a; }
+.ev-title { font: 800 20px/1.1 var(--display); letter-spacing: -0.2px; }
+.ev-sub { font-size: 12.5px; color: var(--ink-2); }
 
-.ev-date { position: absolute; top: 16px; left: 16px; min-width: 190px; }
-.ev-gold { position: absolute; top: 16px; right: 16px; display: flex; gap: 10px; align-items: center; }
-.ev-gold .coin { width: 28px; height: 28px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffe58a, var(--gold) 55%, #b9821e); box-shadow: inset 0 -2px 0 rgba(0,0,0,0.2); }
-.ev-who { position: absolute; top: 92px; right: 16px; min-width: 180px; display: grid; gap: 4px; }
+.ev-date { position: absolute; top: 16px; left: 16px; min-width: 210px; transform: rotate(-0.6deg); }
+.ev-clock { font: 500 13px var(--mono); }
+.ev-gold { position: absolute; top: 16px; right: 16px; display: flex; gap: 12px; align-items: center; transform: rotate(0.8deg); }
+.ev-gold .ev-title { font: 500 24px var(--mono); }
+.ev-gold .coin { width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffe58a, var(--gold) 55%, #9a6d12); box-shadow: inset 0 -2px 0 rgba(0,0,0,0.2); }
+.ev-who { position: absolute; top: 96px; right: 16px; min-width: 190px; display: grid; gap: 4px; }
 .ev-who .who { display: flex; gap: 8px; align-items: center; font-weight: 600; }
-.ev-who i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; border: 2px solid var(--wood-dark); }
-.ev-link { background: none; border: 0; padding: 4px 0 0; color: var(--wood); text-decoration: underline; cursor: pointer; font: inherit; font-size: 12px; text-align: left; }
+.ev-who i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; box-shadow: 0 0 0 2px #fff; }
+.ev-link { background: none; border: 0; padding: 2px 0 0; color: var(--ink-2); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; font: inherit; font-size: 12px; text-align: left; }
 
-.ev-help { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); font: 500 14px "Pixelify Sans", sans-serif; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,0.35); white-space: nowrap; }
-.ev-prompt { position: absolute; bottom: 52px; left: 50%; transform: translateX(-50%); font: 700 17px "Pixelify Sans", sans-serif; color: var(--ink); background: var(--paper); border: 4px solid var(--wood); border-radius: 8px; box-shadow: 0 4px 0 var(--wood-dark); padding: 8px 14px; cursor: pointer; animation: ev-bob 1.2s ease-in-out infinite; }
-.ev-prompt kbd { display: inline-block; min-width: 22px; padding: 0 6px; margin-right: 6px; border-radius: 4px; background: var(--wood); color: #fff; font: inherit; }
+.ev-help { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); font: 500 12.5px var(--mono); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); white-space: nowrap; }
+.ev-prompt { position: absolute; bottom: 52px; left: 50%; transform: translateX(-50%); font: 700 16px var(--display); color: var(--ink); background: var(--paper); border: 0; border-radius: 4px; box-shadow: 0 8px 20px rgba(31,42,68,0.25); padding: 9px 16px; cursor: pointer; animation: ev-bob 1.4s ease-in-out infinite; }
+.ev-prompt kbd { display: inline-block; min-width: 22px; padding: 1px 6px; margin-right: 8px; border-radius: 3px; background: var(--ink); color: var(--paper); font: 500 14px var(--mono); }
 @keyframes ev-bob { 50% { transform: translate(-50%, -4px); } }
-.ev-toast { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: var(--good); color: #fff; padding: 10px 16px; border-radius: 8px; font: 600 15px "Pixelify Sans", sans-serif; box-shadow: 0 4px 0 rgba(0,0,0,0.25); animation: ev-in 0.3s ease-out; }
-.ev-toast.bad { background: var(--bad); top: 64px; cursor: pointer; }
+.ev-toast { position: absolute; top: 20px; left: 50%; transform: translateX(-50%) rotate(-1deg); background: var(--paper); color: var(--ok); border: 2px solid var(--ok); padding: 8px 14px; border-radius: 3px; font: 700 15px var(--display); box-shadow: 0 8px 20px rgba(31,42,68,0.2); animation: ev-in 0.3s ease-out; }
+.ev-toast.bad { color: var(--stamp); border-color: var(--stamp); top: 64px; cursor: pointer; }
 @keyframes ev-in { from { opacity: 0; transform: translate(-50%, -8px); } }
 
 .ev-chat { position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%); width: min(460px, calc(100% - 32px)); }
-.ev-chat input { width: 100%; box-sizing: border-box; font: 16px "Pixelify Sans", sans-serif; padding: 10px 12px; border: 4px solid var(--wood); border-radius: 8px; background: var(--paper); color: var(--ink); outline: none; }
+.ev-chat input { width: 100%; box-sizing: border-box; font: 15px "Inter", sans-serif; padding: 11px 14px; border: 0; border-radius: 4px; background: var(--paper); color: var(--ink); outline: 2px solid var(--ink); }
 
+/* Dialogue: an index card with a file-folder tab naming the speaker. */
 .ev-dialogue-wrap { position: absolute; left: 0; right: 0; bottom: 16px; display: flex; justify-content: center; padding: 0 16px; animation: ev-rise 0.25s ease-out; }
 @keyframes ev-rise { from { opacity: 0; transform: translateY(16px); } }
-.ev-dialogue { width: min(720px, 100%); max-height: 62vh; overflow: auto; position: relative; padding-top: 22px; }
-.ev-speaker { position: absolute; top: -18px; left: 16px; background: var(--wood); color: #fff; font: 700 16px "Pixelify Sans", sans-serif; padding: 4px 12px; border-radius: 6px; box-shadow: 0 3px 0 var(--wood-dark); }
+.ev-dialogue { width: min(720px, 100%); max-height: 62vh; overflow: auto; position: relative; padding-top: 26px; }
+.ev-speaker { position: absolute; top: 0; left: 34px; transform: translateY(-100%); background: var(--paper-2); color: var(--ink); font: 700 15px var(--display); padding: 6px 14px 4px; border-radius: 6px 6px 0 0; box-shadow: 0 -2px 6px rgba(31,42,68,0.08); }
+.ev-dialogue { overflow: visible; margin-top: 30px; }
 .ev-body p { margin: 6px 0; }
-.ev-lead { font: 700 19px/1.3 "Pixelify Sans", sans-serif; }
-.ev-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 10px; align-items: center; }
-.ev-btn { font: 700 16px "Pixelify Sans", sans-serif; color: #fff; background: #3f8f45; border: 3px solid #2a5f2e; border-radius: 8px; padding: 8px 14px; box-shadow: 0 3px 0 #1e4421; cursor: pointer; }
-.ev-btn:hover { filter: brightness(1.07); }
-.ev-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #1e4421; }
-.ev-btn:disabled { opacity: 0.6; cursor: default; }
-.ev-btn.ghost { background: var(--paper); color: var(--ink); border-color: var(--wood); box-shadow: 0 3px 0 var(--wood-dark); }
-.ev-options { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 4px; }
-.ev-options li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; border-radius: 6px; background: rgba(138, 90, 43, 0.08); }
-.ev-options li.rec { background: rgba(47, 125, 58, 0.14); font-weight: 700; }
-.ev-options b { font-variant-numeric: tabular-nums; }
-.ev-good { color: var(--good); font-weight: 700; }
-.ev-bad { color: var(--bad); font-weight: 700; }
-.ev-bad.big { font: 700 20px/1.35 "Pixelify Sans", sans-serif; }
-.ev-src { font-size: 13px; color: #6b4a2a; }
-.ev-src mark { background: #fde68a; padding: 0 3px; border-radius: 3px; }
-.ev-lines { display: grid; gap: 4px; }
-.ev-line { margin: 0; padding: 6px 10px; background: rgba(138, 90, 43, 0.08); border-radius: 6px; animation: ev-rise 0.25s ease-out; }
-.ev-field { display: grid; gap: 4px; font-weight: 700; margin: 8px 0; }
-.ev-field input { font: 16px "Pixelify Sans", sans-serif; padding: 8px 10px; border: 3px solid var(--wood); border-radius: 6px; background: #fffaf0; color: var(--ink); }
-.ev-colors { display: flex; gap: 8px; }
-.ev-colors button { width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--wood-dark); cursor: pointer; }
-.ev-colors button.on { outline: 3px solid var(--gold); outline-offset: 2px; }
+.ev-lead { font: 700 20px/1.3 var(--display); }
+.ev-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 12px; align-items: center; }
+.ev-btn { font: 600 15px "Inter", sans-serif; color: var(--paper); background: var(--ink); border: 0; border-radius: 4px; padding: 10px 16px; cursor: pointer; box-shadow: 0 2px 0 rgba(0,0,0,0.25); }
+.ev-btn:hover { filter: brightness(1.15); }
+.ev-btn:active { transform: translateY(1px); }
+.ev-btn:disabled { opacity: 0.55; cursor: default; }
+.ev-btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+.ev-options { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 2px; }
+.ev-options li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 2px; border-bottom: 1px dashed var(--rule); }
+.ev-options li.rec { font-weight: 700; }
+.ev-options li.rec span::before { content: "✓ "; color: var(--ok); }
+.ev-options b { font: 500 15px var(--mono); }
+.ev-good { color: var(--ok); font-weight: 700; }
+.ev-bad { color: var(--stamp); font-weight: 700; }
+.ev-bad.big { font: 700 19px/1.35 var(--display); }
+.ev-src { font-size: 13px; color: var(--ink-2); }
+.ev-src mark { background: #fde68a; padding: 0 3px; border-radius: 2px; font-family: var(--mono); font-size: 12px; }
+.ev-lines { display: grid; gap: 2px; font-family: var(--mono); font-size: 13.5px; }
+.ev-line { margin: 0; padding: 4px 0; border-bottom: 1px dashed var(--rule); animation: ev-rise 0.25s ease-out; }
+.ev-field { display: grid; gap: 4px; font-weight: 600; margin: 10px 0; }
+.ev-field input { font: 16px "Inter", sans-serif; padding: 9px 10px; border: 0; border-bottom: 2px solid var(--ink); border-radius: 0; background: transparent; color: var(--ink); outline: none; }
+.ev-colors { display: flex; gap: 10px; }
+.ev-colors button { width: 28px; height: 28px; border-radius: 50%; border: 0; cursor: pointer; box-shadow: 0 0 0 2px #fff, 0 1px 3px rgba(0,0,0,0.3); }
+.ev-colors button.on { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--ink); }
 .ev-pick { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-.ev-pick button { display: flex; gap: 6px; align-items: center; font: 600 14px inherit; padding: 6px 10px; border-radius: 6px; border: 2px solid var(--wood); background: #fffaf0; cursor: pointer; color: var(--ink); }
-.ev-pick button.on { background: var(--wood); color: #fff; }
+.ev-pick button { display: flex; gap: 6px; align-items: center; font: 600 14px "Inter", sans-serif; padding: 6px 10px; border-radius: 4px; border: 0; box-shadow: inset 0 0 0 1.5px var(--ink); background: transparent; cursor: pointer; color: var(--ink); }
+.ev-pick button.on { background: var(--ink); color: var(--paper); }
 .ev-pick i { width: 10px; height: 10px; border-radius: 50%; }
 
-/* Labels floating in the 3D world */
-.ev-tag { display: grid; justify-items: center; background: rgba(246, 231, 191, 0.95); border: 2px solid var(--wood); border-radius: 6px; padding: 2px 8px; white-space: nowrap; box-shadow: 0 2px 0 var(--wood-dark); }
-.ev-tag b { font: 700 15px "Pixelify Sans", sans-serif; color: var(--ink); }
-.ev-tag span { font-size: 10px; color: #7a5a3a; }
-.ev-tag.warn b { color: var(--bad); }
-.ev-tag.good { background: #e3f4e1; border-color: var(--good); }
-.ev-tag.good b { color: var(--good); }
+/* Rubber stamp: slams down, slightly crooked, ink a little uneven. */
+.ev-stamp { display: inline-block; font: 800 22px/1 var(--display); letter-spacing: 2px; text-transform: uppercase; padding: 6px 12px; border: 3px double currentColor; border-radius: 6px; transform: rotate(-7deg); opacity: 0.88; animation: ev-stamp 0.35s cubic-bezier(.2,1.6,.4,1) both; margin: 4px 0 8px; mix-blend-mode: multiply; }
+.ev-stamp.ok { color: var(--ok); }
+.ev-stamp.no { color: var(--stamp); font-size: 26px; }
+.ev-stamp small { display: block; font: 500 11px var(--mono); letter-spacing: 1px; margin-top: 3px; }
+@keyframes ev-stamp { 0% { transform: scale(2.2) rotate(-14deg); opacity: 0; } 100% { transform: scale(1) rotate(-7deg); opacity: 0.88; } }
+
+/* Labels floating in the 3D world: luggage tags */
+.ev-tag { display: grid; justify-items: center; background: var(--paper); border-radius: 3px; padding: 2px 9px 3px; white-space: nowrap; box-shadow: 0 3px 8px rgba(31,42,68,0.25); position: relative; }
+.ev-tag::before { content: ""; position: absolute; top: -5px; left: 50%; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: #bfa985; }
+.ev-tag b { font: 500 15px var(--mono); color: var(--ink); }
+.ev-tag span { font: 600 10px var(--display); color: var(--ink-2); }
+.ev-tag.warn b { color: var(--stamp); }
+.ev-tag.good b { color: var(--ok); }
 .ev-tag.dim { opacity: 0.8; }
 .ev-name-wrap { display: grid; justify-items: center; gap: 4px; }
-.ev-name { font: 700 13px "Pixelify Sans", sans-serif; color: #fff; background: rgba(59, 38, 20, 0.75); padding: 1px 8px; border-radius: 10px; white-space: nowrap; }
-.ev-name.me { background: rgba(47, 125, 58, 0.9); }
-.ev-name.elder { background: rgba(62, 50, 102, 0.9); }
-.ev-name.elder.hl { outline: 2px solid var(--gold); }
-.ev-bubble { max-width: 200px; background: #fff; color: var(--ink); border: 2px solid var(--wood); border-radius: 10px; padding: 4px 10px; font: 500 14px "Pixelify Sans", sans-serif; white-space: normal; text-align: center; }
+.ev-name { font: 700 13px var(--display); color: var(--paper); background: rgba(31, 42, 68, 0.82); padding: 1px 9px; border-radius: 10px; white-space: nowrap; }
+.ev-name.me { background: rgba(46, 125, 79, 0.92); }
+.ev-name.elder { background: rgba(47, 93, 90, 0.95); }
+.ev-name.elder.hl { box-shadow: 0 0 0 2px var(--gold); }
+.ev-bubble { max-width: 210px; background: var(--paper); color: var(--ink); border-radius: 10px; padding: 4px 10px; font: 500 13.5px "Inter", sans-serif; white-space: normal; text-align: center; box-shadow: 0 3px 8px rgba(31,42,68,0.25); }
+.ev-burst { font: 500 30px var(--mono); color: #ffe58a; text-shadow: 0 2px 0 #7a4e00, 0 0 12px rgba(255, 200, 80, 0.8); white-space: nowrap; }
+
+/* Title: a postage stamp with a date cancellation ring */
+.ev-title-screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 24px; background: radial-gradient(ellipse at center, rgba(31, 42, 68, 0.05), rgba(31, 42, 68, 0.5)); text-align: center; }
+.ev-postage { position: relative; padding: 9px; transform: rotate(-2deg); filter: drop-shadow(0 14px 28px rgba(31,42,68,0.35)); animation: ev-float 4s ease-in-out infinite;
+  /* Perforated edge: a field of holes, covered everywhere except a 9px margin by the solid inner card. */
+  background: radial-gradient(circle, transparent 5px, var(--paper) 5.5px) -9px -9px / 18px 18px; }
+.ev-postage-inner { background: var(--paper); box-shadow: inset 0 0 0 10px var(--paper), inset 0 0 0 12px var(--ink); padding: 28px 38px 22px; }
+.ev-postage .l1 { display: block; font: italic 700 64px/0.95 var(--display); color: var(--ink); }
+.ev-postage .l2 { display: block; font: 800 64px/0.95 var(--display); color: var(--ok); }
+.ev-postage .denom { display: block; margin-top: 8px; font: 500 13px var(--mono); color: var(--ink-2); letter-spacing: 1px; }
+.ev-cancel { position: absolute; right: -86px; top: -62px; width: 132px; height: 132px; border-radius: 50%; border: 3px solid var(--stamp); color: var(--stamp); display: grid; place-items: center; font: 500 12px/1.3 var(--mono); letter-spacing: 1px; transform: rotate(14deg); opacity: 0.85; mix-blend-mode: multiply; }
+.ev-cancel::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; border: 1px solid var(--stamp); }
+@keyframes ev-float { 50% { transform: rotate(-2deg) translateY(-8px); } }
+.ev-tagline { margin: 0; font: 600 19px var(--display); color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,0.5); max-width: 560px; }
+.ev-title-actions { display: flex; gap: 12px; }
+.ev-btn.big { font: 700 20px var(--display); padding: 12px 40px; background: var(--ok); }
+.ev-title-actions .ev-btn.ghost { color: #fff; box-shadow: inset 0 0 0 1.5px #fff; }
+.ev-how { max-width: 560px; text-align: left; }
+.ev-how p { margin: 6px 0; }
+.ev-credit { position: absolute; bottom: 16px; font: 500 12px var(--mono); color: rgba(255,255,255,0.85); text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+.ev-pop { animation: ev-pop 0.6s ease-out; }
+@keyframes ev-pop { 0% { transform: scale(1); } 30% { transform: scale(1.3); color: #9a6d12; } 100% { transform: scale(1); } }
 
 @media (max-width: 640px) {
   .ev-who { display: none; }
-  .ev-help { font-size: 12px; }
+  .ev-help { font-size: 11px; }
+  .ev-postage .l1, .ev-postage .l2 { font-size: 44px; }
+  .ev-cancel { display: none; }
 }
+
+/* Floating 3D labels live in the canvas layer (z 0–30); every screen UI sits above them. */
+.ev-date, .ev-gold, .ev-who, .ev-help, .ev-prompt, .ev-chat { z-index: 40; }
+.ev-toast { z-index: 60; }
+.ev-dialogue-wrap { z-index: 80; }
+.ev-title-screen { z-index: 90; }
+
+/* Projected label layer: positioned by the Projector every frame. */
+.ev-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 20; }
+.ev-anchor { position: absolute; left: 0; top: 0; will-change: transform; visibility: hidden; }
+.ev-burst { animation: ev-rise-fade 1.9s ease-out forwards; }
+@keyframes ev-rise-fade { 0% { transform: translateY(10px) scale(0.6); opacity: 0; } 15% { transform: translateY(0) scale(1.1); opacity: 1; } 70% { opacity: 1; } 100% { transform: translateY(-60px) scale(1); opacity: 0; } }

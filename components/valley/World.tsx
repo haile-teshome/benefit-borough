@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useFrame } from "@react-three/fiber";
+import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { farmOrigin, mailboxPosition } from "@/lib/valley/layout";
+import { GlowWindow, Lamp } from "./Effects";
 
 // Deterministic scatter so every client sees the same trees and flowers.
 function rng(seed: number) {
@@ -53,6 +55,9 @@ export function Village() {
         <mesh position={[-0.4, 1.55, 0.07]}><boxGeometry args={[0.6, 0.5, 0.02]} /><meshLambertMaterial color="#F4EBD0" /></mesh>
         <mesh position={[0.45, 1.45, 0.07]}><boxGeometry args={[0.5, 0.4, 0.02]} /><meshLambertMaterial color="#F4EBD0" /></mesh>
       </group>
+      <Lamp position={[5.2, 0, -4.4]} />
+      <Lamp position={[-5.2, 0, 4.4]} />
+      <Lamp position={[3.2, 0, 8.6]} />
       {/* Pond */}
       <mesh rotation-x={-Math.PI / 2} position={[16, 0.02, -8]}>
         <circleGeometry args={[6, 24]} />
@@ -130,21 +135,15 @@ export function Farmstead({ farm, color, name, hasGift }: { farm: number; color:
         <mesh position={[0, 1.4, 0]} castShadow receiveShadow><boxGeometry args={[5, 2.8, 3.6]} /><meshLambertMaterial color="#EFE3C8" /></mesh>
         <mesh position={[0, 3.6, 0]} rotation-y={Math.PI / 4} castShadow><coneGeometry args={[4.0, 1.8, 4]} /><meshLambertMaterial color={color} flatShading /></mesh>
         <mesh position={[0, 0.9, 1.81]}><boxGeometry args={[1, 1.8, 0.05]} /><meshLambertMaterial color="#7A5232" /></mesh>
-        <mesh position={[-1.6, 1.6, 1.81]}><boxGeometry args={[0.9, 0.8, 0.05]} /><meshLambertMaterial color="#A7D8F0" /></mesh>
-        <mesh position={[1.6, 1.6, 1.81]}><boxGeometry args={[0.9, 0.8, 0.05]} /><meshLambertMaterial color="#A7D8F0" /></mesh>
+        <GlowWindow position={[-1.6, 1.6, 1.81]} size={[0.9, 0.8]} />
+        <GlowWindow position={[1.6, 1.6, 1.81]} size={[0.9, 0.8]} />
       </group>
       <Fence x={o.x} z={o.z + 2} w={15} d={11} />
       {/* Mailbox; a present sits on it when a gift is waiting. */}
       <group position={mb}>
         <mesh position={[0, 0.6, 0]} castShadow><boxGeometry args={[0.15, 1.2, 0.15]} /><meshLambertMaterial color="#7A5232" /></mesh>
         <mesh position={[0, 1.3, 0]} castShadow><boxGeometry args={[0.7, 0.45, 0.45]} /><meshLambertMaterial color={color} /></mesh>
-        {hasGift && (
-          <group position={[0, 1.85, 0]}>
-            <mesh castShadow><boxGeometry args={[0.5, 0.45, 0.5]} /><meshLambertMaterial color="#E2574C" /></mesh>
-            <mesh><boxGeometry args={[0.52, 0.47, 0.12]} /><meshLambertMaterial color="#F7E26B" /></mesh>
-            <mesh><boxGeometry args={[0.12, 0.47, 0.52]} /><meshLambertMaterial color="#F7E26B" /></mesh>
-          </group>
-        )}
+        {hasGift && <Envelope />}
       </group>
       <mesh position={[o.x - 6.5, 1.0, o.z - 6]} castShadow>
         <boxGeometry args={[2.2, 0.6, 0.12]} />
@@ -155,6 +154,21 @@ export function Farmstead({ farm, color, name, hasGift }: { farm: number; color:
         <meshLambertMaterial color="#7A5232" />
       </mesh>
       <group name={`sign-${name}`} />
+    </group>
+  );
+}
+
+// A wax-sealed envelope standing in the letterbox, bobbing so it's easy to spot.
+function Envelope() {
+  const g = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    if (g.current) { const t = clock.getElapsedTime(); g.current.position.y = 1.95 + Math.sin(t * 3) * 0.08; g.current.rotation.y = Math.sin(t * 1.2) * 0.4; }
+  });
+  return (
+    <group ref={g} position={[0, 1.95, 0]}>
+      <mesh castShadow><boxGeometry args={[0.7, 0.46, 0.04]} /><meshLambertMaterial color="#FFFDF6" /></mesh>
+      <mesh position={[0, 0.06, 0.025]} rotation-z={Math.PI / 4}><boxGeometry args={[0.36, 0.36, 0.01]} /><meshLambertMaterial color="#F1E8D2" /></mesh>
+      <mesh position={[0, -0.02, 0.04]} rotation-x={Math.PI / 2}><cylinderGeometry args={[0.08, 0.08, 0.03, 12]} /><meshLambertMaterial color="#B3261E" /></mesh>
     </group>
   );
 }

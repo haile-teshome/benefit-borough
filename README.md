@@ -4,7 +4,7 @@ Trackers remind. Advisors suggest. **Expire rescues, in the best order, and does
 
 ## Expire Valley (the multiplayer game)
 
-A Stardew-style 3D farm where every benefit you're about to lose grows as a crop. Crops wilt as their deadline approaches. Harvesting one runs the real Expire action (booking call, transfer) through the Reviewer, and the money goes into your rescued total. Classmates farm next door in real time on **SpacetimeDB**: you see each other walk, chat, and harvest, and you can send surplus dining dollars to a friend's mailbox. Elder Ruth on the village square is the Reviewer: ask her to approve a sunscreen cart on your FSA and she says no.
+A 3D multiplayer valley grown out of your paperwork: every benefit you're about to lose grows as a paper plant bearing coins. Its pages yellow as their deadline approaches. Harvesting one runs the real Expire action (booking call, transfer) through the Reviewer, and the money goes into your rescued total. Classmates farm next door in real time on **SpacetimeDB**: you see each other walk, chat, and harvest, and you can send surplus dining dollars to a friend's mailbox. Elder Ruth on the village square is the Reviewer: ask her to approve a sunscreen cart on your FSA and she says no.
 
 ```bash
 # one time: install the SpacetimeDB CLI (https://spacetimedb.com/install), then

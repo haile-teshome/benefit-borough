@@ -9,7 +9,12 @@ import type { Player, Plot } from "@/lib/valley_bindings/types";
 import { expire } from "@/lib/valley/expire";
 import { ELDER_POS, mailboxPosition, slotPosition, usd } from "@/lib/valley/layout";
 import type { AppState, DispatchResult, Tile, Verdict } from "@/lib/types";
+import { sound } from "@/lib/valley/audio";
+import { clockLabel, gameHour, setHour } from "@/lib/valley/clock";
 import { Crop, Elder, Farmer } from "./Actors";
+import { type Burst, CoinBurst, DayNight } from "./Effects";
+import { anchors, labelEls, registerLabel, setAnchor } from "@/lib/valley/labels";
+import { CROP_LOOK } from "@/lib/valley/layout";
 import { Farmstead, Ground, Village } from "./World";
 
 const DB = "expire-valley";
@@ -98,6 +103,9 @@ function Valley() {
   const [error, setError] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [toast, setToast] = useState("");
+  const [title, setTitle] = useState(true);
+  const [muted, setMuted] = useState(false);
+  const [bursts, setBursts] = useState<Burst[]>([]);
 
   useEffect(() => {
     if (pid) expire.state(pid).then((r) => setState(r.state)).catch((e) => setError(e.message));
@@ -122,10 +130,27 @@ function Valley() {
       if (seenGifts.current.has(k)) continue;
       seenGifts.current.add(k);
       const from = players.find((p) => hex(p.identity) === hex(g.from));
-      setToast(`${from?.name ?? "A farmer"} left you a gift at your mailbox`);
+      sound.gift();
+      setToast(`${from?.name ?? "A farmer"} sent you a letter. Check your letterbox.`);
       setTimeout(() => setToast(""), 5000);
     }
   }, [myGifts, players]);
+
+  const harvestedSeen = useRef<Map<string, boolean> | null>(null);
+  useEffect(() => {
+    const prev = harvestedSeen.current;
+    const next = new Map(plots.map((p) => [String(p.id), p.harvested]));
+    if (prev) {
+      for (const pl of plots) {
+        if (!pl.harvested || prev.get(String(pl.id)) !== false) continue;
+        const owner = players.find((p) => hex(p.identity) === hex(pl.owner));
+        if (!owner) continue;
+        sound.coins();
+        setBursts((b) => [...b, { id: Date.now() + Math.random(), at: slotPosition(owner.farm, pl.slot), amount: pl.saved, born: performance.now() }]);
+      }
+    }
+    harvestedSeen.current = next;
+  }, [plots, players]);
 
   const plant = useCallback(async (s: AppState) => {
     if (!conn) return;
@@ -147,10 +172,10 @@ function Valley() {
   // was reset gets their field replanted from the Expire state they already have.
   const replanted = useRef(false);
   useEffect(() => {
-    if (!me || !state || myPlots.length > 0) return;
+    if (title || !me || !state || myPlots.length > 0) return;
     if (!state.tiles.length) { if (modal === null) setModal({ kind: "intro" }); return; }
     if (!replanted.current) { replanted.current = true; void plant(state); }
-  }, [me, state, myPlots.length, modal, plant]);
+  }, [title, me, state, myPlots.length, modal, plant]);
 
   async function plantDocs(name: string, color: string) {
     if (!conn) return;
@@ -160,6 +185,7 @@ function Valley() {
       const r = await expire.scan(pid);
       setState(r.state);
       await plant(r.state);
+      sound.sprout();
       setModal(null);
       setToast("Your documents sprouted. Walk to a crop and press E.");
       setTimeout(() => setToast(""), 5000);
@@ -187,9 +213,11 @@ function Valley() {
     if (!conn || !state) return;
     const tile = state.tiles.find((t) => t.id === tileId)!;
     setModal({ kind: "run", tileId, lines: [], result: null, to });
+    if (tile.action.kind === "book_call") sound.dial(); else sound.harvest();
     try {
       const r = await expire.dispatch(pid, tileId);
       for (const line of r.result.transcript) {
+        sound.blip();
         setModal((m) => (m && m.kind === "run" ? { ...m, lines: [...m.lines, line] } : m));
         await new Promise((ok) => setTimeout(ok, 900));
       }
@@ -210,19 +238,23 @@ function Valley() {
     const fsa = state?.extraction?.balances.find((b) => b.category === "fsa");
     if (!fsa) { setModal({ kind: "elder", step: "verdict", verdict: { verdict: "reject", rule_cited: null, reason: "Plant your documents first, child. I can only judge what I can read.", engine: "rules", at: "" } }); return; }
     setModal({ kind: "elder", step: "thinking" });
+    sound.hmm();
     const r = await expire.reviewCart(pid, fsa.id, items);
     setState(r.state);
+    if (r.verdict.verdict === "reject") sound.refuse(); else sound.coins();
     setModal({ kind: "elder", step: "verdict", verdict: r.verdict });
   }
 
   async function openGifts() {
     if (!conn) return;
     for (const g of myGifts) await conn.reducers.openGift({ id: g.id });
+    sound.gift();
     setModal({ kind: "gift" });
   }
 
   function interact() {
-    if (!near || modal) return;
+    if (!near || modal || title) return;
+    sound.click();
     if (near.kind === "crop") setModal({ kind: "crop", tileId: near.tileId });
     if (near.kind === "elder") setModal({ kind: "elder", step: "hello" });
     if (near.kind === "mailbox") void openGifts();
@@ -232,6 +264,8 @@ function Valley() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.tagName === "INPUT") return;
+      if (title) return;
+      if (e.key === "m" || e.key === "M") toggleMute();
       if (e.key === "e" || e.key === "E") interact();
       if (e.key === "Escape") setModal((m) => (m?.kind === "run" && !m.result ? m : null));
       if (e.key === "Enter" && !modal) { e.preventDefault(); setChatOpen(true); }
@@ -239,6 +273,29 @@ function Valley() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
+
+  function toggleMute() {
+    setMuted((m) => { sound.setMuted(!m); return !m; });
+  }
+
+  function play() {
+    sound.start();
+    sound.click();
+    setHour(7); // every session starts at dawn, whatever the title screen idled through
+    setTitle(false);
+  }
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "production") (window as unknown as { __setHour?: (h: number) => void }).__setHour = setHour;
+  }, []);
+
+  // A soft chime when something new comes within reach.
+  const lastNear = useRef("");
+  useEffect(() => {
+    const k = near ? `${near.kind}:${near.label}` : "";
+    if (k && k !== lastNear.current && !title) sound.prompt();
+    lastNear.current = k;
+  }, [near, title]);
 
   const bubbles = useMemo(() => {
     const now = Date.now();
@@ -257,10 +314,7 @@ function Valley() {
   return (
     <div className="ev-root">
       <Canvas shadows orthographic camera={{ zoom: 38, position: [20, 24, 20], near: 0.1, far: 500 }} dpr={[1, 2]} gl={{ preserveDrawingBuffer: true }}>
-        <color attach="background" args={["#BFE3F5"]} />
-        <fog attach="fog" args={["#BFE3F5", 60, 140]} />
-        <hemisphereLight args={["#FFF7E8", "#6C8F4E", 0.9]} />
-        <directionalLight position={[30, 40, 15]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-60} shadow-camera-right={60} shadow-camera-top={60} shadow-camera-bottom={-60} />
+        <DayNight />
         <Scene
           me={me}
           players={players}
@@ -272,17 +326,25 @@ function Valley() {
           onNear={setNear}
           conn={conn}
           myGiftCount={myGifts.length}
+          attract={title}
+          bursts={bursts}
+          onBurstDone={(id) => setBursts((b) => b.filter((x) => x.id !== id))}
         />
       </Canvas>
+      {!title && <Labels plots={plots} players={players} myHex={myHex} bubbles={bubbles} bursts={bursts} nearElder={near?.kind === "elder"} />}
 
-      <Hud me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} />
+      {title ? (
+        <Title onPlay={play} connected={isActive} />
+      ) : (
+        <Hud me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} />
+      )}
 
-      {near && !modal && (
+      {near && !modal && !title && (
         <button className="ev-prompt" onClick={interact}><kbd>E</kbd> {near.label}</button>
       )}
       {toast && <div className="ev-toast">{toast}</div>}
       {error && <div className="ev-toast bad" onClick={() => setError("")}>{error}</div>}
-      <div className="ev-help">WASD or click to walk · E to interact · Enter to chat</div>
+      {!title && <div className="ev-help">WASD or click to walk · E to interact · Enter to chat · M to mute</div>}
 
       {chatOpen && (
         <form className="ev-chat" onSubmit={(e) => { e.preventDefault(); const v = (e.currentTarget.elements.namedItem("t") as HTMLInputElement).value; if (v.trim() && conn) void conn.reducers.say({ text: v }); setChatOpen(false); }}>
@@ -302,7 +364,7 @@ function Valley() {
       )}
       {modal?.kind === "elder" && <ElderTalk step={modal.step} verdict={modal.verdict} onAsk={askElder} onClose={() => setModal(null)} />}
       {modal?.kind === "gift" && (
-        <Dialogue speaker="Mailbox" onClose={() => setModal(null)}>
+        <Dialogue speaker="Letter" onClose={() => setModal(null)}>
           <p>{gifts.filter((g) => hex(g.to) === myHex).slice(-1).map((g) => `${players.find((p) => hex(p.identity) === hex(g.from))?.name ?? "A farmer"} sent you ${usd(g.amount)}: “${g.note}”`)[0] ?? "Nothing here yet."}</p>
         </Dialogue>
       )}
@@ -312,10 +374,12 @@ function Valley() {
 
 // ---------- 3D scene ----------
 
-function Scene({ me, players, plots, myHex, bubbles, giftsWaitingFor, canMove, onNear, conn, myGiftCount }: {
+function Scene({ me, players, plots, myHex, bubbles, giftsWaitingFor, canMove, onNear, conn, myGiftCount, attract, bursts, onBurstDone }: {
   me?: Player; players: readonly Player[]; plots: readonly Plot[]; myHex: string; bubbles: Map<string, string>;
   giftsWaitingFor: Set<string>; canMove: boolean; onNear: (n: Near) => void; conn: DbConnection | null; myGiftCount: number;
+  attract: boolean; bursts: Burst[]; onBurstDone: (id: number) => void;
 }) {
+  const lastStep = useRef(0);
   const pos = useRef<THREE.Vector3 | null>(null);
   const target = useRef<THREE.Vector3 | null>(null);
   const facing = useRef(0);
@@ -347,7 +411,14 @@ function Scene({ me, players, plots, myHex, bubbles, giftsWaitingFor, canMove, o
 
   const myPlots = plots.filter((p) => hex(p.owner) === myHex);
 
-  useFrame((_, dt) => {
+  useFrame(({ clock }, dt) => {
+    // Title screen: slow orbit over the village instead of following a farmer.
+    if (attract) {
+      const a = clock.getElapsedTime() * 0.08;
+      camera.position.set(Math.cos(a) * 30, 26, 14 + Math.sin(a) * 30);
+      camera.lookAt(0, 0, 14);
+      return;
+    }
     const p = pos.current;
     if (!p || !me) return;
     const dir = new THREE.Vector3();
@@ -374,7 +445,9 @@ function Scene({ me, players, plots, myHex, bubbles, giftsWaitingFor, canMove, o
       facing.current = Math.atan2(dir.x, dir.z);
     }
     if (moving !== walking) setWalking(moving);
+    if (moving && performance.now() - lastStep.current > 300) { lastStep.current = performance.now(); sound.step2(); }
     if (meGroup.current) meGroup.current.position.copy(p);
+    setAnchor(`player:${myHex}`, p.x, 2.35, p.z);
 
     // Follow camera, isometric offset.
     const want = new THREE.Vector3(p.x + 20, 24, p.z + 20);
@@ -398,9 +471,9 @@ function Scene({ me, players, plots, myHex, bubbles, giftsWaitingFor, canMove, o
       const d = Math.hypot(p.x - x, p.z - z);
       if (d < bestD) { bestD = d; id = pl.tileId; best = { kind: "crop", tileId: pl.tileId, label: pl.harvested ? `Look at ${pl.title}` : `Inspect ${pl.title} (${usd(pl.atStake)})` }; }
     }
-    if (Math.hypot(p.x - ELDER_POS[0], p.z - ELDER_POS[2]) < REACH + 0.6) { id = "elder"; best = { kind: "elder", label: "Talk to Elder Ruth, the Reviewer" }; }
+    if (Math.hypot(p.x - ELDER_POS[0], p.z - ELDER_POS[2]) < REACH + 0.6) { id = "elder"; best = { kind: "elder", label: "Talk to Ruth, the Reviewer" }; }
     const mb = mailboxPosition(me.farm);
-    if (myGiftCount > 0 && Math.hypot(p.x - mb[0], p.z - mb[2]) < REACH) { id = "mailbox"; best = { kind: "mailbox", label: "Open your gift" }; }
+    if (myGiftCount > 0 && Math.hypot(p.x - mb[0], p.z - mb[2]) < REACH) { id = "mailbox"; best = { kind: "mailbox", label: "Open your letter" }; }
     if (id !== nearKey.current) { nearKey.current = id; setNearId(id); onNear(best); }
   });
 
@@ -408,7 +481,7 @@ function Scene({ me, players, plots, myHex, bubbles, giftsWaitingFor, canMove, o
     <group>
       <Ground onPoint={(pt) => { target.current = new THREE.Vector3(pt.x, 0, pt.z); }} />
       <Village />
-      <Elder position={ELDER_POS} highlighted={nearId === "elder"} />
+      <Elder position={ELDER_POS} />
       {players.map((pl) => (
         <Farmstead key={`farm-${hex(pl.identity)}`} farm={pl.farm} color={pl.color} name={pl.name} hasGift={giftsWaitingFor.has(hex(pl.identity))} />
       ))}
@@ -424,26 +497,25 @@ function Scene({ me, players, plots, myHex, bubbles, giftsWaitingFor, canMove, o
             atStake={pl.atStake}
             daysLeft={pl.daysLeft}
             harvested={pl.harvested}
-            harvestable={pl.harvestable}
-            saved={pl.saved}
             highlighted={mine && nearId === pl.tileId}
-            label={mine || pl.harvested}
           />
         );
       })}
       {me && (
         <group ref={meGroup} position={[me.x, 0, me.z]}>
-          <Farmer color={me.color} name={me.name} facing={facing.current} walking={walking} bubble={bubbles.get(myHex)} me />
+          <Farmer color={me.color} facing={facing.current} walking={walking} />
         </group>
       )}
       {players.filter((p) => p.online && hex(p.identity) !== myHex).map((p) => (
-        <Remote key={hex(p.identity)} p={p} bubble={bubbles.get(hex(p.identity))} />
+        <Remote key={hex(p.identity)} p={p} />
       ))}
+      {bursts.map((b) => <CoinBurst key={b.id} burst={b} onDone={onBurstDone} />)}
+      <Projector />
     </group>
   );
 }
 
-function Remote({ p, bubble }: { p: Player; bubble?: string }) {
+function Remote({ p }: { p: Player }) {
   const g = useRef<THREE.Group>(null);
   const [walking, setWalking] = useState(false);
   useFrame((_, dt) => {
@@ -451,31 +523,117 @@ function Remote({ p, bubble }: { p: Player; bubble?: string }) {
     const to = new THREE.Vector3(p.x, 0, p.z);
     const d = g.current.position.distanceTo(to);
     g.current.position.lerp(to, 1 - Math.pow(0.0005, dt));
+    setAnchor(`player:${hex(p.identity)}`, g.current.position.x, 2.35, g.current.position.z);
     const w = d > 0.06;
     if (w !== walking) setWalking(w);
   });
   return (
     <group ref={g} position={[p.x, 0, p.z]}>
-      <Farmer color={p.color} name={p.name} facing={p.facing} walking={walking} bubble={bubble} />
+      <Farmer color={p.color} facing={p.facing} walking={walking} />
     </group>
+  );
+}
+
+// Moves every registered DOM label to its anchor's screen position each frame.
+function Projector() {
+  const { camera, size } = useThree();
+  const v = useMemo(() => new THREE.Vector3(), []);
+  useFrame(() => {
+    for (const [id, el] of labelEls) {
+      const w = anchors.get(id);
+      if (!w) { el.style.visibility = "hidden"; continue; }
+      v.copy(w).project(camera);
+      const visible = v.z < 1 && Math.abs(v.x) < 1.2 && Math.abs(v.y) < 1.2;
+      el.style.visibility = visible ? "visible" : "hidden";
+      el.style.transform = `translate(${((v.x + 1) / 2) * size.width}px, ${((1 - v.y) / 2) * size.height}px) translate(-50%, -100%)`;
+    }
+  });
+  return null;
+}
+
+type LabelProps = { plots: readonly Plot[]; players: readonly Player[]; myHex: string; bubbles: Map<string, string>; bursts: Burst[]; nearElder: boolean };
+
+// All floating labels, rendered by the main React tree and positioned by <Projector>.
+function Labels({ plots, players, myHex, bubbles, bursts, nearElder }: LabelProps) {
+  useEffect(() => { setAnchor("elder", ELDER_POS[0], 2.9, ELDER_POS[2]); }, []);
+  const online = players.filter((p) => p.online || hex(p.identity) === myHex);
+  return (
+    <div className="ev-labels">
+      {plots.map((pl) => {
+        const owner = players.find((p) => hex(p.identity) === hex(pl.owner));
+        if (!owner) return null;
+        const mine = hex(pl.owner) === myHex;
+        if (!mine && !pl.harvested) return null;
+        const id = `crop:${String(pl.id)}`;
+        const [x, , z] = slotPosition(owner.farm, pl.slot);
+        setAnchor(id, x, pl.harvested ? 1.1 : 2.3, z);
+        const look = CROP_LOOK[pl.category] ?? CROP_LOOK.fsa;
+        const tax = pl.category === "tax_window";
+        return (
+          <div key={id} ref={registerLabel(id)} className="ev-anchor">
+            <div className={`ev-tag ${pl.harvested ? "good" : pl.daysLeft <= 30 ? "warn" : ""} ${pl.harvestable || pl.harvested ? "" : "dim"}`}>
+              <b>{tax ? "Enroll by Nov 21" : pl.harvested ? `+${usd(pl.saved)}` : usd(pl.atStake)}</b>
+              <span>{tax ? "Open enrollment" : pl.harvested ? "Rescued" : `${look.name} · ${pl.daysLeft}d`}</span>
+            </div>
+          </div>
+        );
+      })}
+      {online.map((p) => {
+        const h = hex(p.identity);
+        const id = `player:${h}`;
+        if (!anchors.has(id)) setAnchor(id, p.x, 2.35, p.z);
+        const bubble = bubbles.get(h);
+        return (
+          <div key={id} ref={registerLabel(id)} className="ev-anchor">
+            <div className="ev-name-wrap">
+              {bubble && <div className="ev-bubble">{bubble}</div>}
+              <div className={`ev-name ${h === myHex ? "me" : ""}`}>{p.name}</div>
+            </div>
+          </div>
+        );
+      })}
+      <div ref={registerLabel("elder")} className="ev-anchor">
+        <div className="ev-name-wrap"><div className={`ev-name elder ${nearElder ? "hl" : ""}`}>Ruth · the Reviewer</div></div>
+      </div>
+      {bursts.map((b) => {
+        const id = `burst:${b.id}`;
+        setAnchor(id, b.at[0], 2.6, b.at[2]);
+        return (
+          <div key={id} ref={registerLabel(id)} className="ev-anchor">
+            <div className="ev-burst">+{usd(b.amount)}</div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
 // ---------- overlays ----------
 
-function Hud({ me, others, isActive, state, busy, onReplant }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void }) {
+function useClock() {
+  const [label, setLabel] = useState(clockLabel());
+  const [night, setNight] = useState(false);
+  useEffect(() => {
+    const id = setInterval(() => { setLabel(clockLabel()); const h = gameHour(); setNight(h < 6 || h >= 19); }, 1000);
+    return () => clearInterval(id);
+  }, []);
+  return { label, night };
+}
+
+function Hud({ me, others, isActive, state, busy, onReplant, muted, onMute }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void }) {
   const next = state?.tiles.filter((t) => !state.done.includes(t.id) && t.atStake > 0).sort((a, b) => a.daysLeft - b.daysLeft)[0];
+  const clock = useClock();
   return (
     <>
       <div className="ev-panel ev-date">
         <div className="ev-title">Expire Valley</div>
-        <div>Sat, Oct 24</div>
+        <div className="ev-clock">Sat, Oct 24 · {clock.label} {clock.night ? "☾" : "☀"}</div>
         {next && <div className="ev-sub">Next to wilt: {shortTitle(next.title).split(" ").slice(0, 3).join(" ")}… in {next.daysLeft}d</div>}
       </div>
       <div className="ev-panel ev-gold">
         <span className="coin" />
         <div>
-          <div className="ev-title">{usd(me?.rescued ?? 0)}</div>
+          <div key={me?.rescued ?? 0} className="ev-title ev-pop">{usd(me?.rescued ?? 0)}</div>
           <div className="ev-sub">rescued</div>
         </div>
       </div>
@@ -484,8 +642,38 @@ function Hud({ me, others, isActive, state, busy, onReplant }: { me?: Player; ot
         {me && <div className="who"><i style={{ background: me.color }} />{me.name} (you)</div>}
         {others.map((p) => <div key={p.identity.toHexString()} className="who"><i style={{ background: p.color }} />{p.name}</div>)}
         <button className="ev-link" disabled={busy} onClick={onReplant}>{busy ? "Replanting…" : "Replant (reset demo)"}</button>
+        <button className="ev-link" onClick={onMute}>{muted ? "Sound off · M" : "Sound on · M"}</button>
       </div>
     </>
+  );
+}
+
+function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }) {
+  const [how, setHow] = useState(false);
+  return (
+    <div className="ev-title-screen">
+      <div className="ev-postage">
+        <div className="ev-postage-inner">
+          <span className="l1">Expire</span>
+          <span className="l2">Valley</span>
+          <span className="denom">GROWN FROM YOUR PAPERWORK · $0 FEE</span>
+        </div>
+        <div className="ev-cancel">USE BY<br />DEC 31<br />2026</div>
+      </div>
+      <p className="ev-tagline">Every benefit you’re about to lose grows here. Harvest it before it wilts.</p>
+      {how ? (
+        <div className="ev-panel ev-how">
+          <p><b>Walk</b> with WASD or by clicking the ground. <b>E</b> to inspect a crop, talk, or open your mailbox. <b>Enter</b> to chat. <b>M</b> to mute.</p>
+          <p>Each crop is a real balance from your documents: dental max, a deductible window, dining dollars, card credits. The closer the deadline, the more it wilts.</p>
+          <p>Harvesting runs the real action (a booking call, a transfer) after Ruth, the Reviewer, approves it. Your rescued total is real money.</p>
+        </div>
+      ) : null}
+      <div className="ev-title-actions">
+        <button className="ev-btn big" onClick={onPlay} disabled={!connected}>{connected ? "Play" : "Connecting…"}</button>
+        <button className="ev-btn ghost" onClick={() => setHow((h) => !h)}>{how ? "Got it" : "How to play"}</button>
+      </div>
+      <div className="ev-credit">Cal Hacks 13.0 · multiplayer on SpacetimeDB · powered by the Expire engine</div>
+    </div>
   );
 }
 
@@ -511,10 +699,10 @@ function Intro({ busy, me, onPlant }: { busy: boolean; me?: Player; onPlant: (na
   const [color, setColor] = useState(me?.color ?? COLORS[0]);
   return (
     <Dialogue speaker="Welcome to Expire Valley" actions={<button className="ev-btn" disabled={busy} onClick={() => onPlant(name, color)}>{busy ? "Planting…" : "Plant my documents"}</button>}>
-      <p>Every benefit you’re about to lose grows here as a crop. The closer its deadline, the more it wilts. Harvest it before it dies and the money is yours.</p>
+      <p>Plant your paperwork and it grows: every benefit you’re about to lose becomes a paper plant bearing coins. The closer its deadline, the more its pages yellow. Harvest it before the date and the money is yours.</p>
       <label className="ev-field">Your name<input value={name} placeholder={me?.name ?? "Farmer"} onChange={(e) => setName(e.target.value)} maxLength={20} /></label>
       <div className="ev-colors">{COLORS.map((c) => <button key={c} aria-label={`Color ${c}`} className={c === color ? "on" : ""} style={{ background: c }} onClick={() => setColor(c)} />)}</div>
-      <p className="ev-sub">We’ll read your benefits summary, dental plan, EOBs, dining statement and cards.</p>
+      <p className="ev-sub">Seeds: your benefits summary, dental plan, EOBs, dining statement and card list.</p>
     </Dialogue>
   );
 }
@@ -538,7 +726,12 @@ function CropCard({ tile, state, onClose, onHarvest }: { tile: Tile; state: AppS
         ))}
       </ul>
       <p className="ev-sub">If you do nothing: {tile.doNothing}</p>
-      {verdict && tile.live && tile.action.kind !== "none" && <p className={verdict.verdict === "approve" ? "ev-good" : "ev-bad"}>Elder Ruth: {verdict.reason}</p>}
+      {verdict && tile.live && tile.action.kind !== "none" && (
+        <div>
+          <span className={`ev-stamp ${verdict.verdict === "approve" ? "ok" : "no"}`}>{verdict.verdict === "approve" ? "Approved" : "Declined"}<small>RUTH · REVIEWER{verdict.rule_cited ? ` · RULE ${verdict.rule_cited}` : ""}</small></span>
+          <p className="ev-sub">{verdict.reason}</p>
+        </div>
+      )}
       {doc && src && <p className="ev-src"><span>{doc.name.replace(/\.txt$/, "")}:</span> <mark>{src.text}</mark></p>}
     </Dialogue>
   );
@@ -549,7 +742,7 @@ function Confirm({ tile, others, onCancel, onConfirm }: { tile: Tile; others: Pl
   const [to, setTo] = useState<string>(transfer && others[0] ? others[0].identity.toHexString() : "");
   return (
     <Dialogue
-      speaker={transfer ? "Send to a classmate" : "Confirm the harvest"}
+      speaker={transfer ? "Send by letter" : "Confirm the harvest"}
       onClose={onCancel}
       actions={<button className="ev-btn" onClick={() => onConfirm(to || undefined)}>{transfer ? `Send ${usd(Number(tile.action.payload.amount))}` : "Yes, call them"}</button>}
     >
@@ -581,7 +774,12 @@ function Run({ tile, lines, result, toName, onDone }: { tile: Tile; lines: strin
       actions={result ? <button className="ev-btn" onClick={onDone}>Collect +{usd(tile.action.savings)}</button> : <span className="ev-sub">{call ? "Calling…" : "Settling…"}</span>}
     >
       <div className="ev-lines">{lines.map((l, i) => <p key={i} className="ev-line">{l}</p>)}</div>
-      {result && <p className="ev-good">Confirmed · {result.confirmation} · {result.integration}{toName ? ` · gift left at ${toName}’s mailbox` : ""}</p>}
+      {result && (
+        <div>
+          <span className="ev-stamp ok">{call ? "Booked" : "Sent"}<small>{result.confirmation}</small></span>
+          <p className="ev-sub">{result.integration}{toName ? ` · an envelope is waiting in ${toName}’s letterbox` : ""}</p>
+        </div>
+      )}
     </Dialogue>
   );
 }
@@ -590,15 +788,16 @@ const CARTS = [["Sunscreen SPF 50", "Aloe vera gel"], ["Electric toothbrush"], [
 
 function ElderTalk({ step, verdict, onAsk, onClose }: { step: "hello" | "thinking" | "verdict"; verdict?: Verdict; onAsk: (items: string[]) => void; onClose: () => void }) {
   return (
-    <Dialogue speaker="Elder Ruth, the Reviewer" onClose={onClose}
+    <Dialogue speaker="Ruth, the Reviewer" onClose={onClose}
       actions={step === "hello" ? CARTS.map((c) => <button key={c.join()} className="ev-btn ghost" onClick={() => onAsk(c)}>Spend my FSA on {c.join(" + ").toLowerCase()}?</button>) : step === "verdict" ? <button className="ev-btn ghost" onClick={() => onAsk(CARTS[0])}>Ask again</button> : null}
     >
-      {step === "hello" && <p>Every merchant in this valley profits when you spend. I don’t. Bring me a purchase and I’ll tell you if it’s worth it.</p>}
-      {step === "thinking" && <p>Hmm. Let me read your papers…</p>}
+      {step === "hello" && <p>I audit every harvest in this valley. Merchants profit when you spend; I don’t. Show me what you want to buy with your FSA.</p>}
+      {step === "thinking" && <p>Checking it against your receipts and stated needs…</p>}
       {step === "verdict" && verdict && (
-        <p className={verdict.verdict === "approve" ? "ev-good" : "ev-bad big"}>
-          {verdict.verdict === "approve" ? "Fine. " : "No. "}{verdict.reason}{verdict.rule_cited ? ` (Rule ${verdict.rule_cited})` : ""}
-        </p>
+        <div>
+          <span className={`ev-stamp ${verdict.verdict === "approve" ? "ok" : "no"}`}>{verdict.verdict === "approve" ? "Approved" : "Declined"}{verdict.rule_cited ? <small>RULE {verdict.rule_cited}</small> : null}</span>
+          <p className={verdict.verdict === "approve" ? "ev-good" : "ev-bad big"}>{verdict.verdict === "approve" ? "Fine. " : "No. "}{verdict.reason}</p>
+        </div>
       )}
     </Dialogue>
   );
