@@ -6,11 +6,17 @@ Cal Hacks 13.0. Expire reads your benefits summary, dental treatment plan, EOBs,
 
 ## Run it
 
+Expire is an iPhone app (Expo, in `mobile/`) backed by this Next.js server, which runs the engine, the Reviewer and the ledger. There's also a web board at http://localhost:3000.
+
 ```bash
-npm install
-npm run dev        # http://localhost:3000
-npm test           # engine math + Reviewer rules
+npm install && npm run dev          # backend + web board on :3000
+cd mobile && npm install && npx expo start   # then press i (simulator) or scan the QR with Expo Go
+npm test                            # engine math + Reviewer rules
 ```
+
+The phone finds the backend at the same LAN address Metro serves from, on port 3000. To use a deployed backend instead, set `EXPO_PUBLIC_API_URL`. Your phone and laptop must be on the same Wi-Fi.
+
+If `npx expo start` can't find the simulator, Xcode isn't selected. Run `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer` once, or prefix the command with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`.
 
 You don't need any keys. Each integration falls back to a deterministic mock, and a badge in the header shows whether it is **live** or **mock**. To go live, copy `.env.example` to `.env.local` and fill in the keys you have.
 
@@ -23,6 +29,7 @@ documents ─▶ Extract (Claude) ─▶ Optimize (calculators + Claude) ─▶ 
 
 | Piece | File | Notes |
 | --- | --- | --- |
+| Mobile app | `mobile/src/app/` | Expo Router: `index.tsx` is the board, `tile/[id].tsx` is the modal with options, Reviewer, booking and sources. |
 | Extract | `lib/engine/extract.ts` | Structured output (`claude-opus-5-5`). A claim whose `source_span` isn't verbatim in a document gets dropped. |
 | Optimize | `lib/engine/optimize.ts` | Plain functions do the math (dental year-split search, deductible/out-of-pocket window, dining burn rate). Claude only writes the copy, and only when it agrees with the calculator's pick. |
 | Reviewer | `lib/engine/reviewer.ts` | The 6 rules from the build plan. Deterministic checks run first, then Claude. Every verdict goes into the audit trail. |
