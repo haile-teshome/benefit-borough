@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { farmField, groundAt, snapToTile, TILE, tiles } from "@/lib/valley/hexgrid";
 import { farmOrigin, mailboxPosition } from "@/lib/valley/layout";
 import { Lamp } from "./Effects";
+import { toon, toonify } from "@/lib/valley/toon";
 
 // KayKit Medieval Hexagon Pack (CC0, Kay Lousberg). Fetched by scripts/fetch-assets.sh.
 const HEX = "/models/kaykit/hex/";
@@ -35,8 +36,9 @@ function Instanced({ name, items, shadows = true, tint }: { name: string; items:
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
     return parts.map((part) => {
       // A tint needs its own material: the pack's models share one texture-atlas material.
-      const material = tint ? (part.material as THREE.MeshStandardMaterial).clone() : part.material;
+      let material = tint ? (part.material as THREE.MeshStandardMaterial).clone() : part.material;
       if (tint) (material as THREE.MeshStandardMaterial).color.set(tint);
+      material = toon(material);
       const im = new THREE.InstancedMesh(part.geometry, material, Math.max(1, items.length));
       im.count = items.length;
       items.forEach((it, i) => {
@@ -71,7 +73,7 @@ function Model({ name, p, r = 0, s = 1, shadowOnly = false }: { name: string; p:
         m.material = mat;
       }
     });
-    return c;
+    return shadowOnly ? c : toonify(c);
   }, [scene, shadowOnly]);
   return <primitive object={obj} position={p} rotation-y={r} scale={s * TILE} />;
 }
@@ -93,10 +95,10 @@ export function HexTerrain({ onPoint, farms }: { onPoint: (p: THREE.Vector3) => 
   // An invisible plane catches clicks for click-to-walk; the tiles themselves don't need raycasts.
   return (
     <group>
-      <Instanced name="hex_grass" items={groups.grass} shadows={false} tint="#C6E3A0" />
+      <Instanced name="hex_grass" items={groups.grass} shadows={false} tint="#9FD47E" />
       <Instanced name="hex_water" items={groups.water} shadows={false} />
       <Instanced name="building_dirt" items={groups.dirt} shadows={false} />
-      <Instanced name="hex_grass" items={groups.dirt.map((d) => ({ ...d, p: [d.p[0], d.p[1] - 0.02, d.p[2]] as [number, number, number] }))} shadows={false} tint="#C6E3A0" />
+      <Instanced name="hex_grass" items={groups.dirt.map((d) => ({ ...d, p: [d.p[0], d.p[1] - 0.02, d.p[2]] as [number, number, number] }))} shadows={false} tint="#9FD47E" />
       {Object.entries(groups)
         .filter(([k]) => !["grass", "water", "dirt"].includes(k))
         .map(([name, items]) => <Instanced key={name} name={name} items={items} />)}

@@ -13,4 +13,5 @@ import {
 export default {
   name: __t.string(),
   color: __t.string(),
+  avatar: __t.string(),
 };

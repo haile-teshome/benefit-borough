@@ -39,6 +39,7 @@ export const Player = __t.object("Player", {
   facing: __t.f32(),
   online: __t.bool(),
   rescued: __t.f64(),
+  avatar: __t.string(),
 });
 export type Player = __Infer<typeof Player>;
 

@@ -12,11 +12,12 @@ import type { AppState, DispatchResult, Tile, Verdict } from "@/lib/types";
 import { sound } from "@/lib/valley/audio";
 import { clockLabel, gameHour, setHour } from "@/lib/valley/clock";
 import { Crop } from "./Actors";
-import { type Emote, FarmerModel, type Mood, RuthModel } from "./Characters";
-import { Clouds, Farmstead, HexTerrain, Village } from "./HexWorld";
+import { AVATARS, type Emote, FarmerModel, type Mood, RuthModel } from "./Characters";
+import { Farmstead, HexTerrain, Village } from "./HexWorld";
 import { Fireflies } from "./Nature";
 import { PostFX } from "./PostFX";
 import { groundAt } from "@/lib/valley/hexgrid";
+import { PIXEL_SIZE } from "@/lib/valley/toon";
 import { type Burst, CoinBurst, DayNight, focus } from "./Effects";
 import { anchors, labelEls, registerLabel, setAnchor } from "@/lib/valley/labels";
 import { CROP_LOOK } from "@/lib/valley/layout";
@@ -78,6 +79,7 @@ type Modal =
   | { kind: "run"; tileId: string; lines: string[]; result: DispatchResult | null; to?: string }
   | { kind: "elder"; step: "hello" | "thinking" | "verdict"; verdict?: Verdict }
   | { kind: "gift" }
+  | { kind: "avatar" }
   | null;
 
 const hex = (id: { toHexString(): string } | undefined | null) => id?.toHexString() ?? "";
@@ -184,11 +186,11 @@ function Valley() {
     if (!replanted.current) { replanted.current = true; void plant(state); }
   }, [title, me, state, myPlots.length, modal, plant]);
 
-  async function plantDocs(name: string, color: string) {
+  async function plantDocs(name: string, color: string, avatar: string) {
     if (!conn) return;
     setBusy(true); setError("");
     try {
-      if (name.trim()) await conn.reducers.setProfile({ name: name.trim(), color });
+      await conn.reducers.setProfile({ name: name.trim(), color, avatar });
       const r = await expire.scan(pid);
       setState(r.state);
       await plant(r.state);
@@ -261,6 +263,13 @@ function Valley() {
     setModal({ kind: "gift" });
   }
 
+  // Picking an avatar applies at once, so you see your new animal in the world behind the dialog.
+  function pickAvatar(avatar: string) {
+    if (!conn || !me) return;
+    sound.click();
+    void conn.reducers.setProfile({ name: me.name, color: me.color, avatar }).catch((e: Error) => setError(e.message));
+  }
+
   function interact() {
     if (!near || modal || title) return;
     sound.click();
@@ -322,7 +331,7 @@ function Valley() {
 
   return (
     <div className="ev-root">
-      <Canvas shadows orthographic camera={{ zoom: 42, position: [20, 24, 20], near: 0.1, far: 500 }} dpr={[1, 2]} gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.95 }}>
+      <Canvas shadows orthographic camera={{ zoom: 42, position: [20, 24, 20], near: 0.1, far: 500 }} dpr={1 / PIXEL_SIZE} gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}>
         <DayNight />
         <Suspense fallback={null}>
         <Scene
@@ -350,7 +359,7 @@ function Valley() {
       {title ? (
         <Title onPlay={play} connected={isActive} />
       ) : (
-        <Hud me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} />
+        <Hud me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} />
       )}
 
       {near && !modal && !title && (
@@ -366,7 +375,12 @@ function Valley() {
         </form>
       )}
 
-      {modal?.kind === "intro" && <Intro busy={busy} me={me} onPlant={plantDocs} />}
+      {modal?.kind === "intro" && <Intro busy={busy} me={me} onPlant={plantDocs} onPick={pickAvatar} />}
+      {modal?.kind === "avatar" && (
+        <Dialogue speaker="Choose your farmer" onClose={() => setModal(null)}>
+          <AvatarPicker value={me?.avatar ?? ""} onPick={pickAvatar} />
+        </Dialogue>
+      )}
       {modal?.kind === "crop" && tileById(modal.tileId) && (
         <CropCard tile={tileById(modal.tileId)!} state={state!} onClose={() => setModal(null)} onHarvest={() => setModal({ kind: "confirm", tileId: modal.tileId })} />
       )}
@@ -499,7 +513,6 @@ function Scene({ me, players, plots, myHex, bubbles, giftsWaitingFor, canMove, o
     <group>
       <HexTerrain farms={farmsKey.split(",").filter(Boolean).map(Number)} onPoint={(pt) => { target.current = new THREE.Vector3(pt.x, 0, pt.z); }} />
       <Village />
-      <Clouds />
       <Fireflies />
       <RuthModel position={ELDER_POS} mood={ruthMood} />
       {players.map((pl) => (
@@ -523,7 +536,7 @@ function Scene({ me, players, plots, myHex, bubbles, giftsWaitingFor, canMove, o
       })}
       {me && (
         <group ref={meGroup} position={[me.x, 0, me.z]}>
-          <FarmerModel farm={me.farm} facing={0} facingRef={facing} walking={walking} emote={emotes[myHex]} />
+          <FarmerModel farm={me.farm} avatar={me.avatar} facing={0} facingRef={facing} walking={walking} emote={emotes[myHex]} />
         </group>
       )}
       {players.filter((p) => p.online && hex(p.identity) !== myHex).map((p) => (
@@ -549,7 +562,7 @@ function Remote({ p, emote }: { p: Player; emote?: Emote }) {
   });
   return (
     <group ref={g} position={[p.x, 0, p.z]}>
-      <FarmerModel farm={p.farm} facing={p.facing} walking={walking} emote={emote} />
+      <FarmerModel farm={p.farm} avatar={p.avatar} facing={p.facing} walking={walking} emote={emote} />
     </group>
   );
 }
@@ -642,7 +655,7 @@ function useClock() {
   return { label, night };
 }
 
-function Hud({ me, others, isActive, state, busy, onReplant, muted, onMute }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void }) {
+function Hud({ me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void }) {
   const next = state?.tiles.filter((t) => !state.done.includes(t.id) && t.atStake > 0).sort((a, b) => a.daysLeft - b.daysLeft)[0];
   const clock = useClock();
   return (
@@ -664,6 +677,7 @@ function Hud({ me, others, isActive, state, busy, onReplant, muted, onMute }: { 
         {me && <div className="who"><i style={{ background: me.color }} />{me.name} (you)</div>}
         {others.map((p) => <div key={p.identity.toHexString()} className="who"><i style={{ background: p.color }} />{p.name}</div>)}
         <button className="ev-link" disabled={busy} onClick={onReplant}>{busy ? "Replanting…" : "Replant (reset demo)"}</button>
+        <button className="ev-link" onClick={onAvatar}>Change avatar</button>
         <button className="ev-link" onClick={onMute}>{muted ? "Sound off · M" : "Sound on · M"}</button>
       </div>
     </>
@@ -674,13 +688,12 @@ function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }
   const [how, setHow] = useState(false);
   return (
     <div className="ev-title-screen">
-      <div className="ev-postage">
-        <div className="ev-postage-inner">
+      <div className="ev-sign">
+        <div className="ev-sign-board">
           <span className="l1">Expire</span>
           <span className="l2">Valley</span>
-          <span className="denom">GROWN FROM YOUR PAPERWORK · $0 FEE</span>
+          <span className="denom">GROW YOUR PAPERWORK · HARVEST YOUR MONEY</span>
         </div>
-        <div className="ev-cancel">USE BY<br />DEC 31<br />2026</div>
       </div>
       <p className="ev-tagline">Every benefit you’re about to lose grows here. Harvest it before it wilts.</p>
       {how ? (
@@ -716,12 +729,27 @@ function Dialogue({ speaker, children, onClose, actions }: { speaker: string; ch
 
 const COLORS = ["#E2574C", "#3E8ED0", "#F2B33D", "#8E5BD0", "#3FA66B", "#E07BB0"];
 
-function Intro({ busy, me, onPlant }: { busy: boolean; me?: Player; onPlant: (name: string, color: string) => void }) {
+function AvatarPicker({ value, onPick }: { value: string; onPick: (a: string) => void }) {
+  return (
+    <div className="ev-avatars" role="radiogroup" aria-label="Avatar">
+      {AVATARS.map((a) => (
+        <button key={a.id} role="radio" aria-checked={value === a.id} className={value === a.id ? "on" : ""} onClick={() => onPick(a.id)}>
+          <span className="icon">{a.icon}</span>
+          <span>{a.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Intro({ busy, me, onPlant, onPick }: { busy: boolean; me?: Player; onPlant: (name: string, color: string, avatar: string) => void; onPick: (a: string) => void }) {
   const [name, setName] = useState("");
   const [color, setColor] = useState(me?.color ?? COLORS[0]);
   return (
-    <Dialogue speaker="Welcome to Expire Valley" actions={<button className="ev-btn" disabled={busy} onClick={() => onPlant(name, color)}>{busy ? "Planting…" : "Plant my documents"}</button>}>
-      <p>Plant your paperwork and it grows: every benefit you’re about to lose becomes a paper plant bearing coins. The closer its deadline, the more its pages yellow. Harvest it before the date and the money is yours.</p>
+    <Dialogue speaker="Welcome to Expire Valley" actions={<button className="ev-btn" disabled={busy} onClick={() => onPlant(name, color, me?.avatar ?? "")}>{busy ? "Planting…" : "Plant my documents"}</button>}>
+      <p>Plant your paperwork and it grows: every benefit you’re about to lose becomes a crop bearing coins. The closer its deadline, the more it wilts. Harvest it before the date and the money is yours.</p>
+      <div className="ev-field">Pick your farmer</div>
+      <AvatarPicker value={me?.avatar ?? ""} onPick={onPick} />
       <label className="ev-field">Your name<input value={name} placeholder={me?.name ?? "Farmer"} onChange={(e) => setName(e.target.value)} maxLength={20} /></label>
       <div className="ev-colors">{COLORS.map((c) => <button key={c} aria-label={`Color ${c}`} className={c === color ? "on" : ""} style={{ background: c }} onClick={() => setColor(c)} />)}</div>
       <p className="ev-sub">Seeds: your benefits summary, dental plan, EOBs, dining statement and card list.</p>

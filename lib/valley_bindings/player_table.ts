@@ -20,4 +20,5 @@ export default __t.row({
   facing: __t.f32(),
   online: __t.bool(),
   rescued: __t.f64(),
+  avatar: __t.string(),
 });

@@ -5,10 +5,21 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
+import { toonify } from "@/lib/valley/toon";
 
 // Quaternius Ultimate Animated Animal Pack (CC0). Farmers are little animals; Ruth is an alpaca.
 const ANIMAL = (n: string) => `/models/quaternius/animals/${n}.glb`;
-const FARMER_ANIMALS = ["ShibaInu", "Fox", "Husky", "Deer"] as const;
+const FARMER_ANIMALS = ["ShibaInu", "Fox", "Husky", "Deer", "Cow"] as const;
+
+// Avatars farmers can pick (Ruth keeps the alpaca to herself).
+export const AVATARS: { id: (typeof FARMER_ANIMALS)[number]; label: string; icon: string }[] = [
+  { id: "ShibaInu", label: "Shiba", icon: "🐕" },
+  { id: "Fox", label: "Fox", icon: "🦊" },
+  { id: "Husky", label: "Husky", icon: "🐺" },
+  { id: "Deer", label: "Deer", icon: "🦌" },
+  { id: "Cow", label: "Cow", icon: "🐄" },
+];
+const HEIGHT: Record<string, number> = { ShibaInu: 1.8, Fox: 1.8, Husky: 1.9, Deer: 2.4, Cow: 2.1 };
 const CLIP = (n: string) => `AnimalArmature|${n}`;
 
 export type Emote = { clip: "Cheer" | "Interact"; at: number } | null;
@@ -26,6 +37,7 @@ function useAnimal(name: string, height: number, headScale = 2.4) {
       const m = o as THREE.Mesh;
       if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; }
     });
+    toonify(c);
     // The rig has an internal 100× scale node: update world matrices before measuring.
     c.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(c, true);
@@ -85,9 +97,9 @@ function useBounce(walking: boolean, hopAt: number) {
   return body;
 }
 
-export function FarmerModel({ farm, facing, facingRef, walking, emote }: { farm: number; facing: number; facingRef?: { current: number }; walking: boolean; emote?: Emote }) {
-  const animal = FARMER_ANIMALS[farm % FARMER_ANIMALS.length];
-  const { obj, rig, actions } = useAnimal(animal, animal === "Deer" ? 2.4 : 1.8);
+export function FarmerModel({ farm, avatar, facing, facingRef, walking, emote }: { farm: number; avatar?: string; facing: number; facingRef?: { current: number }; walking: boolean; emote?: Emote }) {
+  const animal = FARMER_ANIMALS.find((a) => a === avatar) ?? FARMER_ANIMALS[farm % FARMER_ANIMALS.length];
+  const { obj, rig, actions } = useAnimal(animal, HEIGHT[animal] ?? 1.8);
   const emoting = emote && performance.now() - emote.at < 1800;
   const clip = emoting ? (emote!.clip === "Cheer" ? "Gallop_Jump" : "Eating") : walking ? "Walk" : "Idle";
   usePlay(actions, clip);

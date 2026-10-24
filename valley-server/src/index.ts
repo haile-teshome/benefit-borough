@@ -15,6 +15,7 @@ const player = table(
     facing: t.f32(),
     online: t.bool(),
     rescued: t.f64(), // dollars confirmed by the Expire engine
+    avatar: t.string().default(""), // which animal this farmer plays as ("" = by farm order)
   }
 );
 
@@ -64,6 +65,7 @@ export default spacetimedb;
 
 type Ctx = ReducerCtx<InferSchema<typeof spacetimedb>>;
 
+const AVATARS = ["ShibaInu", "Fox", "Husky", "Deer", "Cow"];
 const PALETTE = ['#E2574C', '#3E8ED0', '#F2B33D', '#8E5BD0', '#3FA66B', '#E07BB0', '#2BB3B1', '#C77B3A'];
 const FARM_SPACING = 22;
 
@@ -105,6 +107,7 @@ export const join = spacetimedb.reducer((ctx) => {
     facing: 0,
     online: true,
     rescued: 0,
+    avatar: AVATARS[farm % AVATARS.length],
   });
 });
 
@@ -113,12 +116,12 @@ export const onDisconnect = spacetimedb.clientDisconnected((ctx) => {
   if (p) ctx.db.player.identity.update({ ...p, online: false });
 });
 
-export const setProfile = spacetimedb.reducer({ name: t.string(), color: t.string() }, (ctx, { name, color }) => {
+export const setProfile = spacetimedb.reducer({ name: t.string(), color: t.string(), avatar: t.string() }, (ctx, { name, color, avatar }) => {
   const p = me(ctx);
-  const clean = name.trim().slice(0, 20);
-  if (!clean) throw new SenderError('name required');
+  const clean = name.trim().slice(0, 20) || p.name;
   if (!/^#[0-9a-fA-F]{6}$/.test(color)) throw new SenderError('bad color');
-  ctx.db.player.identity.update({ ...p, name: clean, color });
+  if (avatar && !AVATARS.includes(avatar)) throw new SenderError('unknown avatar');
+  ctx.db.player.identity.update({ ...p, name: clean, color, avatar: avatar || p.avatar });
 });
 
 export const move = spacetimedb.reducer({ x: t.f32(), z: t.f32(), facing: t.f32() }, (ctx, { x, z, facing }) => {
