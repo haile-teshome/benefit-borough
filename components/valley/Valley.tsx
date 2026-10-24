@@ -1,30 +1,20 @@
 "use client";
 
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SpacetimeDBProvider, useSpacetimeDB, useTable } from "spacetimedb/react";
-import * as THREE from "three";
 import { DbConnection, tables } from "@/lib/valley_bindings";
 import type { Player, Plot } from "@/lib/valley_bindings/types";
 import { expire } from "@/lib/valley/expire";
-import { ELDER_POS, mailboxPosition, slotPosition, usd } from "@/lib/valley/layout";
+import { CROP_LOOK, ELDER_POS, slotPosition, usd } from "@/lib/valley/layout";
 import type { AppState, DispatchResult, Tile, Verdict } from "@/lib/types";
 import { sound } from "@/lib/valley/audio";
 import { clockLabel, gameHour, setHour } from "@/lib/valley/clock";
-import { Crop } from "./Actors";
-import { AVATARS, type Emote, FarmerModel, type Mood, RuthModel } from "./Characters";
-import { Farmstead, HexTerrain, Village } from "./HexWorld";
-import { Fireflies } from "./Nature";
-import { PostFX } from "./PostFX";
-import { groundAt } from "@/lib/valley/hexgrid";
-import { PIXEL_SIZE } from "@/lib/valley/toon";
-import { type Burst, CoinBurst, DayNight, focus } from "./Effects";
-import { anchors, labelEls, registerLabel, setAnchor } from "@/lib/valley/labels";
-import { CROP_LOOK } from "@/lib/valley/layout";
+import { anchors, registerLabel, setAnchor } from "@/lib/valley/labels";
+import { AVATARS, portrait } from "@/lib/valley/pixel/animals";
+import { DISTRICTS, NPCS } from "@/lib/valley/world";
+import World2D, { type Burst, type Emote, type Mood, type Near } from "./World2D";
 
 const DB = "expire-valley";
-const SPEED = 6.5;
-const REACH = 2.2;
 
 // ?farmer=2 in the URL gives a second identity in the same browser (a second player for demos).
 function slotKey() {
@@ -70,7 +60,6 @@ export default function ValleyApp() {
   );
 }
 
-type Near = { kind: "crop"; tileId: string; label: string } | { kind: "elder"; label: string } | { kind: "mailbox"; label: string } | null;
 
 type Modal =
   | { kind: "intro" }
@@ -276,6 +265,11 @@ function Valley() {
     if (near.kind === "crop") { setModal({ kind: "crop", tileId: near.tileId }); setEmotes((e) => ({ ...e, [myHex]: { clip: "Interact", at: performance.now() } })); }
     if (near.kind === "elder") setModal({ kind: "elder", step: "hello" });
     if (near.kind === "mailbox") void openGifts();
+    if (near.kind === "place") {
+      const tile = state?.tiles.find((t) => t.category === near.place.category);
+      if (tile) setModal({ kind: "crop", tileId: tile.id });
+      else { setToast(`${near.place.name}: ${near.place.line}`); setTimeout(() => setToast(""), 4000); }
+    }
   }
 
   // Keyboard: E to interact, Esc to close, Enter to chat.
@@ -331,29 +325,22 @@ function Valley() {
 
   return (
     <div className="ev-root">
-      <Canvas shadows orthographic camera={{ zoom: 42, position: [20, 24, 20], near: 0.1, far: 500 }} dpr={1 / PIXEL_SIZE} gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}>
-        <DayNight />
-        <Suspense fallback={null}>
-        <Scene
-          me={me}
-          players={players}
-          plots={plots}
-          myHex={myHex}
-          bubbles={bubbles}
-          giftsWaitingFor={giftsWaitingFor}
-          canMove={!modal && !chatOpen}
-          onNear={setNear}
-          conn={conn}
-          myGiftCount={myGifts.length}
-          attract={title}
-          bursts={bursts}
-          onBurstDone={(id) => setBursts((b) => b.filter((x) => x.id !== id))}
-          emotes={emotes}
-          ruthMood={ruthMood}
-        />
-        </Suspense>
-        <PostFX />
-      </Canvas>
+      <World2D
+        me={me}
+        players={players}
+        plots={plots}
+        myHex={myHex}
+        giftsWaitingFor={giftsWaitingFor}
+        canMove={!modal && !chatOpen && !title}
+        onNear={setNear}
+        conn={conn}
+        myGiftCount={myGifts.length}
+        attract={title}
+        bursts={bursts}
+        onBurstDone={(id) => setBursts((b) => b.filter((x) => x.id !== id))}
+        emotes={emotes}
+        ruthMood={ruthMood}
+      />
       {!title && <Labels plots={plots} players={players} myHex={myHex} bubbles={bubbles} bursts={bursts} nearElder={near?.kind === "elder"} />}
 
       {title ? (
@@ -400,197 +387,13 @@ function Valley() {
   );
 }
 
-// ---------- 3D scene ----------
-
-function Scene({ me, players, plots, myHex, bubbles, giftsWaitingFor, canMove, onNear, conn, myGiftCount, attract, bursts, onBurstDone, emotes, ruthMood }: {
-  me?: Player; players: readonly Player[]; plots: readonly Plot[]; myHex: string; bubbles: Map<string, string>;
-  giftsWaitingFor: Set<string>; canMove: boolean; onNear: (n: Near) => void; conn: DbConnection | null; myGiftCount: number;
-  attract: boolean; bursts: Burst[]; onBurstDone: (id: number) => void; emotes: Record<string, Emote>; ruthMood: Mood;
-}) {
-  const lastStep = useRef(0);
-  const pos = useRef<THREE.Vector3 | null>(null);
-  const target = useRef<THREE.Vector3 | null>(null);
-  const facing = useRef(0);
-  const [walking, setWalking] = useState(false);
-  const keys = useRef(new Set<string>());
-  const meGroup = useRef<THREE.Group>(null);
-  const lastSent = useRef({ t: 0, x: 0, z: 0 });
-  const nearKey = useRef("");
-  const { camera } = useThree();
-  const [nearId, setNearId] = useState("");
-
-  useEffect(() => {
-    if (me && !pos.current) pos.current = new THREE.Vector3(me.x, 0, me.z);
-  }, [me]);
-
-  // Dev hook so tests can walk without simulating mouse rays: window.__walkTo(x, z).
-  useEffect(() => {
-    if (process.env.NODE_ENV === "production") return;
-    (window as unknown as { __walkTo?: (x: number, z: number) => void }).__walkTo = (x, z) => { target.current = new THREE.Vector3(x, 0, z); };
-  }, []);
-
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => { if ((e.target as HTMLElement)?.tagName !== "INPUT") keys.current.add(e.key.toLowerCase()); };
-    const up = (e: KeyboardEvent) => keys.current.delete(e.key.toLowerCase());
-    window.addEventListener("keydown", down);
-    window.addEventListener("keyup", up);
-    return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); };
-  }, []);
-
-  const myPlots = plots.filter((p) => hex(p.owner) === myHex);
-  // A stable string so the terrain only rebuilds when the set of claimed farms changes.
-  const farmsKey = [...new Set(players.map((p) => p.farm))].sort((a, b) => a - b).join(",");
-
-  useFrame(({ clock }, dt) => {
-    // Title screen: slow orbit over the village instead of following a farmer.
-    if (attract) {
-      const a = clock.getElapsedTime() * 0.08;
-      camera.position.set(Math.cos(a) * 30, 26, 14 + Math.sin(a) * 30);
-      camera.lookAt(0, 0, 14);
-      return;
-    }
-    const p = pos.current;
-    if (!p || !me) return;
-    const dir = new THREE.Vector3();
-    if (canMove) {
-      const k = keys.current;
-      // Screen-aligned controls for the isometric camera.
-      if (k.has("w") || k.has("arrowup")) dir.add(new THREE.Vector3(-1, 0, -1));
-      if (k.has("s") || k.has("arrowdown")) dir.add(new THREE.Vector3(1, 0, 1));
-      if (k.has("a") || k.has("arrowleft")) dir.add(new THREE.Vector3(-1, 0, 1));
-      if (k.has("d") || k.has("arrowright")) dir.add(new THREE.Vector3(1, 0, -1));
-      if (dir.lengthSq() > 0) target.current = null;
-      else if (target.current) {
-        const to = target.current.clone().sub(p);
-        if (to.length() < 0.15) target.current = null;
-        else dir.copy(to);
-      }
-    }
-    const moving = dir.lengthSq() > 0;
-    if (moving) {
-      dir.normalize();
-      p.addScaledVector(dir, Math.min(SPEED * dt, target.current ? p.distanceTo(target.current) : Infinity));
-      p.x = Math.max(-88, Math.min(88, p.x));
-      p.z = Math.max(-88, Math.min(88, p.z));
-      facing.current = Math.atan2(dir.x, dir.z);
-    }
-    if (moving !== walking) setWalking(moving);
-    if (moving && performance.now() - lastStep.current > 300) { lastStep.current = performance.now(); sound.step2(); }
-    p.y = THREE.MathUtils.lerp(p.y, groundAt(p.x, p.z), Math.min(1, dt * 14));
-    if (meGroup.current) meGroup.current.position.copy(p);
-    focus.copy(p);
-    setAnchor(`player:${myHex}`, p.x, p.y + 2.3, p.z);
-
-    // Follow camera, isometric offset.
-    const want = new THREE.Vector3(p.x + 20, p.y + 24, p.z + 20);
-    camera.position.lerp(want, 1 - Math.pow(0.001, dt));
-    camera.lookAt(camera.position.x - 20, camera.position.y - 24, camera.position.z - 20);
-
-    // Tell the valley where we are, at most ~10 times a second.
-    const now = performance.now();
-    const ls = lastSent.current;
-    if (conn && now - ls.t > 100 && (Math.abs(ls.x - p.x) > 0.05 || Math.abs(ls.z - p.z) > 0.05)) {
-      lastSent.current = { t: now, x: p.x, z: p.z };
-      void conn.reducers.move({ x: p.x, z: p.z, facing: facing.current }).catch(() => {});
-    }
-
-    // What's within reach?
-    let best: Near = null;
-    let bestD = REACH;
-    let id = "";
-    for (const pl of myPlots) {
-      const [x, , z] = slotPosition(me.farm, pl.slot);
-      const d = Math.hypot(p.x - x, p.z - z);
-      if (d < bestD) { bestD = d; id = pl.tileId; best = { kind: "crop", tileId: pl.tileId, label: pl.harvested ? `Look at ${pl.title}` : `Inspect ${pl.title} (${usd(pl.atStake)})` }; }
-    }
-    if (Math.hypot(p.x - ELDER_POS[0], p.z - ELDER_POS[2]) < REACH + 0.6) { id = "elder"; best = { kind: "elder", label: "Talk to Ruth, the Reviewer" }; }
-    const mb = mailboxPosition(me.farm);
-    if (myGiftCount > 0 && Math.hypot(p.x - mb[0], p.z - mb[2]) < REACH) { id = "mailbox"; best = { kind: "mailbox", label: "Open your letter" }; }
-    if (id !== nearKey.current) { nearKey.current = id; setNearId(id); onNear(best); }
-  });
-
-  return (
-    <group>
-      <HexTerrain farms={farmsKey.split(",").filter(Boolean).map(Number)} onPoint={(pt) => { target.current = new THREE.Vector3(pt.x, 0, pt.z); }} />
-      <Village />
-      <Fireflies />
-      <RuthModel position={ELDER_POS} mood={ruthMood} />
-      {players.map((pl) => (
-        <Farmstead key={`farm-${hex(pl.identity)}`} farm={pl.farm} color={pl.color} hasGift={giftsWaitingFor.has(hex(pl.identity))} />
-      ))}
-      {plots.map((pl) => {
-        const owner = players.find((p) => hex(p.identity) === hex(pl.owner));
-        if (!owner) return null;
-        const mine = hex(pl.owner) === myHex;
-        return (
-          <Crop
-            key={String(pl.id)}
-            position={slotPosition(owner.farm, pl.slot)}
-            category={pl.category}
-            atStake={pl.atStake}
-            daysLeft={pl.daysLeft}
-            harvested={pl.harvested}
-            highlighted={mine && nearId === pl.tileId}
-          />
-        );
-      })}
-      {me && (
-        <group ref={meGroup} position={[me.x, 0, me.z]}>
-          <FarmerModel farm={me.farm} avatar={me.avatar} facing={0} facingRef={facing} walking={walking} emote={emotes[myHex]} />
-        </group>
-      )}
-      {players.filter((p) => p.online && hex(p.identity) !== myHex).map((p) => (
-        <Remote key={hex(p.identity)} p={p} emote={emotes[hex(p.identity)]} />
-      ))}
-      {bursts.map((b) => <CoinBurst key={b.id} burst={b} onDone={onBurstDone} />)}
-      <Projector />
-    </group>
-  );
-}
-
-function Remote({ p, emote }: { p: Player; emote?: Emote }) {
-  const g = useRef<THREE.Group>(null);
-  const [walking, setWalking] = useState(false);
-  useFrame((_, dt) => {
-    if (!g.current) return;
-    const to = new THREE.Vector3(p.x, groundAt(p.x, p.z), p.z);
-    const d = g.current.position.distanceTo(to);
-    g.current.position.lerp(to, 1 - Math.pow(0.0005, dt));
-    setAnchor(`player:${hex(p.identity)}`, g.current.position.x, g.current.position.y + 2.3, g.current.position.z);
-    const w = d > 0.06;
-    if (w !== walking) setWalking(w);
-  });
-  return (
-    <group ref={g} position={[p.x, 0, p.z]}>
-      <FarmerModel farm={p.farm} avatar={p.avatar} facing={p.facing} walking={walking} emote={emote} />
-    </group>
-  );
-}
-
-// Moves every registered DOM label to its anchor's screen position each frame.
-function Projector() {
-  const { camera, size } = useThree();
-  const v = useMemo(() => new THREE.Vector3(), []);
-  useFrame(() => {
-    for (const [id, el] of labelEls) {
-      const w = anchors.get(id);
-      if (!w) { el.style.visibility = "hidden"; continue; }
-      v.copy(w).project(camera);
-      const visible = v.z < 1 && Math.abs(v.x) < 1.2 && Math.abs(v.y) < 1.2;
-      el.style.visibility = visible ? "visible" : "hidden";
-      el.style.transform = `translate(${((v.x + 1) / 2) * size.width}px, ${((1 - v.y) / 2) * size.height}px) translate(-50%, -100%)`;
-      // Crop tags shrink to just the amount unless you're standing close.
-      if (id.startsWith("crop:")) el.classList.toggle("far", Math.hypot(w.x - focus.x, w.z - focus.z) > 7);
-    }
-  });
-  return null;
-}
-
 type LabelProps = { plots: readonly Plot[]; players: readonly Player[]; myHex: string; bubbles: Map<string, string>; bursts: Burst[]; nearElder: boolean };
 
 // All floating labels, rendered by the main React tree and positioned by <Projector>.
 function Labels({ plots, players, myHex, bubbles, bursts, nearElder }: LabelProps) {
-  useEffect(() => { setAnchor("elder", ELDER_POS[0], 4.0, ELDER_POS[2]); }, []);
+  useEffect(() => { setAnchor("elder", ELDER_POS[0], 2.1, ELDER_POS[2]);
+    for (const d of DISTRICTS) setAnchor(`district:${d.id}`, d.x, 1.15, d.z);
+    for (const n of NPCS) setAnchor(`npc:${n.id}`, n.x, 1.7, n.z); }, []);
   const online = players.filter((p) => p.online || hex(p.identity) === myHex);
   return (
     <div className="ev-labels">
@@ -601,7 +404,7 @@ function Labels({ plots, players, myHex, bubbles, bursts, nearElder }: LabelProp
         if (!mine && !pl.harvested) return null;
         const id = `crop:${String(pl.id)}`;
         const [x, , z] = slotPosition(owner.farm, pl.slot);
-        setAnchor(id, x, pl.harvested ? 1.7 : 3.6, z);
+        setAnchor(id, x, pl.harvested ? 1.0 : 1.75, z);
         const look = CROP_LOOK[pl.category] ?? CROP_LOOK.fsa;
         const tax = pl.category === "tax_window";
         return (
@@ -616,7 +419,7 @@ function Labels({ plots, players, myHex, bubbles, bursts, nearElder }: LabelProp
       {online.map((p) => {
         const h = hex(p.identity);
         const id = `player:${h}`;
-        if (!anchors.has(id)) setAnchor(id, p.x, 2.35, p.z);
+        if (!anchors.has(id)) setAnchor(id, p.x, 1.75, p.z);
         const bubble = bubbles.get(h);
         return (
           <div key={id} ref={registerLabel(id)} className="ev-anchor">
@@ -627,12 +430,22 @@ function Labels({ plots, players, myHex, bubbles, bursts, nearElder }: LabelProp
           </div>
         );
       })}
+      {DISTRICTS.map((d) => (
+        <div key={d.id} ref={registerLabel(`district:${d.id}`)} className="ev-anchor">
+          <div className="ev-district" style={{ borderColor: d.color }}>{d.name}</div>
+        </div>
+      ))}
+      {NPCS.map((n) => (
+        <div key={n.id} ref={registerLabel(`npc:${n.id}`)} className="ev-anchor">
+          <div className="ev-name npc">{n.name}</div>
+        </div>
+      ))}
       <div ref={registerLabel("elder")} className="ev-anchor">
         <div className="ev-name-wrap"><div className={`ev-name elder ${nearElder ? "hl" : ""}`}>Ruth · the Reviewer</div></div>
       </div>
       {bursts.map((b) => {
         const id = `burst:${b.id}`;
-        setAnchor(id, b.at[0], 2.6, b.at[2]);
+        setAnchor(id, b.at[0], 2.0, b.at[2]);
         return (
           <div key={id} ref={registerLabel(id)} className="ev-anchor">
             <div className="ev-burst">+{usd(b.amount)}</div>
@@ -734,7 +547,7 @@ function AvatarPicker({ value, onPick }: { value: string; onPick: (a: string) =>
     <div className="ev-avatars" role="radiogroup" aria-label="Avatar">
       {AVATARS.map((a) => (
         <button key={a.id} role="radio" aria-checked={value === a.id} className={value === a.id ? "on" : ""} onClick={() => onPick(a.id)}>
-          <span className="icon">{a.icon}</span>
+          <img className="icon" src={portrait(a.id)} alt="" />
           <span>{a.label}</span>
         </button>
       ))}

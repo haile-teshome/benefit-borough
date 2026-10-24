@@ -67,13 +67,13 @@ type Ctx = ReducerCtx<InferSchema<typeof spacetimedb>>;
 
 const AVATARS = ["ShibaInu", "Fox", "Husky", "Deer", "Cow"];
 const PALETTE = ['#E2574C', '#3E8ED0', '#F2B33D', '#8E5BD0', '#3FA66B', '#E07BB0', '#2BB3B1', '#C77B3A'];
-const FARM_SPACING = 22;
+const FARM_SPACING = 13;
 
 // Farms line both sides of the main road running south from the village square.
 function farmOrigin(farm: number) {
   const side = farm % 2 === 0 ? -1 : 1;
   const row = Math.floor(farm / 2);
-  return { x: side * 20, z: 22 + row * FARM_SPACING };
+  return { x: side * 13, z: 16 + row * FARM_SPACING };
 }
 
 function me(ctx: Ctx) {
@@ -102,8 +102,8 @@ export const join = spacetimedb.reducer((ctx) => {
     name: `Farmer ${farm + 1}`,
     color: PALETTE[farm % PALETTE.length],
     farm,
-    x: o.x + 3,
-    z: o.z - 4.5, // in the yard between the farmhouse and the field
+    x: o.x,
+    z: o.z, // in the yard between the farmhouse and the field
     facing: 0,
     online: true,
     rescued: 0,

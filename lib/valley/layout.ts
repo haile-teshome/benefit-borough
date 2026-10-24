@@ -1,22 +1,18 @@
-import { farmField } from "./hexgrid";
 export { FARM_SPACING, farmOrigin } from "./farms";
-import { farmOrigin } from "./farms";
+import { ELDER, farmLayout } from "./world";
 
-// Crops grow on the dirt hex tiles of the owner's field (see hexgrid.farmField).
 export function slotPosition(farm: number, slot: number): [number, number, number] {
-  const f = farmField(farm);
-  const t = f[slot % Math.max(1, f.length)] ?? farmOrigin(farm);
-  return [t.x, 0, t.z];
+  const s = farmLayout(farm).slots[slot % 8];
+  return [s.x, 0, s.z];
 }
 
-export const ELDER_POS: [number, number, number] = [0, 0, 2];
+export const ELDER_POS = ELDER;
 
 export function mailboxPosition(farm: number): [number, number, number] {
-  const o = farmOrigin(farm);
-  return [o.x + 6.5, 0, o.z - 6];
+  const m = farmLayout(farm).mailbox;
+  return [m.x, 0, m.z];
 }
 
-// Each crop is a paper plant; the band is the colored header printed on its pages.
 export const CROP_LOOK: Record<string, { name: string; band: string }> = {
   deductible: { name: "Claim Fern", band: "#D2413A" },
   dental: { name: "Molar Lily", band: "#3E8ED0" },
