@@ -16,7 +16,9 @@ npm run dev                                                 # terminal 2: http:/
 
 Open `http://localhost:3000/valley?farmer=2` in a second window for a second farmer. `npm run valley:reset` wipes the world and every farmer's ledger before a demo.
 
-**Controls:** WASD or click to walk · E to interact · Enter to chat.
+**Controls:** WASD or click to walk · E to interact · Enter to chat · M to mute.
+
+**Art (all CC0, fetched by `scripts/fetch-assets.sh` into `public/models/`):** hex terrain, buildings, trees and props from the [KayKit Medieval Hexagon Pack](https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0) by Kay Lousberg; animal farmers and Ruth the alpaca from the [Quaternius Ultimate Animated Animal Pack](https://quaternius.com/packs/ultimateanimatedanimals.html). The paper crops, stamps and UI are original.
 
 | Piece | File | Notes |
 | --- | --- | --- |

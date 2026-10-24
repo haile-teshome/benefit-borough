@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SpacetimeDBProvider, useSpacetimeDB, useTable } from "spacetimedb/react";
 import * as THREE from "three";
 import { DbConnection, tables } from "@/lib/valley_bindings";
@@ -11,11 +11,15 @@ import { ELDER_POS, mailboxPosition, slotPosition, usd } from "@/lib/valley/layo
 import type { AppState, DispatchResult, Tile, Verdict } from "@/lib/types";
 import { sound } from "@/lib/valley/audio";
 import { clockLabel, gameHour, setHour } from "@/lib/valley/clock";
-import { Crop, Elder, Farmer } from "./Actors";
-import { type Burst, CoinBurst, DayNight } from "./Effects";
+import { Crop } from "./Actors";
+import { type Emote, FarmerModel, type Mood, RuthModel } from "./Characters";
+import { Clouds, Farmstead, HexTerrain, Village } from "./HexWorld";
+import { Fireflies } from "./Nature";
+import { PostFX } from "./PostFX";
+import { groundAt } from "@/lib/valley/hexgrid";
+import { type Burst, CoinBurst, DayNight, focus } from "./Effects";
 import { anchors, labelEls, registerLabel, setAnchor } from "@/lib/valley/labels";
 import { CROP_LOOK } from "@/lib/valley/layout";
-import { Farmstead, Ground, Village } from "./World";
 
 const DB = "expire-valley";
 const SPEED = 6.5;
@@ -106,6 +110,8 @@ function Valley() {
   const [title, setTitle] = useState(true);
   const [muted, setMuted] = useState(false);
   const [bursts, setBursts] = useState<Burst[]>([]);
+  const [emotes, setEmotes] = useState<Record<string, Emote>>({});
+  const [ruthMood, setRuthMood] = useState<Mood>(null);
 
   useEffect(() => {
     if (pid) expire.state(pid).then((r) => setState(r.state)).catch((e) => setError(e.message));
@@ -147,6 +153,7 @@ function Valley() {
         if (!owner) continue;
         sound.coins();
         setBursts((b) => [...b, { id: Date.now() + Math.random(), at: slotPosition(owner.farm, pl.slot), amount: pl.saved, born: performance.now() }]);
+        setEmotes((e) => ({ ...e, [hex(owner.identity)]: { clip: "Cheer", at: performance.now() } }));
       }
     }
     harvestedSeen.current = next;
@@ -239,9 +246,11 @@ function Valley() {
     if (!fsa) { setModal({ kind: "elder", step: "verdict", verdict: { verdict: "reject", rule_cited: null, reason: "Plant your documents first, child. I can only judge what I can read.", engine: "rules", at: "" } }); return; }
     setModal({ kind: "elder", step: "thinking" });
     sound.hmm();
+    setRuthMood({ kind: "thinking", at: performance.now() });
     const r = await expire.reviewCart(pid, fsa.id, items);
     setState(r.state);
     if (r.verdict.verdict === "reject") sound.refuse(); else sound.coins();
+    setRuthMood({ kind: r.verdict.verdict === "reject" ? "reject" : "approve", at: performance.now() });
     setModal({ kind: "elder", step: "verdict", verdict: r.verdict });
   }
 
@@ -255,7 +264,7 @@ function Valley() {
   function interact() {
     if (!near || modal || title) return;
     sound.click();
-    if (near.kind === "crop") setModal({ kind: "crop", tileId: near.tileId });
+    if (near.kind === "crop") { setModal({ kind: "crop", tileId: near.tileId }); setEmotes((e) => ({ ...e, [myHex]: { clip: "Interact", at: performance.now() } })); }
     if (near.kind === "elder") setModal({ kind: "elder", step: "hello" });
     if (near.kind === "mailbox") void openGifts();
   }
@@ -313,8 +322,9 @@ function Valley() {
 
   return (
     <div className="ev-root">
-      <Canvas shadows orthographic camera={{ zoom: 38, position: [20, 24, 20], near: 0.1, far: 500 }} dpr={[1, 2]} gl={{ preserveDrawingBuffer: true }}>
+      <Canvas shadows orthographic camera={{ zoom: 42, position: [20, 24, 20], near: 0.1, far: 500 }} dpr={[1, 2]} gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 0.95 }}>
         <DayNight />
+        <Suspense fallback={null}>
         <Scene
           me={me}
           players={players}
@@ -329,7 +339,11 @@ function Valley() {
           attract={title}
           bursts={bursts}
           onBurstDone={(id) => setBursts((b) => b.filter((x) => x.id !== id))}
+          emotes={emotes}
+          ruthMood={ruthMood}
         />
+        </Suspense>
+        <PostFX />
       </Canvas>
       {!title && <Labels plots={plots} players={players} myHex={myHex} bubbles={bubbles} bursts={bursts} nearElder={near?.kind === "elder"} />}
 
@@ -374,10 +388,10 @@ function Valley() {
 
 // ---------- 3D scene ----------
 
-function Scene({ me, players, plots, myHex, bubbles, giftsWaitingFor, canMove, onNear, conn, myGiftCount, attract, bursts, onBurstDone }: {
+function Scene({ me, players, plots, myHex, bubbles, giftsWaitingFor, canMove, onNear, conn, myGiftCount, attract, bursts, onBurstDone, emotes, ruthMood }: {
   me?: Player; players: readonly Player[]; plots: readonly Plot[]; myHex: string; bubbles: Map<string, string>;
   giftsWaitingFor: Set<string>; canMove: boolean; onNear: (n: Near) => void; conn: DbConnection | null; myGiftCount: number;
-  attract: boolean; bursts: Burst[]; onBurstDone: (id: number) => void;
+  attract: boolean; bursts: Burst[]; onBurstDone: (id: number) => void; emotes: Record<string, Emote>; ruthMood: Mood;
 }) {
   const lastStep = useRef(0);
   const pos = useRef<THREE.Vector3 | null>(null);
@@ -410,6 +424,8 @@ function Scene({ me, players, plots, myHex, bubbles, giftsWaitingFor, canMove, o
   }, []);
 
   const myPlots = plots.filter((p) => hex(p.owner) === myHex);
+  // A stable string so the terrain only rebuilds when the set of claimed farms changes.
+  const farmsKey = [...new Set(players.map((p) => p.farm))].sort((a, b) => a - b).join(",");
 
   useFrame(({ clock }, dt) => {
     // Title screen: slow orbit over the village instead of following a farmer.
@@ -446,13 +462,15 @@ function Scene({ me, players, plots, myHex, bubbles, giftsWaitingFor, canMove, o
     }
     if (moving !== walking) setWalking(moving);
     if (moving && performance.now() - lastStep.current > 300) { lastStep.current = performance.now(); sound.step2(); }
+    p.y = THREE.MathUtils.lerp(p.y, groundAt(p.x, p.z), Math.min(1, dt * 14));
     if (meGroup.current) meGroup.current.position.copy(p);
-    setAnchor(`player:${myHex}`, p.x, 2.35, p.z);
+    focus.copy(p);
+    setAnchor(`player:${myHex}`, p.x, p.y + 2.3, p.z);
 
     // Follow camera, isometric offset.
-    const want = new THREE.Vector3(p.x + 20, 24, p.z + 20);
+    const want = new THREE.Vector3(p.x + 20, p.y + 24, p.z + 20);
     camera.position.lerp(want, 1 - Math.pow(0.001, dt));
-    camera.lookAt(camera.position.x - 20, 0, camera.position.z - 20);
+    camera.lookAt(camera.position.x - 20, camera.position.y - 24, camera.position.z - 20);
 
     // Tell the valley where we are, at most ~10 times a second.
     const now = performance.now();
@@ -479,11 +497,13 @@ function Scene({ me, players, plots, myHex, bubbles, giftsWaitingFor, canMove, o
 
   return (
     <group>
-      <Ground onPoint={(pt) => { target.current = new THREE.Vector3(pt.x, 0, pt.z); }} />
+      <HexTerrain farms={farmsKey.split(",").filter(Boolean).map(Number)} onPoint={(pt) => { target.current = new THREE.Vector3(pt.x, 0, pt.z); }} />
       <Village />
-      <Elder position={ELDER_POS} />
+      <Clouds />
+      <Fireflies />
+      <RuthModel position={ELDER_POS} mood={ruthMood} />
       {players.map((pl) => (
-        <Farmstead key={`farm-${hex(pl.identity)}`} farm={pl.farm} color={pl.color} name={pl.name} hasGift={giftsWaitingFor.has(hex(pl.identity))} />
+        <Farmstead key={`farm-${hex(pl.identity)}`} farm={pl.farm} color={pl.color} hasGift={giftsWaitingFor.has(hex(pl.identity))} />
       ))}
       {plots.map((pl) => {
         const owner = players.find((p) => hex(p.identity) === hex(pl.owner));
@@ -503,11 +523,11 @@ function Scene({ me, players, plots, myHex, bubbles, giftsWaitingFor, canMove, o
       })}
       {me && (
         <group ref={meGroup} position={[me.x, 0, me.z]}>
-          <Farmer color={me.color} facing={facing.current} walking={walking} />
+          <FarmerModel farm={me.farm} facing={0} facingRef={facing} walking={walking} emote={emotes[myHex]} />
         </group>
       )}
       {players.filter((p) => p.online && hex(p.identity) !== myHex).map((p) => (
-        <Remote key={hex(p.identity)} p={p} />
+        <Remote key={hex(p.identity)} p={p} emote={emotes[hex(p.identity)]} />
       ))}
       {bursts.map((b) => <CoinBurst key={b.id} burst={b} onDone={onBurstDone} />)}
       <Projector />
@@ -515,21 +535,21 @@ function Scene({ me, players, plots, myHex, bubbles, giftsWaitingFor, canMove, o
   );
 }
 
-function Remote({ p }: { p: Player }) {
+function Remote({ p, emote }: { p: Player; emote?: Emote }) {
   const g = useRef<THREE.Group>(null);
   const [walking, setWalking] = useState(false);
   useFrame((_, dt) => {
     if (!g.current) return;
-    const to = new THREE.Vector3(p.x, 0, p.z);
+    const to = new THREE.Vector3(p.x, groundAt(p.x, p.z), p.z);
     const d = g.current.position.distanceTo(to);
     g.current.position.lerp(to, 1 - Math.pow(0.0005, dt));
-    setAnchor(`player:${hex(p.identity)}`, g.current.position.x, 2.35, g.current.position.z);
+    setAnchor(`player:${hex(p.identity)}`, g.current.position.x, g.current.position.y + 2.3, g.current.position.z);
     const w = d > 0.06;
     if (w !== walking) setWalking(w);
   });
   return (
     <group ref={g} position={[p.x, 0, p.z]}>
-      <Farmer color={p.color} facing={p.facing} walking={walking} />
+      <FarmerModel farm={p.farm} facing={p.facing} walking={walking} emote={emote} />
     </group>
   );
 }
@@ -546,6 +566,8 @@ function Projector() {
       const visible = v.z < 1 && Math.abs(v.x) < 1.2 && Math.abs(v.y) < 1.2;
       el.style.visibility = visible ? "visible" : "hidden";
       el.style.transform = `translate(${((v.x + 1) / 2) * size.width}px, ${((1 - v.y) / 2) * size.height}px) translate(-50%, -100%)`;
+      // Crop tags shrink to just the amount unless you're standing close.
+      if (id.startsWith("crop:")) el.classList.toggle("far", Math.hypot(w.x - focus.x, w.z - focus.z) > 7);
     }
   });
   return null;
@@ -555,7 +577,7 @@ type LabelProps = { plots: readonly Plot[]; players: readonly Player[]; myHex: s
 
 // All floating labels, rendered by the main React tree and positioned by <Projector>.
 function Labels({ plots, players, myHex, bubbles, bursts, nearElder }: LabelProps) {
-  useEffect(() => { setAnchor("elder", ELDER_POS[0], 2.9, ELDER_POS[2]); }, []);
+  useEffect(() => { setAnchor("elder", ELDER_POS[0], 4.0, ELDER_POS[2]); }, []);
   const online = players.filter((p) => p.online || hex(p.identity) === myHex);
   return (
     <div className="ev-labels">
@@ -566,7 +588,7 @@ function Labels({ plots, players, myHex, bubbles, bursts, nearElder }: LabelProp
         if (!mine && !pl.harvested) return null;
         const id = `crop:${String(pl.id)}`;
         const [x, , z] = slotPosition(owner.farm, pl.slot);
-        setAnchor(id, x, pl.harvested ? 1.1 : 2.3, z);
+        setAnchor(id, x, pl.harvested ? 1.7 : 3.6, z);
         const look = CROP_LOOK[pl.category] ?? CROP_LOOK.fsa;
         const tax = pl.category === "tax_window";
         return (

@@ -10,7 +10,7 @@ const SKY = [
   { h: 16.5, c: "#BFE3F5" }, { h: 18, c: "#F59E78" }, { h: 19.3, c: "#3B3566" }, { h: 20.5, c: "#1B2442" }, { h: 24, c: "#1B2442" },
 ];
 const SUN = [
-  { h: 0, c: "#7C8BD6" }, { h: 6, c: "#FFB27A" }, { h: 8, c: "#FFF4E0" }, { h: 16.5, c: "#FFF4E0" }, { h: 18.2, c: "#FF9A6A" }, { h: 20, c: "#7C8BD6" }, { h: 24, c: "#7C8BD6" },
+  { h: 0, c: "#7C8BD6" }, { h: 6, c: "#FFB27A" }, { h: 8, c: "#FFFFFF" }, { h: 16.5, c: "#FFFAF0" }, { h: 18.2, c: "#FF9A6A" }, { h: 20, c: "#7C8BD6" }, { h: 24, c: "#7C8BD6" },
 ];
 
 function sample(keys: { h: number; c: string }[], h: number, out: THREE.Color) {
@@ -20,6 +20,9 @@ function sample(keys: { h: number; c: string }[], h: number, out: THREE.Color) {
   }
   return out.set(keys[0].c);
 }
+
+// Where the camera is looking; the sun's shadow box follows it so shadows stay crisp.
+export const focus = new THREE.Vector3();
 
 // Sky, fog, sun and ambient light all follow the game clock.
 export function DayNight() {
@@ -36,17 +39,19 @@ export function DayNight() {
     if (sun.current) {
       // Sun arcs east to west through the day; the moon light comes from the same rig at night.
       const a = ((h - 6) / 12) * Math.PI;
-      sun.current.position.set(Math.cos(a) * 45, 20 + Math.max(0, Math.sin(a)) * 30, 18);
+      sun.current.position.set(focus.x + Math.cos(a) * 40, 22 + Math.max(0, Math.sin(a)) * 30, focus.z + 18);
+      sun.current.target.position.copy(focus);
+      sun.current.target.updateMatrixWorld();
       sample(SUN, h, sun.current.color);
-      sun.current.intensity = 0.35 + (1 - night) * 1.3;
+      sun.current.intensity = 0.3 + (1 - night) * 1.9;
     }
-    if (hemi.current) hemi.current.intensity = 0.35 + (1 - night) * 0.6;
+    if (hemi.current) hemi.current.intensity = 0.3 + (1 - night) * 0.75;
   });
   return (
     <>
       <fog attach="fog" args={["#BFE3F5", 60, 140]} />
-      <hemisphereLight ref={hemi} args={["#FFF7E8", "#6C8F4E", 0.9]} />
-      <directionalLight ref={sun} position={[30, 40, 15]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-60} shadow-camera-right={60} shadow-camera-top={60} shadow-camera-bottom={-60} />
+      <hemisphereLight ref={hemi} args={["#EAF4FF", "#C9D6B8", 0.9]} />
+      <directionalLight ref={sun} position={[30, 40, 15]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-38} shadow-camera-right={38} shadow-camera-top={38} shadow-camera-bottom={-38} shadow-camera-far={140} shadow-bias={-0.0004} shadow-normalBias={0.04} />
     </>
   );
 }

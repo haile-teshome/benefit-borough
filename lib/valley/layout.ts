@@ -1,18 +1,12 @@
-// Mirrors the module's farm grid (valley-server/src/index.ts) so crops land where the world expects.
-export const FARM_SPACING = 22;
+import { farmField } from "./hexgrid";
+export { FARM_SPACING, farmOrigin } from "./farms";
+import { farmOrigin } from "./farms";
 
-export function farmOrigin(farm: number) {
-  const side = farm % 2 === 0 ? -1 : 1;
-  const row = Math.floor(farm / 2);
-  return { x: side * 20, z: 22 + row * FARM_SPACING };
-}
-
-// Crops sit in a 4-wide field in front of the farmhouse.
+// Crops grow on the dirt hex tiles of the owner's field (see hexgrid.farmField).
 export function slotPosition(farm: number, slot: number): [number, number, number] {
-  const o = farmOrigin(farm);
-  const col = slot % 4;
-  const row = Math.floor(slot / 4);
-  return [o.x - 4.5 + col * 3, 0, o.z - 1 + row * 3];
+  const f = farmField(farm);
+  const t = f[slot % Math.max(1, f.length)] ?? farmOrigin(farm);
+  return [t.x, 0, t.z];
 }
 
 export const ELDER_POS: [number, number, number] = [0, 0, 2];
