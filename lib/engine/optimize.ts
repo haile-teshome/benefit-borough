@@ -49,7 +49,7 @@ export function mriCost(fee: number, f: Record<string, number>) {
 
 export function diningSurplus(balance: number, weeklyAvg: number, daysLeft: number) {
   const projected = round2((weeklyAvg * daysLeft) / 7);
-  const surplus = Math.max(0, round2(balance - projected));
+  const surplus = Math.max(0, Math.round(balance - projected));
   return { projected, surplus, transfer: Math.floor(surplus / 5) * 5 };
 }
 
@@ -120,11 +120,11 @@ export async function optimize(ex: Extraction): Promise<Tile[]> {
       id: "tile_dining", category: "dining", title: "Dining dollars: transfer the surplus before Dec 14",
       ...b, live: true, atStake: s.surplus,
       candidates: [
-        { id: "transfer", label: `Keep ${usd(round2(dining.amount - s.transfer))} for your meals, transfer ${usd(s.transfer)} to a classmate`, costToUser: 0, detail: `At ${usd(pace.weeklyAvg)}/week you will spend about ${usd(s.projected)} by Dec 14.` },
+        { id: "transfer", label: `Keep ${usd(round2(dining.amount - s.transfer))} for your meals, transfer ${usd(s.transfer)} to a classmate`, costToUser: 0, detail: `At ${usd(pace.weeklyAvg)}/week you will spend about ${usd(Math.round(s.projected))} by Dec 14.` },
         { id: "nothing", label: "Do nothing", costToUser: s.surplus, detail: `${usd(s.surplus)} forfeits Dec 14.` },
       ],
       recommendation: "transfer",
-      headline: `You'll use about ${usd(s.projected)}; ${usd(s.surplus)} would forfeit. Send ${usd(s.transfer)} to a classmate.`,
+      headline: `You'll use about ${usd(Math.round(s.projected))}; about ${usd(Math.round(s.surplus))} would forfeit. Send ${usd(s.transfer)} to a classmate.`,
       tradeoff: "We don't suggest buying extra food to burn the balance. Transfers are final.",
       doNothingCost: s.surplus, doNothing: `${usd(s.surplus)} is forfeited on Dec 14 and not refunded.`,
       action: { kind: "transfer", summary: `Transfer ${usd(s.transfer)} of dining dollars to a peer`, savings: s.transfer,

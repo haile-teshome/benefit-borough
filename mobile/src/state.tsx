@@ -32,6 +32,8 @@ export function ExpireProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Initial fetch; refresh only sets state after the request resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
     // Pick up changes made elsewhere (web board, another phone) when the app returns to the foreground.
     const sub = RNAppState.addEventListener("change", (s) => { if (s === "active") refresh(); });
