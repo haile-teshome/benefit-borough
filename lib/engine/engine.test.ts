@@ -18,7 +18,8 @@ test("extraction grounds every balance in a verbatim span", async () => {
 });
 
 test("ungrounded claims are dropped", async () => {
-  const docs = SAMPLE_DOCS.filter((d) => d.id !== "cards");
+  // The card list no longer contains the line the claim quotes, as if it had been made up.
+  const docs = SAMPLE_DOCS.map((d) => (d.id === "cards" ? { ...d, text: d.text.replace(/Sapphire Reserve.*\n/, "") } : d));
   const ex = await extract(docs);
   assert.ok(!ex.balances.some((b) => b.category === "card_credit"));
   assert.equal(ex.dropped.length, 1);
@@ -75,4 +76,24 @@ test("bank and card statement findings are grounded and computed", async () => {
   assert.equal(t("tile_rotating").action.savings, 10.74); // $120/mo x 68 days x 4 extra points
   assert.equal(t("tile_cash").live, false); // options only (rule 5)
   for (const tile of tiles) assert.equal(ruleCheck({ kind: "tile", tile }, ex, docsText).verdict, "approve", tile.id);
+});
+
+test("an uploaded CSV statement yields grounded findings", async () => {
+  const csv = `Posting Date,Description,Amount
+09/22/2026,NETFLIX.COM 866-579-7172 CA,-15.49
+10/22/2026,NETFLIX.COM 866-579-7172 CA,-15.49
+10/15/2026,OVERDRAFT FEE,-34.00
+10/18/2026,DOORDASH*CHIPOTLE,-23.41
+10/18/2026,DOORDASH*CHIPOTLE,-23.41
+10/11/2026,CVS/PHARMACY #09812,-38.62
+10/16/2026,ACME CORP PAYROLL,2400.00`;
+  const docs = [...SAMPLE_DOCS.filter((d) => d.id !== "statements"), { id: "upload_1", name: "chase.csv", text: csv }];
+  const ex = await extract(docs);
+  assert.equal(ex.dropped.length, 0);
+  const up = ex.balances.filter((b) => b.id.startsWith("up_"));
+  assert.deepEqual(up.map((b) => b.category).sort(), ["bank_fee", "dispute", "fsa_claim", "subscription"]);
+  assert.equal(up.find((b) => b.category === "dispute")!.amount, 23.41);
+  for (const b of up) assert.ok(csv.includes(b.source.text));
+  const tiles = await optimize(ex);
+  for (const t of tiles.filter((t) => t.id.startsWith("tile_up_"))) assert.equal(ruleCheck({ kind: "tile", tile: t }, ex, csv).verdict, "approve");
 });

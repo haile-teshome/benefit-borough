@@ -13,5 +13,14 @@ export const expire = {
   scan: (pid: string) => call<{ state: AppState }>("/api/scan", { pid }),
   dispatch: (pid: string, tileId: string) => call<{ state: AppState; result: DispatchResult }>("/api/dispatch", { pid, tileId }),
   reviewCart: (pid: string, balanceId: string, items: string[]) => call<{ state: AppState; verdict: Verdict }>("/api/review-cart", { pid, balanceId, items }),
+  upload: async (pid: string, file: File) => {
+    const form = new FormData();
+    form.append("pid", pid);
+    form.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body: form });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+    return json as { state: AppState; found: number };
+  },
   reset: (pid: string) => call<{ state: AppState }>("/api/reset", { pid }),
 };

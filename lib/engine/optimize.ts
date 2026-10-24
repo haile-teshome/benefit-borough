@@ -179,7 +179,7 @@ export async function optimize(ex: Extraction): Promise<Tile[]> {
     });
   }
 
-  tiles.push(...statementTiles(ex));
+  tiles.push(...statementTiles(ex), ...uploadTiles(ex));
 
   const score = (t: Tile) => t.atStake / Math.sqrt(Math.max(t.daysLeft, 1));
   tiles.sort((a, b) => score(b) - score(a));
@@ -210,7 +210,7 @@ const request = (summary: string, savings: number, r: Req) =>
 
 function statementTiles(ex: Extraction): Tile[] {
   const f = ex.facts;
-  const all = (c: Balance["category"]) => ex.balances.filter((b) => b.category === c);
+  const all = (c: Balance["category"]) => ex.balances.filter((b) => b.category === c && !b.id.startsWith("up_"));
   const one = (c: Balance["category"]) => all(c)[0];
   const base = (bs: Balance[]) => {
     const deadline = bs.map((b) => b.deadline).sort()[0];
@@ -417,6 +417,42 @@ function statementTiles(ex: Extraction): Tile[] {
   }, [ins]);
 
   return out;
+}
+
+// ---------- uploaded statements ----------
+
+// One tile per finding from a real statement. Amounts are the transactions themselves; the rules are
+// typical issuer and plan terms, so the copy says "check" where a term varies.
+function uploadTiles(ex: Extraction): Tile[] {
+  return ex.balances.filter((b) => b.id.startsWith("up_")).flatMap((b): Tile[] => {
+    const daysLeft = daysBetween(DEMO_TODAY, b.deadline);
+    const what = b.label.replace(/^[^:]+:\s*/, "");
+    const by = new Date(`${b.deadline}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+    const common = { balanceIds: [b.id], deadline: b.deadline, daysLeft, sources: [b.source], engine: "mock" as const, live: true, atStake: b.amount, doNothingCost: b.amount, recommendation: "act" };
+    const steps = (title: string, to: string, lines: string[], conf: string) => request(title, b.amount, { title, to, steps: lines, confirmation: `${conf}-${b.id.slice(-4).toUpperCase()}` });
+    if (b.category === "dispute") return [{ ...common, id: `tile_${b.id}`, category: "dispute", title: `Dispute a duplicate charge: ${what}`,
+      candidates: [{ id: "act", label: "Dispute the duplicate", costToUser: 0, detail: "Same merchant, amount and day." }],
+      headline: `${what} charged you ${usd(b.amount)} twice. Dispute the copy.`, tradeoff: "Only the duplicate; check it wasn't two real orders.",
+      doNothing: `The dispute window closes ${by}.`, action: steps(`Dispute the duplicate ${what} charge`, "your card issuer", [`Selecting the duplicate ${what} charge`, "Reason: duplicate charge", "Issuer: provisional credit issued while we review"], "DSP") }];
+    if (b.category === "bank_fee") return [{ ...common, id: `tile_${b.id}`, category: "bank_fee", title: `Ask for a refund: ${what}`,
+      candidates: [{ id: "act", label: "Request a courtesy refund", costToUser: 0, detail: "Banks often waive an occasional fee." }],
+      headline: `Ask your bank to reverse the ${usd(b.amount)} ${what.toLowerCase()}.`, tradeoff: "Refunds are discretionary; it costs nothing to ask.",
+      doNothing: `${usd(b.amount)} stays charged.`, action: steps(`Request a refund of the ${what}`, "your bank", [`Expire: I was charged ${usd(b.amount)} (${what}). Could you refund it as a courtesy?`, "Bank: We've refunded it as a one-time courtesy."], "RFD") }];
+    if (b.category === "annual_fee") return [{ ...common, id: `tile_${b.id}`, category: "annual_fee", title: `Annual fee posted: downgrade by ${by} if it isn't worth it`,
+      candidates: [{ id: "act", label: "Downgrade to a no-fee card and get the fee back", costToUser: 0, detail: "Keeps your credit history; check the issuer's refund window." }, { id: "keep", label: "Keep the card", costToUser: b.amount, detail: "Worth it only if you'll use its credits." }],
+      headline: `A ${usd(b.amount)} annual fee just posted. Most issuers refund it if you downgrade within about 30 days.`, tradeoff: "You lose the card's perks; downgrade rather than close.",
+      doNothing: `After about ${by} the fee is final.`, action: { kind: "book_call", summary: "Call the issuer to downgrade and refund the annual fee", savings: b.amount,
+        payload: { to: "your card issuer", phone: "the number on your card", patient: "you", thisYear: "a product change to a no-fee card with the annual fee refunded", nextYear: "", date: DEMO_TODAY, nextDate: "" } } }];
+    if (b.category === "subscription") return [{ ...common, id: `tile_${b.id}`, category: "subscription", title: `Renews soon: ${what}`,
+      candidates: [{ id: "act", label: "Cancel if you don't use it", costToUser: 0, detail: "Keep it if you do; we only see that it bills." }],
+      headline: `${what} bills about ${usd(b.amount)} again around ${by}. Cancel it if you've stopped using it.`, tradeoff: "Harvest only if you really don't use it.",
+      doNothing: `${usd(b.amount)} bills again around ${by}.`, action: steps(`Cancel ${what}`, what, [`Opening ${what} → Account → Subscription`, "Turning off auto-renew", "Access continues until the end of the paid period"], "CXL") }];
+    if (b.category === "fsa_claim") return [{ ...common, id: `tile_${b.id}`, category: "fsa_claim", title: `Claim from your FSA/HSA: ${what}`,
+      candidates: [{ id: "act", label: "Submit the receipt to your FSA or HSA", costToUser: 0, detail: "Only if you have one and the expense is eligible." }],
+      headline: `${usd(b.amount)} at ${what} went on a regular card. If you have an FSA or HSA, get it back tax-free.`, tradeoff: "Eligibility depends on the item; keep the itemized receipt.",
+      doNothing: `Most FSAs stop taking ${b.deadline.slice(0, 4)} claims around ${by}.`, action: steps(`Submit the ${what} receipt`, "your FSA/HSA portal", [`Uploading the ${what} receipt (${usd(b.amount)})`, "Claim submitted; reimbursement to your bank"], "FSA") }];
+    return [];
+  });
 }
 
 const NarrationSchema = z.object({

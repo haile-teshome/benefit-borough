@@ -194,6 +194,26 @@ function Valley() {
     }
   }
 
+  // Plant a real statement (CSV or PDF): findings grow as new crops on your farm.
+  async function uploadStatement(file: File) {
+    if (!conn) return;
+    setBusy(true); setError("");
+    try {
+      if (me && !myPlots.length) await conn.reducers.setProfile({ name: me.name, color: me.color, avatar: me.avatar });
+      const r = await expire.upload(pid, file);
+      setState(r.state);
+      await plant(r.state);
+      sound.sprout();
+      setModal(null);
+      setToast(r.found ? `${file.name}: ${r.found} thing${r.found > 1 ? "s" : ""} to rescue sprouted on your farm.` : `${file.name}: nothing expiring found. Your farm keeps the sample crops.`);
+      setTimeout(() => setToast(""), 6000);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function replant() {
     if (!conn) return;
     setBusy(true);
@@ -348,7 +368,7 @@ function Valley() {
       {title ? (
         <Title onPlay={play} connected={isActive} />
       ) : (
-        <Hud me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} />
+        <Hud me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} />
       )}
 
       {near && !modal && !title && (
@@ -364,7 +384,7 @@ function Valley() {
         </form>
       )}
 
-      {modal?.kind === "intro" && <Intro busy={busy} me={me} onPlant={plantDocs} onPick={pickAvatar} />}
+      {modal?.kind === "intro" && <Intro busy={busy} me={me} onPlant={plantDocs} onPick={pickAvatar} onUpload={uploadStatement} />}
       {modal?.kind === "avatar" && (
         <Dialogue speaker="Choose your farmer" onClose={() => setModal(null)}>
           <AvatarPicker value={me?.avatar ?? ""} onPick={pickAvatar} />
@@ -470,7 +490,17 @@ function useClock() {
   return { label, night };
 }
 
-function Hud({ me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void }) {
+function UploadButton({ busy, onUpload, className, label }: { busy: boolean; onUpload: (f: File) => void; className: string; label: string }) {
+  const input = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <button className={className} disabled={busy} onClick={() => input.current?.click()}>{busy ? "Reading…" : label}</button>
+      <input ref={input} type="file" accept=".csv,.pdf,text/csv,application/pdf" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = ""; }} />
+    </>
+  );
+}
+
+function Hud({ me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void }) {
   const next = state?.tiles.filter((t) => !state.done.includes(t.id) && t.atStake > 0).sort((a, b) => a.daysLeft - b.daysLeft)[0];
   const clock = useClock();
   return (
@@ -491,6 +521,7 @@ function Hud({ me, others, isActive, state, busy, onReplant, muted, onMute, onAv
         <div className="ev-sub">{isActive ? `${others.length + (me ? 1 : 0)} in the valley` : "Connecting…"}</div>
         {me && <div className="who"><i style={{ background: me.color }} />{me.name} (you)</div>}
         {others.map((p) => <div key={p.identity.toHexString()} className="who"><i style={{ background: p.color }} />{p.name}</div>)}
+        <UploadButton busy={busy} onUpload={onUpload} className="ev-link" label="Plant a bank statement (CSV/PDF)" />
         <button className="ev-link" disabled={busy} onClick={onReplant}>{busy ? "Replanting…" : "Replant (reset demo)"}</button>
         <button className="ev-link" onClick={onAvatar}>Change avatar</button>
         <button className="ev-link" onClick={onMute}>{muted ? "Sound off · M" : "Sound on · M"}</button>
@@ -557,7 +588,7 @@ function AvatarPicker({ value, onPick }: { value: string; onPick: (a: string) =>
   );
 }
 
-function Intro({ busy, me, onPlant, onPick }: { busy: boolean; me?: Player; onPlant: (name: string, color: string, avatar: string) => void; onPick: (a: string) => void }) {
+function Intro({ busy, me, onPlant, onPick, onUpload }: { busy: boolean; me?: Player; onPlant: (name: string, color: string, avatar: string) => void; onPick: (a: string) => void; onUpload: (f: File) => void }) {
   const [name, setName] = useState("");
   const [color, setColor] = useState(me?.color ?? COLORS[0]);
   return (
@@ -567,7 +598,11 @@ function Intro({ busy, me, onPlant, onPick }: { busy: boolean; me?: Player; onPl
       <AvatarPicker value={me?.avatar ?? ""} onPick={onPick} />
       <label className="ev-field">Your name<input value={name} placeholder={me?.name ?? "Farmer"} onChange={(e) => setName(e.target.value)} maxLength={20} /></label>
       <div className="ev-colors">{COLORS.map((c) => <button key={c} aria-label={`Color ${c}`} className={c === color ? "on" : ""} style={{ background: c }} onClick={() => setColor(c)} />)}</div>
-      <p className="ev-sub">Seeds: your benefits summary, dental plan, EOBs, dining statement, card list and bank &amp; card statements.</p>
+      <p className="ev-sub">Seeds: a sample benefits summary, dental plan, EOBs, dining statement, card list and bank statement.</p>
+      <div className="ev-upload">
+        <UploadButton busy={busy} onUpload={onUpload} className="ev-btn ghost" label="Or plant your own bank statement" />
+        <span className="ev-sub">CSV export or PDF. It stays on this computer.</span>
+      </div>
     </Dialogue>
   );
 }

@@ -2,6 +2,9 @@ import { z } from "zod";
 import type { SourceDoc } from "../documents";
 import type { Balance, CareItem, Category, Extraction, SpendPattern } from "../types";
 import { callStructured, claudeEnabled } from "./claude";
+import { DEMO_TODAY } from "../documents";
+import { parseCsv, parseLines, statementYear } from "../statement/parse";
+import { detect } from "../statement/detect";
 import { findSpan } from "./spans";
 
 const CATEGORIES = [
@@ -67,12 +70,34 @@ Rules:
 - From bank and card statements: bank_bonus (account bonus with a deadline), bank_fee (refundable fee), idle_cash (cash earning near-zero interest; amount = balance), annual_fee (fee refundable within a window), credit_move (a recurring charge on the wrong card while another card's monthly credit goes unused; amount = monthly credit), dispute (duplicate or wrong charge; amount = refund), rotating (bonus category not activated; amount = monthly spend in it), price_adjust (purchase now cheaper within a price-match window; amount = price paid), fsa_claim (eligible expense paid out of pocket; one balance per receipt), promo_apr (deferred interest that hits if the promo balance is not paid; amount = interest), subscription (trial or renewal about to bill; one balance per charge), points (miles or points about to expire; amount = points), insurance (policy renewal worth re-shopping; amount = premium).`;
 
 export async function extract(docs: SourceDoc[]): Promise<Extraction> {
+  const uploads = docs.filter((d) => d.id.startsWith("upload_"));
+  const found = uploads.flatMap((d) => statementFindings(d));
+  const ex = await extractDocs(docs.filter((d) => !d.id.startsWith("upload_")), docs);
+  const extra = ground(docs, { balances: found, care_items: [], spend_patterns: [], facts: [] }, ex.engine);
+  return { ...ex, balances: [...ex.balances, ...extra.balances], dropped: [...ex.dropped, ...extra.dropped] };
+}
+
+// Uploaded statements go through the deterministic detectors (see lib/statement).
+function statementFindings(d: SourceDoc) {
+  const year = statementYear(d.text, +DEMO_TODAY.slice(0, 4));
+  const csv = parseCsv(d.text, year);
+  const txns = csv.length ? csv : parseLines(d.text, year);
+  return detect(txns, d.id, DEMO_TODAY).map((f) => ({
+    balance_id: f.id, category: f.category, label: f.label, amount: f.amount, deadline: f.deadline, source_doc: d.id, source_span: f.span, rule_text: f.rule,
+  }));
+}
+
+async function extractDocs(docs: SourceDoc[], all: SourceDoc[]): Promise<Extraction> {
   if (claudeEnabled()) {
     const user = docs.map((d) => `<document id="${d.id}" name="${d.name}">\n${d.text}\n</document>`).join("\n\n");
     const out = await callStructured({ system: SYSTEM, user, schema: ExtractionSchema, effort: "medium" });
-    if (out) return ground(docs, out, "claude");
+    if (out) return ground(all, out, "claude");
   }
-  return ground(docs, mockExtraction(), "mock");
+  // The mock knows the sample documents; skip any that were replaced (e.g. by an uploaded statement).
+  const have = new Set(docs.map((d) => d.id));
+  const m = mockExtraction();
+  const keep = <T extends { source_doc: string }>(xs: T[]) => xs.filter((x) => have.has(x.source_doc));
+  return ground(docs, { balances: keep(m.balances), care_items: keep(m.care_items), spend_patterns: keep(m.spend_patterns), facts: keep(m.facts) }, "mock");
 }
 
 // Attach real character offsets to every claim; drop any claim whose span is not in a document.

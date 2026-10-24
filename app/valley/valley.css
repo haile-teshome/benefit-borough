@@ -162,3 +162,4 @@ body { margin: 0; overflow: hidden; background: #8fc4e8; }
 .ev-district { font: 700 13px var(--pixel); color: var(--ink); background: var(--parchment); border: 3px solid; border-bottom-width: 5px; padding: 1px 8px; white-space: nowrap; box-shadow: 0 3px 0 rgba(40,20,5,0.35); }
 .ev-name.npc { font-size: 11px; background: #fff8e2; color: var(--ink); border-width: 2px; opacity: 0.9; }
 .ev-avatars img.icon { width: 64px; height: 76px; image-rendering: pixelated; }
+.ev-upload { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
