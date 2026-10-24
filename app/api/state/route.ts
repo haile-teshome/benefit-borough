@@ -4,9 +4,10 @@ import { load } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-export function GET() {
+export function GET(req: Request) {
+  const pid = new URL(req.url).searchParams.get("pid");
   return NextResponse.json({
-    state: load(),
+    state: load(pid),
     integrations: {
       claude: claudeEnabled(),
       cartesia: Boolean(process.env.CARTESIA_API_KEY && process.env.CARTESIA_VOICE_ID),

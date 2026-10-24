@@ -11,8 +11,8 @@ import type { AppState, DispatchResult } from "./types";
 const docsText = (s: AppState) => s.docs.map((d) => `[${d.name}]\n${d.text}`).join("\n\n");
 
 // Extract → Optimize → Reviewer, for every tile. The board only offers a tap on approved tiles.
-export async function scan(docs: SourceDoc[]): Promise<AppState> {
-  const s = load();
+export async function scan(docs: SourceDoc[], pid?: string | null): Promise<AppState> {
+  const s = load(pid);
   s.docs = docs;
   const ex = await extract(docs);
   s.extraction = ex;
@@ -24,23 +24,23 @@ export async function scan(docs: SourceDoc[]): Promise<AppState> {
     s.reviews[t.id] = verdicts[i];
     log(s, "review", `${t.id}: ${verdicts[i].verdict}${verdicts[i].rule_cited ? ` (rule ${verdicts[i].rule_cited})` : ""}`);
   });
-  save(s);
+  save(s, pid);
   return s;
 }
 
-export async function reviewCart(balanceId: string, items: string[]) {
-  const s = load();
+export async function reviewCart(balanceId: string, items: string[], pid?: string | null) {
+  const s = load(pid);
   const balance = s.extraction?.balances.find((b) => b.id === balanceId);
   if (!s.extraction || !balance) throw new Error("Scan documents first");
   const v = await review({ kind: "cart", balance, items }, s.extraction, docsText(s));
   s.reviews[`cart:${balanceId}`] = v;
   log(s, "review", `cart on ${balanceId} [${items.join(", ")}]: ${v.verdict}${v.rule_cited ? ` (rule ${v.rule_cited})` : ""}`);
-  save(s);
+  save(s, pid);
   return { state: s, verdict: v };
 }
 
-export async function dispatch(tileId: string): Promise<{ state: AppState; result: DispatchResult }> {
-  const s = load();
+export async function dispatch(tileId: string, pid?: string | null): Promise<{ state: AppState; result: DispatchResult }> {
+  const s = load(pid);
   const tile = s.tiles.find((t) => t.id === tileId);
   if (!tile) throw new Error("Unknown tile");
   if (s.reviews[tileId]?.verdict !== "approve") throw new Error("Reviewer has not approved this action");
@@ -57,6 +57,6 @@ export async function dispatch(tileId: string): Promise<{ state: AppState; resul
   } else {
     log(s, "dispatch", `${tileId} failed; ledger unchanged`);
   }
-  save(s);
+  save(s, pid);
   return { state: s, result };
 }
