@@ -1,6 +1,6 @@
 // Mirrors the module's farm grid (valley-server/src/index.ts). No imports: everything else builds on it.
 // World units are tiles (16px). x runs east, z runs south.
-export const FARM_SPACING = 13;
+export const FARM_SPACING = 14;
 
 // Farms line both sides of the main road running south from the village square.
 export function farmOrigin(farm: number) {

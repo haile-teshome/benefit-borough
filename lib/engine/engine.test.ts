@@ -56,3 +56,23 @@ test("reviewer approves the phased dental booking and rejects new care", async (
   assert.equal(v.verdict, "reject");
   assert.equal(v.rule_cited, 1);
 });
+
+test("bank and card statement findings are grounded and computed", async () => {
+  const ex = await extract(SAMPLE_DOCS);
+  assert.equal(ex.dropped.length, 0);
+  const tiles = await optimize(ex);
+  const t = (id: string) => tiles.find((x) => x.id === id)!;
+  assert.equal(t("tile_bonus").action.savings, 300);
+  assert.equal(t("tile_fees").action.savings, 47);
+  assert.equal(t("tile_annual_fee").action.savings, 325);
+  assert.equal(t("tile_credit_move").action.savings, 31.98); // $15.99 x Nov, Dec
+  assert.equal(t("tile_dispute").action.savings, 42.17);
+  assert.equal(t("tile_price").action.savings, 50);
+  assert.equal(t("tile_fsa_claim").action.savings, 92.45);
+  assert.equal(t("tile_promo").action.savings, 286.2);
+  assert.equal(t("tile_subs").action.savings, 107.98);
+  assert.equal(t("tile_points").action.savings, 409.5); // 31,500 x 1.3 cents
+  assert.equal(t("tile_rotating").action.savings, 10.74); // $120/mo x 68 days x 4 extra points
+  assert.equal(t("tile_cash").live, false); // options only (rule 5)
+  for (const tile of tiles) assert.equal(ruleCheck({ kind: "tile", tile }, ex, docsText).verdict, "approve", tile.id);
+});

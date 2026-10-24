@@ -179,9 +179,244 @@ export async function optimize(ex: Extraction): Promise<Tile[]> {
     });
   }
 
+  tiles.push(...statementTiles(ex));
+
   const score = (t: Tile) => t.atStake / Math.sqrt(Math.max(t.daysLeft, 1));
   tiles.sort((a, b) => score(b) - score(a));
   return claudeEnabled() ? narrate(tiles) : tiles;
+}
+
+// ---------- bank and card statements ----------
+
+// What a mile is worth when redeemed for a flight; conservative published valuations run 1.2-1.6 cents.
+export const MILE_CENTS = 1.3;
+// The high-yield rate we compare idle cash against. A labeled assumption, not a quote.
+export const HYSA_APY = 4.0;
+const CASH_BUFFER = 2000;
+
+export function idleCashGain(balance: number, apyPct: number, daysLeft: number) {
+  const movable = Math.max(0, balance - CASH_BUFFER);
+  return { movable, gain: round2((movable * (HYSA_APY - apyPct)) / 100 * (daysLeft / 365)) };
+}
+
+export function rotatingBonus(monthlySpend: number, daysLeft: number) {
+  // The card already earns 1%; activation adds 4 points on the category through the quarter.
+  return round2(((monthlySpend * daysLeft) / 30.4) * 0.04);
+}
+
+type Req = { title: string; to: string; steps: string[]; confirmation: string };
+const request = (summary: string, savings: number, r: Req) =>
+  ({ kind: "request" as const, summary, savings: round2(savings), payload: { title: r.title, to: r.to, steps: r.steps.join("|"), confirmation: r.confirmation } });
+
+function statementTiles(ex: Extraction): Tile[] {
+  const f = ex.facts;
+  const all = (c: Balance["category"]) => ex.balances.filter((b) => b.category === c);
+  const one = (c: Balance["category"]) => all(c)[0];
+  const base = (bs: Balance[]) => {
+    const deadline = bs.map((b) => b.deadline).sort()[0];
+    return { balanceIds: bs.map((b) => b.id), deadline, daysLeft: daysBetween(DEMO_TODAY, deadline), sources: bs.map((b) => b.source), engine: "mock" as const };
+  };
+  const out: Tile[] = [];
+  const add = (t: Omit<Tile, "balanceIds" | "deadline" | "daysLeft" | "sources" | "engine">, bs: Balance[]) => out.push({ ...base(bs), ...t });
+
+  const bonus = one("bank_bonus");
+  if (bonus) add({
+    id: "tile_bonus", category: "bank_bonus", title: "Checking bonus: route $500 of your paycheck to Chase",
+    live: true, atStake: bonus.amount,
+    candidates: [
+      { id: "split", label: "Send $500 of each paycheck to Chase, the rest stays at Wells Fargo", costToUser: 0, detail: "One direct deposit qualifies; it also waives the $12 monthly fee." },
+      { id: "nothing", label: "Do nothing", costToUser: bonus.amount, detail: "No direct deposit by Nov 8, no bonus." },
+    ],
+    recommendation: "split",
+    headline: `One $500 direct deposit before Nov 8 earns the ${usd(bonus.amount)} bonus and waives the monthly fee.`,
+    tradeoff: "Keep the account open 6 months after the bonus posts or it can be clawed back.",
+    doNothingCost: bonus.amount, doNothing: `The ${usd(bonus.amount)} bonus window closes Nov 8.`,
+    action: request("Submit a split direct-deposit form to Acme payroll", bonus.amount, { title: "Filing with Acme payroll", to: "Acme payroll portal", steps: ["Opening Acme payroll → Direct deposit", "Adding Chase Total Checking for $500 per paycheck", "Remainder stays at Wells Fargo", "Payroll: change effective with the Oct 31 paycheck"], confirmation: "DD-ACME-1031" }),
+  }, [bonus]);
+
+  const fees = all("bank_fee");
+  if (fees.length) {
+    const sum = round2(fees.reduce((s, b) => s + b.amount, 0));
+    add({
+      id: "tile_fees", category: "bank_fee", title: "Bank fees: ask Chase to refund them",
+      live: true, atStake: sum,
+      candidates: [{ id: "ask", label: "Ask for a courtesy refund of both fees", costToUser: 0, detail: "First overdraft in 12 months; banks routinely refund it once." }],
+      recommendation: "ask",
+      headline: `Ask Chase to reverse ${usd(sum)} in fees: a first-time overdraft and a service fee.`,
+      tradeoff: "Courtesy refunds are discretionary; set up the direct deposit so the service fee stops.",
+      doNothingCost: sum, doNothing: `${usd(sum)} stays charged.`,
+      action: request("Message Chase to request a courtesy fee refund", sum, { title: "Messaging Chase support", to: "Chase secure message", steps: ["Expire: Hi, I was charged a $35 overdraft fee on Oct 14, my first in a year, and a $12 service fee. Could you refund them?", "Chase: Thanks for being a customer. We've refunded both fees as a one-time courtesy.", "Credit of $47.00 posting in 1-2 business days"], confirmation: "CH-RFD-1024" }),
+    }, fees);
+  }
+
+  const gold = one("annual_fee");
+  if (gold) add({
+    id: "tile_annual_fee", category: "annual_fee", title: "Amex Gold: you used $0 of its credits; downgrade before Nov 5",
+    live: true, atStake: gold.amount,
+    candidates: [
+      { id: "downgrade", label: "Downgrade to the no-fee Amex Green Basic, keep the account history", costToUser: 0, detail: `The ${usd(gold.amount)} fee is refunded in full inside the 30-day window.` },
+      { id: "keep", label: "Keep Gold", costToUser: gold.amount, detail: "Worth it only if you will use the $424 of dining and Uber credits you haven't touched." },
+    ],
+    recommendation: "downgrade",
+    headline: `You used $0 of Gold's $424 in credits. Downgrading by Nov 5 refunds the ${usd(gold.amount)} fee.`,
+    tradeoff: "You lose 4x points on dining. Downgrade instead of closing so your credit history stays.",
+    doNothingCost: gold.amount, doNothing: `After Nov 5 the ${usd(gold.amount)} fee is final for the year.`,
+    action: { kind: "book_call", summary: "Call Amex to downgrade Gold and refund the annual fee", savings: gold.amount,
+      payload: { to: "American Express", phone: "(800) 528-4800", patient: "Jordan Lee", thisYear: "a product change from Gold to a no-fee card with the annual fee refunded", nextYear: "", date: "2026-10-27", nextDate: "" } },
+  }, [gold]);
+
+  const move = one("credit_move");
+  const overlap = f.credit_overlap_monthly;
+  if (move && overlap) {
+    const months = 2; // November and December credits are still ahead
+    const save = round2(Math.min(move.amount, overlap) * months);
+    add({
+      id: "tile_credit_move", category: "credit_move", title: "Move Disney+ to Platinum to use its monthly credit",
+      live: true, atStake: save,
+      candidates: [{ id: "move", label: "Bill Disney+ to Platinum", costToUser: 0, detail: `The ${usd(move.amount)} monthly credit covers the ${usd(overlap)} charge.` }],
+      recommendation: "move",
+      headline: `Disney+ is on Freedom while Platinum's ${usd(move.amount)} monthly credit goes unused. Switch it: ${usd(save)} back this year.`,
+      tradeoff: "Same subscription you already pay for; nothing new is bought.",
+      doNothingCost: save, doNothing: `${usd(save)} of credits lapse by Dec 31.`,
+      action: request("Change Disney+ billing to Amex Platinum", save, { title: "Updating Disney+ billing", to: "Disney+ account", steps: ["Opening Disney+ → Account → Payment", "Replacing Freedom Flex with Amex Platinum", "Next charge Nov 15 on Platinum, credited back automatically"], confirmation: "DSNY-PMT-1115" }),
+    }, [move]);
+  }
+
+  const dupe = one("dispute");
+  if (dupe) add({
+    id: "tile_dispute", category: "dispute", title: "Dispute the duplicate Uber Eats charge",
+    live: true, atStake: dupe.amount,
+    candidates: [{ id: "dispute", label: "Dispute the second charge", costToUser: 0, detail: "Same merchant, amount and minute." }],
+    recommendation: "dispute",
+    headline: `Uber Eats charged you ${usd(dupe.amount)} twice on Oct 19. Dispute the copy before Dec 23.`,
+    tradeoff: "Only the duplicate; the first order was real.",
+    doNothingCost: dupe.amount, doNothing: `After Dec 23 the ${usd(dupe.amount)} can't be disputed.`,
+    action: request("File a billing dispute for the duplicate charge", dupe.amount, { title: "Filing a dispute with Chase", to: "Chase disputes", steps: ["Selecting Oct 19 Uber Eats $42.17 (second charge)", "Reason: duplicate charge", "Chase: provisional credit issued while we review"], confirmation: "DSP-1019-UBR" }),
+  }, [dupe]);
+
+  const q4 = one("rotating");
+  if (q4) {
+
+    const gain = rotatingBonus(q4.amount, daysBetween(DEMO_TODAY, "2026-12-31"));
+    add({
+      id: "tile_rotating", category: "rotating", title: "Activate Freedom's 5% on Amazon for Q4",
+      live: true, atStake: gain,
+      candidates: [{ id: "activate", label: "Activate, keep shopping as usual", costToUser: 0, detail: `About ${usd(q4.amount)}/month on Amazon earns 5% instead of 1%.` }],
+      recommendation: "activate",
+      headline: `One tap: your usual Amazon spending earns ${usd(gain)} more this quarter.`,
+      tradeoff: "Don't buy more to chase points; this counts only what you already spend.",
+      doNothingCost: gain, doNothing: `${usd(gain)} of bonus cash back is skipped. Activation closes Dec 14.`,
+      action: request("Activate Freedom Flex Q4 categories", gain, { title: "Activating 5% categories", to: "Chase app", steps: ["Opening Freedom Flex → Activate 5%", "Q4: Amazon, PayPal — activated"], confirmation: "Q4-ACT-2026" }),
+    }, [q4]);
+  }
+
+  const pod = one("price_adjust");
+  if (pod && f.price_now) {
+    const diff = round2(pod.amount - f.price_now);
+    add({
+      id: "tile_price", category: "price_adjust", title: "Target dropped the AirPods price: claim the $50",
+      live: true, atStake: diff,
+      candidates: [{ id: "match", label: "Request Target's price match", costToUser: 0, detail: `Paid ${usd(pod.amount)}, now ${usd(f.price_now)}.` }],
+      recommendation: "match",
+      headline: `You paid ${usd(pod.amount)}; Target now sells them for ${usd(f.price_now)}. Ask for ${usd(diff)} back by Oct 26.`,
+      tradeoff: "Same item you already own; nothing to return.",
+      doNothingCost: diff, doNothing: `The price-match window closes Oct 26.`,
+      action: request("Request a Target price adjustment", diff, { title: "Chatting with Target", to: "Target guest services", steps: ["Expire: Hi, I bought AirPods Pro on Oct 12 for $249. They're $199 now. Can you match it?", "Target: Yes, within 14 days. I've refunded $50.00 to your card."], confirmation: "TGT-PM-1012" }),
+    }, [pod]);
+  }
+
+  const rx = all("fsa_claim");
+  if (rx.length) {
+    const sum = round2(rx.reduce((s, b) => s + b.amount, 0));
+    add({
+      id: "tile_fsa_claim", category: "fsa_claim", title: "FSA: reimburse yourself for two prescriptions",
+      live: true, atStake: sum,
+      candidates: [{ id: "claim", label: "Submit both receipts to the FSA", costToUser: 0, detail: "Prescriptions are FSA-eligible; you paid with a personal card." }],
+      recommendation: "claim",
+      headline: `${usd(sum)} of prescriptions went on your personal card. Your FSA pays you back tax-free.`,
+      tradeoff: "Spends FSA money you'd carry over, on care you already had. Nothing new is bought.",
+      doNothingCost: sum, doNothing: `After Mar 31, 2027 these receipts can't be claimed.`,
+      action: request("Submit prescription receipts to the FSA", sum, { title: "Filing FSA claims", to: "Acme FSA portal", steps: ["Uploading CVS receipt $64.30 (Sep 28)", "Uploading Walgreens receipt $28.15 (Oct 3)", "FSA: both claims approved, paid to your bank"], confirmation: "FSA-CLM-2026-02" }),
+    }, rx);
+  }
+
+  const bb = one("promo_apr");
+  if (bb) add({
+    id: "tile_promo", category: "promo_apr", title: "Best Buy promo: pay it off before Nov 30",
+    live: true, atStake: bb.amount,
+    candidates: [
+      { id: "payoff", label: `Pay the ${usd(f.promo_balance ?? 0)} promo balance from checking`, costToUser: 0, detail: "Checking has $8,240; the interest is charged retroactively if any balance remains." },
+      { id: "minimum", label: "Keep paying the minimum", costToUser: bb.amount, detail: "Deferred interest hits all at once on Dec 1." },
+    ],
+    recommendation: "payoff",
+    headline: `Pay ${usd(f.promo_balance ?? 0)} by Nov 30 or ${usd(bb.amount)} of back interest lands at once.`,
+    tradeoff: "Leaves about $7,100 in checking.",
+    doNothingCost: bb.amount, doNothing: `${usd(bb.amount)} of deferred interest is charged Dec 1.`,
+    action: request("Schedule a full payoff of the Best Buy promo balance", bb.amount, { title: "Scheduling a payment", to: "Best Buy Credit Card", steps: ["Paying $1,140.00 from Chase checking", "Scheduled for Nov 20, 10 days before the promo ends", "Citibank: payment scheduled"], confirmation: "BBY-PAY-1120" }),
+  }, [bb]);
+
+  const subs = all("subscription");
+  if (subs.length) {
+    const sum = round2(subs.reduce((s, b) => s + b.amount, 0));
+    add({
+      id: "tile_subs", category: "subscription", title: "Cancel the Hulu trial and Duolingo renewal",
+      live: true, atStake: sum,
+      candidates: [{ id: "cancel", label: "Cancel both before they bill", costToUser: 0, detail: "Duolingo unopened since June; the Hulu trial converts Nov 2." }],
+      recommendation: "cancel",
+      headline: `${usd(sum)} is about to bill for a trial and an app you stopped opening in June.`,
+      tradeoff: "Keep Hulu if you're watching it; we only flagged what's about to charge.",
+      doNothingCost: sum, doNothing: `Hulu bills Nov 2, Duolingo renews Nov 9.`,
+      action: request("Cancel the Hulu trial and Duolingo renewal", sum, { title: "Canceling subscriptions", to: "Hulu and Duolingo", steps: ["Hulu → Cancel trial: access continues until Nov 2, no charge", "Duolingo → Turn off auto-renew: Super ends Nov 9, no renewal"], confirmation: "SUB-CXL-2" }),
+    }, subs);
+  }
+
+  const miles = one("points");
+  if (miles) {
+    const value = round2((miles.amount * MILE_CENTS) / 100);
+    add({
+      id: "tile_points", category: "points", title: "AAdvantage miles expire Jan 9",
+      live: true, atStake: value,
+      candidates: [{ id: "earn", label: "Earn one mile through AAdvantage Dining on a meal you'd buy anyway", costToUser: 0, detail: "Any activity resets the 24-month clock." }],
+      recommendation: "earn",
+      headline: `${miles.amount.toLocaleString("en-US")} miles (about ${usd(value)} in flights) expire Jan 9. One activity saves them.`,
+      tradeoff: `Valued at ${MILE_CENTS}¢ a mile; real value depends on what you book.`,
+      doNothingCost: value, doNothing: `All ${miles.amount.toLocaleString("en-US")} miles disappear Jan 9.`,
+      action: request("Link a card to AAdvantage Dining to post activity", value, { title: "Linking AAdvantage Dining", to: "AAdvantage Dining", steps: ["Linking Freedom Flex to AAdvantage Dining", "Your next restaurant meal earns miles and resets expiry to 2029"], confirmation: "AAD-LINK-01" }),
+    }, [miles]);
+  }
+
+  const cash = one("idle_cash");
+  if (cash) {
+    const b = base([cash]);
+    const g = idleCashGain(cash.amount, f.checking_apy_pct ?? 0, b.daysLeft);
+    add({
+      id: "tile_cash", category: "idle_cash", title: "Idle cash: options for checking earning 0.01%",
+      live: false, atStake: g.gain,
+      candidates: [
+        { id: "hysa", label: `Option: move ${usd(g.movable)} to a high-yield savings account`, costToUser: 0, detail: `At ${HYSA_APY}% (assumed) that's about ${usd(g.gain)} by Dec 31.` },
+        { id: "stay", label: "Option: leave it", costToUser: g.gain, detail: "Keeps everything in one place." },
+      ],
+      recommendation: "hysa",
+      headline: `Options, not advice: ${usd(cash.amount)} earns almost nothing. Keeping ${usd(CASH_BUFFER)} for bills and saving the rest would earn about ${usd(g.gain)} by year end.`,
+      tradeoff: "Rates vary by bank; we assume 4% to show the size of it.",
+      doNothingCost: g.gain, doNothing: `About ${usd(g.gain)} of interest by Dec 31.`,
+      action: { kind: "none", summary: "Options only", savings: 0, payload: {} },
+    }, [cash]);
+  }
+
+  const ins = one("insurance");
+  if (ins) add({
+    id: "tile_insurance", category: "insurance", title: "Auto insurance renews 22% higher on Nov 18",
+    live: false, atStake: 0,
+    candidates: [{ id: "quote", label: "Option: get two quotes before Nov 18", costToUser: 0, detail: "Same coverage, compared side by side." }],
+    recommendation: "quote",
+    headline: `Options, not advice: GEICO renews at ${usd(ins.amount)} for 6 months, up 22%. Compare quotes before it auto-renews.`,
+    tradeoff: "We can't know a cheaper price until you quote; nothing is counted as saved.",
+    doNothingCost: 0, doNothing: `Renews Nov 18 at ${usd(ins.amount)}.`,
+    action: { kind: "none", summary: "Options only", savings: 0, payload: {} },
+  }, [ins]);
+
+  return out;
 }
 
 const NarrationSchema = z.object({

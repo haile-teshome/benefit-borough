@@ -67,7 +67,7 @@ type Ctx = ReducerCtx<InferSchema<typeof spacetimedb>>;
 
 const AVATARS = ["ShibaInu", "Fox", "Husky", "Deer", "Cow"];
 const PALETTE = ['#E2574C', '#3E8ED0', '#F2B33D', '#8E5BD0', '#3FA66B', '#E07BB0', '#2BB3B1', '#C77B3A'];
-const FARM_SPACING = 13;
+const FARM_SPACING = 14;
 
 // Farms line both sides of the main road running south from the village square.
 function farmOrigin(farm: number) {
@@ -147,7 +147,7 @@ const PlotInput = t.object('PlotInput', {
 export const plantFarm = spacetimedb.reducer({ plots: t.array(PlotInput) }, (ctx, { plots }) => {
   const p = me(ctx);
   for (const old of [...ctx.db.plot.owner.filter(ctx.sender)]) ctx.db.plot.id.delete(old.id);
-  plots.slice(0, 12).forEach((pi, slot) => {
+  plots.slice(0, 20).forEach((pi, slot) => {
     ctx.db.plot.insert({ id: 0n, owner: ctx.sender, slot, ...pi });
   });
   const rescued = plots.reduce((sum, pi) => sum + (pi.harvested ? pi.saved : 0), 0);

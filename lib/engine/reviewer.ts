@@ -45,10 +45,10 @@ export function ruleCheck(subject: ReviewSubject, ex: Extraction, docsText: stri
     const unknown = String(t.action.payload.careIds ?? "").split(",").filter((id) => id && !known.has(id));
     if (unknown.length) return verdict({ verdict: "reject", rule_cited: 1, reason: `Care item ${unknown.join(", ")} is not in your treatment plan or EOB history.` });
   }
-  if (t.category === "tax_window" && !/options?/i.test(t.headline)) {
+  if ((t.category === "tax_window" || t.category === "idle_cash" || t.category === "insurance") && !/options?/i.test(t.headline)) {
     return verdict({ verdict: "reject", rule_cited: 5, reason: "Plan-election suggestions must be labeled as options." });
   }
-  return verdict({ verdict: "approve", rule_cited: null, reason: t.action.kind === "none" ? "Informational tile; nothing to dispatch." : "Uses only care and needs already in your documents, with the do-nothing cost shown." });
+  return verdict({ verdict: "approve", rule_cited: null, reason: t.action.kind === "none" ? "Informational tile; nothing to dispatch." : "Uses only what's already in your documents, with the do-nothing cost shown." });
 }
 
 export async function review(subject: ReviewSubject, ex: Extraction, docsText: string): Promise<Verdict> {

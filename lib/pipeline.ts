@@ -4,6 +4,7 @@ import { optimize } from "./engine/optimize";
 import { review } from "./engine/reviewer";
 import { usd } from "./engine/spans";
 import { bookingCall } from "./integrations/cartesia";
+import { requestAction } from "./integrations/request";
 import { peerTransfer } from "./integrations/transfer";
 import { load, log, save } from "./store";
 import type { AppState, DispatchResult } from "./types";
@@ -48,7 +49,7 @@ export async function dispatch(tileId: string, pid?: string | null): Promise<{ s
   if (tile.action.kind === "none") throw new Error("Nothing to dispatch");
 
   log(s, "dispatch", `${tileId}: ${tile.action.summary}`);
-  const result = tile.action.kind === "book_call" ? await bookingCall(tile.action) : await peerTransfer(tile.action);
+  const result = tile.action.kind === "book_call" ? await bookingCall(tile.action) : tile.action.kind === "request" ? await requestAction(tile.action) : await peerTransfer(tile.action);
   // Rule 6: the ledger moves only on a confirmed action.
   if (result.status === "confirmed") {
     s.ledger.push({ id: `L${s.ledger.length + 1}`, tileId, amount: tile.action.savings, description: tile.action.summary, confirmation: result.confirmation, at: new Date().toISOString() });

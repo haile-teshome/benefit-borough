@@ -1,4 +1,8 @@
-export type Category = "fsa" | "dental" | "deductible" | "dining" | "card_credit" | "tax_window";
+export type Category =
+  | "fsa" | "dental" | "deductible" | "dining" | "card_credit" | "tax_window"
+  // found in bank and card statements
+  | "bank_bonus" | "bank_fee" | "idle_cash" | "annual_fee" | "credit_move" | "dispute" | "rotating"
+  | "price_adjust" | "fsa_claim" | "promo_apr" | "subscription" | "points" | "insurance";
 
 export type Span = { doc: string; start: number; end: number; text: string };
 
@@ -32,7 +36,7 @@ export type Extraction = {
   engine: "claude" | "mock";
 };
 
-export type ActionKind = "book_call" | "transfer" | "none";
+export type ActionKind = "book_call" | "transfer" | "request" | "none";
 
 export type Action = {
   kind: ActionKind;

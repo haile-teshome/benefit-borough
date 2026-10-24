@@ -4,7 +4,11 @@ import type { Balance, CareItem, Category, Extraction, SpendPattern } from "../t
 import { callStructured, claudeEnabled } from "./claude";
 import { findSpan } from "./spans";
 
-const CATEGORIES = ["fsa", "dental", "deductible", "dining", "card_credit", "tax_window"] as const;
+const CATEGORIES = [
+  "fsa", "dental", "deductible", "dining", "card_credit", "tax_window",
+  "bank_bonus", "bank_fee", "idle_cash", "annual_fee", "credit_move", "dispute", "rotating",
+  "price_adjust", "fsa_claim", "promo_apr", "subscription", "points", "insurance",
+] as const;
 
 export const FACT_KEYS = [
   "fsa_carryover_limit",
@@ -15,6 +19,10 @@ export const FACT_KEYS = [
   "coinsurance_member_pct",
   "dental_annual_max",
   "dental_used",
+  "checking_apy_pct",
+  "credit_overlap_monthly",
+  "price_now",
+  "promo_balance",
 ] as const;
 
 const ExtractionSchema = z.object({
@@ -55,7 +63,8 @@ Rules:
 - source_span must be copied verbatim from the document, character for character, and must contain the number you report. Spans that are not verbatim are discarded.
 - Report only what the documents state. Never estimate a balance that is not written down.
 - Dates are ISO (YYYY-MM-DD). source_doc is the document id given in its header.
-- Categories: fsa, dental (unused annual maximum), deductible (met deductible / out-of-pocket window that resets), dining, card_credit, tax_window (an enrollment or election window).`;
+- Categories: fsa, dental (unused annual maximum), deductible (met deductible / out-of-pocket window that resets), dining, card_credit, tax_window (an enrollment or election window).
+- From bank and card statements: bank_bonus (account bonus with a deadline), bank_fee (refundable fee), idle_cash (cash earning near-zero interest; amount = balance), annual_fee (fee refundable within a window), credit_move (a recurring charge on the wrong card while another card's monthly credit goes unused; amount = monthly credit), dispute (duplicate or wrong charge; amount = refund), rotating (bonus category not activated; amount = monthly spend in it), price_adjust (purchase now cheaper within a price-match window; amount = price paid), fsa_claim (eligible expense paid out of pocket; one balance per receipt), promo_apr (deferred interest that hits if the promo balance is not paid; amount = interest), subscription (trial or renewal about to bill; one balance per charge), points (miles or points about to expire; amount = points), insurance (policy renewal worth re-shopping; amount = premium).`;
 
 export async function extract(docs: SourceDoc[]): Promise<Extraction> {
   if (claudeEnabled()) {
@@ -103,6 +112,22 @@ function mockExtraction(): z.infer<typeof ExtractionSchema> {
       b("oop_window", "deductible", "Deductible met, $400 left to out-of-pocket max", 400, "2026-12-31", "benefits", "Out-of-pocket maximum: $4,000 — applied to date: $3,600", "Deductible and out-of-pocket accumulators reset January 1, 2027."),
       b("dining", "dining", "Dining dollars", 412, "2026-12-14", "dining", "Balance: $412.00", "Unused dining dollars are forfeited and not refunded."),
       b("travel_credit", "card_credit", "Sapphire Reserve travel credit", 300, "2026-12-31", "cards", "annual travel credit: $300.00 remaining, expires December 31, 2026", "Credit expires December 31, 2026."),
+      b("bonus", "bank_bonus", "Chase checking $300 bonus", 300, "2026-11-08", "statements", "New-account bonus: $300.00 after a qualifying direct deposit within 90 days of opening (by November 8, 2026).", "Bonus requires a direct deposit by November 8, 2026."),
+      b("od_fee", "bank_fee", "Overdraft fee", 35, "2026-11-23", "statements", "Oct 14  Overdraft fee  $35.00 (first overdraft in 12 months)", "First overdraft in 12 months: banks usually refund on request."),
+      b("svc_fee", "bank_fee", "Monthly service fee", 12, "2026-11-23", "statements", "Oct 1   Monthly service fee  $12.00 (waived with $500+ in monthly direct deposits)", "Waived with $500+ in monthly direct deposits."),
+      b("idle", "idle_cash", "Checking earning 0.01%", 8240, "2026-12-31", "statements", "Average daily balance: $8,240.00   Interest rate: 0.01% APY", "Interest accrues daily; time out of a savings account is not recoverable."),
+      b("gold_fee", "annual_fee", "Amex Gold annual fee", 325, "2026-11-05", "statements", "Oct 6   Annual membership fee  $325.00. Cancel or downgrade within 30 days of the fee posting for a full refund (by November 5, 2026).", "Full refund if downgraded within 30 days of the fee posting."),
+      b("plat_ent", "credit_move", "Platinum digital entertainment credit", 25, "2026-11-30", "statements", "Digital entertainment credit: $25.00 per month. Unused monthly credits do not roll over.", "Unused monthly credits do not roll over."),
+      b("dupe", "dispute", "Duplicate Uber Eats charge", 42.17, "2026-12-23", "statements", "Oct 19  Uber Eats  $42.17 (same merchant, amount and minute)", "Billing disputes must be submitted within 60 days of the statement date."),
+      b("q4", "rotating", "Freedom Flex Q4 5% on Amazon", 120, "2026-12-14", "statements", "Amazon spending: about $120.00 per month.", "Q4 5% categories must be activated by December 14, 2026."),
+      b("airpods", "price_adjust", "AirPods Pro price drop", 249, "2026-10-26", "statements", "Oct 12  Target — AirPods Pro  $249.00. Target now lists them at $199.00. Price match within 14 days of purchase (by October 26, 2026).", "Price match within 14 days of purchase."),
+      b("rx_cvs", "fsa_claim", "CVS prescription", 64.3, "2027-03-31", "statements", "Sep 28  CVS Pharmacy — prescription  $64.30 (paid with personal card)", "FSA claims for 2026 expenses can be submitted until March 31, 2027."),
+      b("rx_wag", "fsa_claim", "Walgreens prescription", 28.15, "2027-03-31", "statements", "Oct 3   Walgreens — prescription  $28.15 (paid with personal card)", "FSA claims for 2026 expenses can be submitted until March 31, 2027."),
+      b("bestbuy", "promo_apr", "Best Buy deferred interest", 286.2, "2026-11-30", "statements", "Deferred-interest promo balance: $1,140.00. Pay in full by November 30, 2026 or $286.20 of accrued interest is charged.", "All accrued interest is charged if the promo balance is not paid in full by the date."),
+      b("hulu", "subscription", "Hulu trial converts", 17.99, "2026-11-02", "statements", "Hulu free trial ends November 2, 2026, then $17.99/month.", "Bills monthly after the trial unless canceled."),
+      b("duolingo", "subscription", "Duolingo Super renewal", 89.99, "2026-11-09", "statements", "Duolingo Super annual renewal on November 9, 2026: $89.99. Last opened: June 2026.", "Renews annually unless canceled before the date."),
+      b("aa_miles", "points", "AAdvantage miles", 31500, "2027-01-09", "statements", "AAdvantage: 31,500 miles. Miles expire January 9, 2027 after 24 months with no activity.", "Any earning activity resets the 24-month clock."),
+      b("geico", "insurance", "GEICO auto renewal", 1284, "2026-11-18", "statements", "GEICO auto policy renews November 18, 2026: $1,284.00 for 6 months (up 22% from the last term).", "Renews automatically at the new rate."),
       b("open_enrollment", "tax_window", "2027 FSA election (open enrollment)", 3400, "2026-11-21", "benefits", "Open enrollment for 2027 runs November 1 – November 21, 2026.", "FSA election limit for 2027: $3,400."),
     ],
     care_items: [
@@ -124,6 +149,10 @@ function mockExtraction(): z.infer<typeof ExtractionSchema> {
       fact("coinsurance_member_pct", 20, "benefits", "Coinsurance after deductible: 20%"),
       fact("dental_annual_max", 1500, "benefits", "Annual maximum: $1,500 — used to date: $150"),
       fact("dental_used", 150, "benefits", "Annual maximum: $1,500 — used to date: $150"),
+      fact("checking_apy_pct", 0.01, "statements", "Interest rate: 0.01% APY"),
+      fact("credit_overlap_monthly", 15.99, "statements", "Disney+ $15.99/month is billed to Freedom Flex, not Platinum."),
+      fact("price_now", 199, "statements", "Target now lists them at $199.00."),
+      fact("promo_balance", 1140, "statements", "Deferred-interest promo balance: $1,140.00."),
     ],
   };
 }

@@ -255,7 +255,47 @@ export function crop(category: string, wilt: number, harvested: boolean): Sprite
     for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) g.set(5 + i * 2.5, 8 + j * 2.5, "#8C8798");
     g.rect(12, 10, 2, 2, "#D2413A");
   }
+  const extra = EXTRA_CROPS[category];
+  if (extra) paintExtra(g, extra[0], wilted(extra[1], wilt), leaf, droop);
   return g.outline().sprite(9, 24);
+}
+
+// Crops for findings from bank and card statements: a shape and a bloom color each.
+const EXTRA_CROPS: Record<string, [string, string]> = {
+  bank_bonus: ["bean", "#E9BC3C"], bank_fee: ["bulb", "#C8A8F0"], idle_cash: ["flower", "#7C8CE0"], annual_fee: ["thistle", "#B48CF0"],
+  credit_move: ["bean", "#7CC46B"], dispute: ["daisy", "#FFFFFF"], rotating: ["clover", "#5BAA4A"], price_adjust: ["bush", "#7FE3C0"],
+  fsa_claim: ["bush", "#E04870"], promo_apr: ["bean", "#E04848"], subscription: ["bulb", "#E04848"], points: ["flower", "#F06C3B"], insurance: ["flower", "#F49AC8"],
+};
+
+function paintExtra(g: Grid, shape: string, c: string, leaf: string, droop: number) {
+  if (shape === "flower" || shape === "thistle") {
+    g.line(9, 22, 9, 9 + droop, shade(leaf, -0.1));
+    g.ellipse(6, 17, 2.6, 1.2, leaf); g.ellipse(12, 15, 2.6, 1.2, shade(leaf, 0.1));
+    if (shape === "thistle") { g.ellipse(9, 7 + droop, 3, 3.4, ball(c)); g.rect(7, 10 + droop, 5, 2, leaf); }
+    else { for (const [dx, dy] of [[-2.5, 0], [2.5, 0], [0, -2.5], [0, 2.5]]) g.ellipse(9 + dx, 8 + droop + dy, 2.2, 2.2, ball(c)); g.ellipse(9, 8 + droop, 1.4, 1.4, "#FFD45A"); }
+  }
+  if (shape === "daisy") for (const [x, y] of [[6, 10], [12, 8]] as const) {
+    g.line(9, 22, x, y + 3 + droop, shade(leaf, -0.1));
+    for (const [dx, dy] of [[-2, 0], [2, 0], [0, -2], [0, 2]]) g.ellipse(x + dx, y + droop + dy, 1.6, 1.6, c);
+    g.ellipse(x, y + droop, 1.2, 1.2, "#F6B93B");
+  }
+  if (shape === "bulb") {
+    for (const dx of [-3, 0, 3]) g.line(9, 18, 9 + dx, 8 + droop + Math.abs(dx), dx ? leaf : shade(leaf, 0.12));
+    g.ellipse(9, 20, 4, 3, ball(c));
+  }
+  if (shape === "clover") for (const [x, y] of [[5, 17], [12, 15], [9, 11]] as const) {
+    g.line(9, 22, x, y + 2, shade(leaf, -0.1));
+    for (const [dx, dy] of [[-1.6, 0], [1.6, 0], [0, -1.6]]) g.ellipse(x + dx, y + droop * 0.5 + dy, 1.6, 1.6, ball(c));
+  }
+  if (shape === "bean") {
+    g.rect(8, 4, 2, 19, "#A86A3C");
+    for (let y = 6; y < 21; y += 3) { g.ellipse(y % 2 ? 6 : 12, y + droop * 0.4, 2, 1.2, leaf); }
+    for (const [x, y] of [[11, 9], [6, 13], [11, 17]] as const) g.rect(x, y + droop * 0.4, 2, 4, ball(c) as never), g.rect(x, y + droop * 0.4, 2, 4, c);
+  }
+  if (shape === "bush") {
+    g.ellipse(9, 17, 6, 4.5, ball(leaf));
+    for (const [x, y] of [[5, 15], [9, 12], [13, 15], [7, 19], [12, 19]] as const) g.rect(x, y + droop * 0.4, 1, 3, c);
+  }
 }
 
 export function coin(): Sprite {

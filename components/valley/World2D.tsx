@@ -67,7 +67,7 @@ function makeArt(): Art {
   const L = farmLayout(0).field;
   return {
     ground: bakeGround(),
-    field: fieldPatch(Math.round(L.x1 - L.x0), Math.round((L.z1 - L.z0) * 10) / 10),
+    field: fieldPatch(Math.round(L.x1 - L.x0 + 0.4), Math.round(L.z1 - L.z0)),
     buildings: new Map(BUILDINGS.map((b) => [b.id, P.building(b.w, STYLES[b.kind])])),
     farmhouse: new Map(),
     trees: TREE_KINDS.map((k, i) => P.tree(k, i * 7)),
@@ -154,7 +154,7 @@ export default function World2D(props: Props) {
     const wrap = (v: number, c: number, span: number) => v - Math.round((v - c) / span) * span;
 
     // Dev hooks so tests can drive the farmer without synthesizing clicks.
-    Object.assign(window, { __walkTo: (x: number, z: number) => { target = { x, z }; }, __pos: () => pos && { ...pos } });
+    if (process.env.NODE_ENV !== "production") Object.assign(window, { __walkTo: (x: number, z: number) => { target = { x, z }; }, __pos: () => pos && { ...pos }, __tp: (x: number, z: number) => { pos = { x, z }; cam = { x, z }; target = null; } });
 
     const onDown = (e: PointerEvent) => {
       const p = live.current;
@@ -303,7 +303,7 @@ export default function World2D(props: Props) {
         const sway = pl.harvested ? 0 : Math.round(Math.sin(t * 2 + pl.slot) * 0.6);
         list.push({ z, draw: () => {
           blit(s, x + sway / T, z);
-          if (mine && pl.harvestable && !pl.harvested) blit(art.coin, x, z, 30 + Math.round(Math.sin(t * 3 + pl.slot) * 2));
+          if (mine && pl.harvestable && !pl.harvested) blit(art.coin, x + 0.45, z, 22 + Math.round(Math.sin(t * 3 + pl.slot) * 2));
         } });
       }
       const drawAnimal = (species: string, outfit: Outfit, x: number, z: number, dir: Dir, walk: number, lift = 0) => {
@@ -508,7 +508,8 @@ export default function World2D(props: Props) {
         const sx = (a.x * T - camLeft) * scale, sy = (a.z * T - a.y * T - camTop) * scale;
         const vis = sx > -100 && sy > -40 && sx < cw * scale + 100 && sy < ch * scale + 80;
         el.style.visibility = vis ? "visible" : "hidden";
-        el.style.transform = `translate(${Math.round(sx)}px, ${Math.round(sy)}px) translate(-50%, -100%)`;
+        // Crop tags hang under their plant like garden markers; everything else floats above its anchor.
+        el.style.transform = `translate(${Math.round(sx)}px, ${Math.round(sy)}px) translate(-50%, ${id.startsWith("crop:") ? "0" : "-100%"})`;
         if (id.startsWith("crop:")) el.classList.toggle("far", Math.hypot(a.x - focus.x, a.z - focus.z) > 1.6);
       }
 

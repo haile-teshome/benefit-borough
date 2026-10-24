@@ -2,7 +2,7 @@ export { FARM_SPACING, farmOrigin } from "./farms";
 import { ELDER, farmLayout } from "./world";
 
 export function slotPosition(farm: number, slot: number): [number, number, number] {
-  const s = farmLayout(farm).slots[slot % 8];
+  const s = farmLayout(farm).slots[slot % 20];
   return [s.x, 0, s.z];
 }
 
@@ -20,6 +20,19 @@ export const CROP_LOOK: Record<string, { name: string; band: string }> = {
   fsa: { name: "Pretax Pumpkin", band: "#3FA66B" },
   card_credit: { name: "Mileage Marigold", band: "#8E5BD0" },
   tax_window: { name: "Enrollment Calendar", band: "#D2413A" },
+  bank_bonus: { name: "Bonus Beanstalk", band: "#E9BC3C" },
+  bank_fee: { name: "Overdraft Onion", band: "#C8A8F0" },
+  idle_cash: { name: "Interest Iris", band: "#7C8CE0" },
+  annual_fee: { name: "Fee Thistle", band: "#B48CF0" },
+  credit_move: { name: "Perk Pea", band: "#7CC46B" },
+  dispute: { name: "Double Daisy", band: "#3E8ED0" },
+  rotating: { name: "Cashback Clover", band: "#3FA66B" },
+  price_adjust: { name: "Markdown Mint", band: "#3FA6A0" },
+  fsa_claim: { name: "Receipt Rhubarb", band: "#E04870" },
+  promo_apr: { name: "Interest Ivy", band: "#D2413A" },
+  subscription: { name: "Renewal Radish", band: "#E04848" },
+  points: { name: "Mileage Poppy", band: "#F06C3B" },
+  insurance: { name: "Premium Peony", band: "#F49AC8" },
 };
 
 export const usd = (n: number) => "$" + Math.round(n).toLocaleString("en-US");

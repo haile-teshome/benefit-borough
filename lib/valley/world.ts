@@ -6,21 +6,21 @@ import type { Category } from "@/lib/types";
 
 export const BOUNDS = { x0: -40, x1: 40, z0: -34, z1: 72 };
 export const WALK = { x0: -35, x1: 35, z0: -29, z1: 67 };
-export const FARM_ROWS = [16, 29, 42, 55];
+export const FARM_ROWS = [16, 30, 44, 58];
 
-export type Place = { name: string; category?: Category; line: string };
+export type Place = { name: string; categories?: Category[]; line: string };
 export type BuildingDef = { id: string; kind: string; x: number; z: number; w: number; place?: Place };
 
 // x, z is the bottom-center of the front wall; w is the width in tiles.
 export const BUILDINGS: BuildingDef[] = [
-  { id: "pharmacy", kind: "pharmacy", x: -11.5, z: -3, w: 4, place: { name: "Pharmacy", category: "fsa", line: "FSA-eligible shelves. Ruth checks every cart." } },
-  { id: "clinic", kind: "clinic", x: -18.5, z: -3, w: 6, place: { name: "Valley Hospital", category: "deductible", line: "Imaging and labs. Your deductible is already met." } },
-  { id: "dental", kind: "dental", x: -26.5, z: -3, w: 5, place: { name: "Dr. Okafor’s Dental", category: "dental", line: "Crowns, fillings and cleanings." } },
-  { id: "bank", kind: "bank", x: 12.5, z: -3, w: 6, place: { name: "Valley Bank", category: "card_credit", line: "Card perks and statement credits." } },
-  { id: "store", kind: "store", x: 20.5, z: -3, w: 5, place: { name: "Department Store", category: "card_credit", line: "Travel desk on the second floor." } },
+  { id: "pharmacy", kind: "pharmacy", x: -11.5, z: -3, w: 4, place: { name: "Pharmacy", categories: ["fsa", "fsa_claim"], line: "FSA-eligible shelves. Ruth checks every cart." } },
+  { id: "clinic", kind: "clinic", x: -18.5, z: -3, w: 6, place: { name: "Valley Hospital", categories: ["deductible"], line: "Imaging and labs. Your deductible is already met." } },
+  { id: "dental", kind: "dental", x: -26.5, z: -3, w: 5, place: { name: "Dr. Okafor’s Dental", categories: ["dental"], line: "Crowns, fillings and cleanings." } },
+  { id: "bank", kind: "bank", x: 12.5, z: -3, w: 6, place: { name: "Valley Bank", categories: ["bank_bonus", "bank_fee", "annual_fee", "dispute", "rotating", "idle_cash"], line: "Checking, fees, disputes and card perks." } },
+  { id: "store", kind: "store", x: 20.5, z: -3, w: 5, place: { name: "Department Store", categories: ["price_adjust", "promo_apr", "subscription", "credit_move", "card_credit", "points"], line: "Price matches, store cards and a travel desk upstairs." } },
   { id: "market", kind: "market", x: 27, z: -3, w: 3, place: { name: "Corner Market", line: "Fresh produce. Nothing expiring here." } },
-  { id: "commons", kind: "commons", x: 17, z: -16, w: 8, place: { name: "Dining Commons", category: "dining", line: "Meal-plan dollars spent here." } },
-  { id: "hall", kind: "hall", x: 0, z: -10, w: 8, place: { name: "Benefits Office", category: "tax_window", line: "Open enrollment, every November." } },
+  { id: "commons", kind: "commons", x: 17, z: -16, w: 8, place: { name: "Dining Commons", categories: ["dining"], line: "Meal-plan dollars spent here." } },
+  { id: "hall", kind: "hall", x: 0, z: -10, w: 8, place: { name: "Benefits Office", categories: ["tax_window", "insurance"], line: "Open enrollment and policy renewals." } },
   // Homes and shops that make it a town (no balances live here, just flavor)
   { id: "cottage1", kind: "cottage1", x: -28, z: 8.8, w: 4, place: { name: "Rose Cottage", line: "Someone is baking cinnamon rolls." } },
   { id: "library", kind: "library", x: -21.5, z: 8.8, w: 5, place: { name: "Library", line: "A whole shelf on reading your benefits summary." } },
@@ -88,28 +88,28 @@ export function zoneAt(x: number, z: number): Zone["kind"] | null {
 export function farmLayout(farm: number) {
   const o = farmOrigin(farm);
   const side = o.x < 0 ? -1 : 1;
-  const slots = Array.from({ length: 8 }, (_, i) => ({ x: o.x + side + ((i % 4) - 1.5) * 2, z: o.z + 2.6 + Math.floor(i / 4) * 2 }));
+  const slots = Array.from({ length: 20 }, (_, i) => ({ x: o.x + side + ((i % 5) - 2) * 1.6, z: o.z + 2.3 + Math.floor(i / 5) * 1.6 }));
   return {
     o, side, slots,
     house: { x: o.x + side * 2.5, z: o.z - 1.3 },
     mailbox: { x: o.x - side * 3.4, z: o.z - 1 },
-    field: { x0: o.x + side - 4, x1: o.x + side + 4, z0: o.z + 1.4, z1: o.z + 5.8 },
+    field: { x0: o.x + side - 4.2, x1: o.x + side + 4.2, z0: o.z + 1.3, z1: o.z + 8 },
     decor: [
-      { kind: "scarecrow", x: o.x + side * 5.6, z: o.z + 3.4 },
+      { kind: "scarecrow", x: o.x + side * 6.2, z: o.z + 4 },
       { kind: "hay", x: o.x - side * 1.2, z: o.z - 2.4 },
       { kind: "crate", x: o.x + side * 5.5, z: o.z - 1.6 },
       { kind: "barrel", x: o.x + side * 5.6, z: o.z - 0.6 },
       { kind: "planter", x: o.x + side * 1.3, z: o.z - 1 },
       { kind: "planter", x: o.x + side * 3.7, z: o.z - 1 },
       { kind: "flowerbed", x: o.x + side * 2.5, z: o.z - 0.4 },
-      ...[-3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5].map((dx) => ({ kind: "picket", x: o.x + side + dx, z: o.z + 6.1 })),
-      ...[2, 3, 4, 5, 6].flatMap((dz) => [{ kind: "post", x: o.x + side - 4.2, z: o.z + dz }, { kind: "post", x: o.x + side + 4.2, z: o.z + dz }]),
+      ...[-3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5].map((dx) => ({ kind: "picket", x: o.x + side + dx, z: o.z + 8.4 })),
+      ...[2, 3, 4, 5, 6, 7, 8].flatMap((dz) => [{ kind: "post", x: o.x + side - 4.5, z: o.z + dz }, { kind: "post", x: o.x + side + 4.5, z: o.z + dz }]),
     ],
   };
 }
 const farmBox = (farm: number) => {
   const o = farmOrigin(farm);
-  return [o.x - 7, o.z - 6.5, o.x + 7, o.z + 7] as const;
+  return [o.x - 7, o.z - 6.5, o.x + 7, o.z + 9] as const;
 };
 
 // ---------- static decor ----------
@@ -159,7 +159,7 @@ const FIXED: Decor[] = [
   ...[-25, -18, -11, 11, 18, 25].map((x) => ({ kind: "lamp", x, z: 11.4 })),
   ...[-30, -27, -23, -20, -16, -13].map((x) => ({ kind: "picket", x, z: 11.5 })), ...[13, 16, 20, 23, 27, 30].map((x) => ({ kind: "picket", x, z: 11.5 })),
   // lamps down the farm road, with lights strung across it
-  ...[8, 21, 34, 47, 60].flatMap((z) => [{ kind: "lamp", x: -2.2, z }, { kind: "lamp", x: 2.2, z }]),
+  ...[8, 23, 37, 51, 64].flatMap((z) => [{ kind: "lamp", x: -2.2, z }, { kind: "lamp", x: 2.2, z }]),
   // herb garden north of the Healthcare District
   { kind: "arch", x: -25, z: -6.6 },
   ...[-29, -27, -23, -21].flatMap((x, i) => [{ kind: "flowerbed", x, z: -8.6, v: 20 + i }, { kind: "flowerbed", x, z: -10.8, v: 30 + i }]),
@@ -218,7 +218,7 @@ export const STRINGS: [number, number, number, number][] = [
   [-5, -4.6, 5, -4.6], [-5, 5.2, 5, 5.2], [-5, -4.6, -5, 5.2], [5, -4.6, 5, 5.2],
   [-30, 2.8, -24, 2.8], [-24, 2.8, -16, 2.8], [-16, 2.8, -9, 2.8],
   [9, 2.8, 16, 2.8], [16, 2.8, 24, 2.8], [24, 2.8, 30, 2.8],
-  ...[8, 21, 34, 47, 60].map((z) => [-2.2, z, 2.2, z] as [number, number, number, number]),
+  ...[8, 23, 37, 51, 64].map((z) => [-2.2, z, 2.2, z] as [number, number, number, number]),
   [-25, 11.4, -18, 11.4], [-18, 11.4, -11, 11.4], [11, 11.4, 18, 11.4], [18, 11.4, 25, 11.4],
 ];
 export const GLOWS: Record<string, string> = { lilac: "180, 140, 240", aqua: "111, 224, 224", rose: "244, 154, 200", "#4FC3E8": "79, 195, 232", "#F06C8B": "240, 108, 139", "#B48CF0": "180, 140, 240" };

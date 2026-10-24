@@ -266,7 +266,9 @@ function Valley() {
     if (near.kind === "elder") setModal({ kind: "elder", step: "hello" });
     if (near.kind === "mailbox") void openGifts();
     if (near.kind === "place") {
-      const tile = state?.tiles.find((t) => t.category === near.place.category);
+      const cats = near.place.categories ?? [];
+      const here = (state?.tiles ?? []).filter((t) => cats.includes(t.category));
+      const tile = here.filter((t) => !state!.done.includes(t.id)).sort((a, b) => b.atStake - a.atStake)[0] ?? here[0];
       if (tile) setModal({ kind: "crop", tileId: tile.id });
       else { setToast(`${near.place.name}: ${near.place.line}`); setTimeout(() => setToast(""), 4000); }
     }
@@ -404,7 +406,7 @@ function Labels({ plots, players, myHex, bubbles, bursts, nearElder }: LabelProp
         if (!mine && !pl.harvested) return null;
         const id = `crop:${String(pl.id)}`;
         const [x, , z] = slotPosition(owner.farm, pl.slot);
-        setAnchor(id, x, pl.harvested ? 1.0 : 1.75, z);
+        setAnchor(id, x, -0.1, z);
         const look = CROP_LOOK[pl.category] ?? CROP_LOOK.fsa;
         const tax = pl.category === "tax_window";
         return (
@@ -513,7 +515,7 @@ function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }
         <div className="ev-panel ev-how">
           <p><b>Walk</b> with WASD or by clicking the ground. <b>E</b> to inspect a crop, talk, or open your mailbox. <b>Enter</b> to chat. <b>M</b> to mute.</p>
           <p>Each crop is a real balance from your documents: dental max, a deductible window, dining dollars, card credits. The closer the deadline, the more it wilts.</p>
-          <p>Harvesting runs the real action (a booking call, a transfer) after Ruth, the Reviewer, approves it. Your rescued total is real money.</p>
+          <p>Harvesting runs the real action (a booking call, a transfer, a refund request) after Ruth, the Reviewer, approves it. Your rescued total is real money.</p>
         </div>
       ) : null}
       <div className="ev-title-actions">
@@ -565,7 +567,7 @@ function Intro({ busy, me, onPlant, onPick }: { busy: boolean; me?: Player; onPl
       <AvatarPicker value={me?.avatar ?? ""} onPick={onPick} />
       <label className="ev-field">Your name<input value={name} placeholder={me?.name ?? "Farmer"} onChange={(e) => setName(e.target.value)} maxLength={20} /></label>
       <div className="ev-colors">{COLORS.map((c) => <button key={c} aria-label={`Color ${c}`} className={c === color ? "on" : ""} style={{ background: c }} onClick={() => setColor(c)} />)}</div>
-      <p className="ev-sub">Seeds: your benefits summary, dental plan, EOBs, dining statement and card list.</p>
+      <p className="ev-sub">Seeds: your benefits summary, dental plan, EOBs, dining statement, card list and bank &amp; card statements.</p>
     </Dialogue>
   );
 }
@@ -607,7 +609,7 @@ function Confirm({ tile, others, onCancel, onConfirm }: { tile: Tile; others: Pl
     <Dialogue
       speaker={transfer ? "Send by letter" : "Confirm the harvest"}
       onClose={onCancel}
-      actions={<button className="ev-btn" onClick={() => onConfirm(to || undefined)}>{transfer ? `Send ${usd(Number(tile.action.payload.amount))}` : "Yes, call them"}</button>}
+      actions={<button className="ev-btn" onClick={() => onConfirm(to || undefined)}>{transfer ? `Send ${usd(Number(tile.action.payload.amount))}` : tile.action.kind === "request" ? "Yes, do it" : "Yes, call them"}</button>}
     >
       <p>Expire will: {tile.action.summary}. Nothing else will be said or paid.</p>
       {transfer && (
@@ -631,15 +633,16 @@ function Confirm({ tile, others, onCancel, onConfirm }: { tile: Tile; others: Pl
 
 function Run({ tile, lines, result, toName, onDone }: { tile: Tile; lines: string[]; result: DispatchResult | null; toName?: string; onDone: () => void }) {
   const call = tile.action.kind === "book_call";
+  const req = tile.action.kind === "request";
   return (
     <Dialogue
-      speaker={call ? `On the phone with ${tile.action.payload.to}` : "Sending dining dollars"}
-      actions={result ? <button className="ev-btn" onClick={onDone}>Collect +{usd(tile.action.savings)}</button> : <span className="ev-sub">{call ? "Calling…" : "Settling…"}</span>}
+      speaker={call ? `On the phone with ${tile.action.payload.to}` : req ? String(tile.action.payload.title) : "Sending dining dollars"}
+      actions={result ? <button className="ev-btn" onClick={onDone}>Collect +{usd(tile.action.savings)}</button> : <span className="ev-sub">{call ? "Calling…" : req ? "Working on it…" : "Settling…"}</span>}
     >
       <div className="ev-lines">{lines.map((l, i) => <p key={i} className="ev-line">{l}</p>)}</div>
       {result && (
         <div>
-          <span className="ev-stamp ok">{call ? "Booked" : "Sent"}<small>{result.confirmation}</small></span>
+          <span className="ev-stamp ok">{call ? "Booked" : req ? "Done" : "Sent"}<small>{result.confirmation}</small></span>
           <p className="ev-sub">{result.integration}{toName ? ` · an envelope is waiting in ${toName}’s letterbox` : ""}</p>
         </div>
       )}
