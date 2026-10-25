@@ -64,7 +64,7 @@ documents ─▶ Extract (Claude) ─▶ Optimize (calculators + Claude) ─▶ 
 | Extract | `lib/engine/extract.ts` | Structured output (`claude-opus-5-5`). A claim whose `source_span` isn't verbatim in a document gets dropped. |
 | Optimize | `lib/engine/optimize.ts` | Plain functions do the math (dental year-split search, deductible/out-of-pocket window, dining burn rate). Claude only writes the copy, and only when it agrees with the calculator's pick. |
 | Reviewer | `lib/engine/reviewer.ts` | The 6 rules from the build plan. Deterministic checks run first, then Claude. Every verdict goes into the audit trail. |
-| Ledger + state | `lib/store.ts` | A local JSON stand-in for the Convex tables (`.data/state.json`). Rule 6: the ledger moves only on a confirmed action. |
+| Ledger + state | `lib/store.ts` | Local JSON (`.data/`) with write-through to Convex when configured. Rule 6: the ledger moves only on a confirmed action. |
 | Booking call | `lib/integrations/cartesia.ts` | Cartesia TTS voices the agent line when `CARTESIA_API_KEY` and `CARTESIA_VOICE_ID` are set; otherwise it runs a scripted call. |
 | Transfer | `lib/integrations/transfer.ts` | Capital One Nessie transfer when the `NESSIE_*` keys are set; otherwise a simulated x402 settlement. |
 
@@ -76,8 +76,23 @@ documents ─▶ Extract (Claude) ─▶ Optimize (calculators + Claude) ─▶ 
 4. FSA tile: $612 is under the $640 carryover limit, so nothing is forfeiting. Ask the Reviewer about a sunscreen cart and it **rejects on rule 2**.
 5. Dining tile: at $29.50/week you'll spend about $215 by Dec 14. Send the $195 surplus to a classmate.
 
+## Sponsor tech: what each one does here
+
+| Sponsor | Where | What it does in the running game | Live or simulated |
+| --- | --- | --- | --- |
+| **Anthropic Claude** (`claude-opus-5-5`) | `lib/engine/*.ts` | Extracts every expiring balance with a verbatim quote, writes crop copy, and plays **Ruth the Reviewer**: she gates every action on 6 rules, asks you when only you know the answer, and defends her verdicts when you push back (she can concede wording, never loosen a rule). | Live with `ANTHROPIC_API_KEY` |
+| **Capital One Nessie** | `lib/integrations/nessie.ts`, `scripts/seed-nessie.ts` | The demo farmer's checking and cards live in the Nessie sandbox; scans read them live and the statement detectors turn duplicate charges, fees, prescriptions, subscriptions and the annual fee into crops. Dining dollars post as a Nessie transfer. | Live with `NESSIE_*` (run `npm run seed:nessie` once) |
+| **Cartesia** | `app/api/voice`, `lib/integrations/cartesia.ts` | Ruth's voice (Sonic TTS) for her verdicts and replies, and the agent's line on booking calls. | Live with `CARTESIA_API_KEY` + `CARTESIA_VOICE_ID`; the office's side of a call is scripted |
+| **Convex** | `convex/`, `lib/store.ts`, `components/valley/LiveBoard.tsx`, `Ruth.tsx` | Every farmer's saved game, the rescued-money ledger and Ruth's audit trail. **Live queries** drive the valley leaderboard, the rescue feed and Ruth's record on every screen. | Live with `NEXT_PUBLIC_CONVEX_URL` (`npm run convex:push`) |
+| **Apify** | `lib/integrations/apify.ts`, `lib/statement/products.ts` | Price watch: a recent purchase on the watchlist (e.g. Target AirPods) gets the store's **live price** from Apify's E-commerce Scraping Tool; a real drop inside the price-match window grows a crop that cites it. | Live with `APIFY_TOKEN` (cached 6 h) |
+| **SpacetimeDB** | `valley-server/`, `components/valley/Valley.tsx` | The multiplayer world: farmers, positions, crops, harvests, letters (gifts) and chat, all live-synced. | Live (local server) |
+
+What's simulated, and said so in Ruth's record ("What's real"): the other side of phone calls, and form/chat steps for refunds, disputes and cancellations (each provider's API is the seam).
+
+Run `npm run check:keys` to test each key (it never prints them).
+
 ## Not done yet
 
-- Convex: the ledger is a local JSON file with the same shape. Swap `load`/`save` in `lib/store.ts` after running `npx convex dev`.
-- x402: the transfer is simulated. Apify card-terms scrape: the terms are hardcoded in the sample docs.
-- Cartesia: the call is TTS only. A real outbound phone call needs a Cartesia agent and a phone number.
+- x402: dining transfers post to Nessie when configured; the x402 rail is still simulated.
+- Cartesia: a real outbound phone call needs a Cartesia agent and a phone number.
+- The price watchlist has one product page; adding a store means adding its page and match policy to `lib/statement/products.ts`.
