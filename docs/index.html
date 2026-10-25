@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2b2552">
 <title>Benefit Burrow</title>
 <meta name="description" content="A cozy multiplayer farming town where your expiring benefits grow as crops, and AI agents find the money, fill your claims and shop your perks. Cal Hacks 13.0.">
 <meta property="og:title" content="Benefit Burrow">
@@ -15,7 +16,7 @@
   :root {
     --wood-dark: #4a2a12; --wood: #8a4f22; --wood-light: #c9813f; --wood-hi: #e3a35a;
     --parchment: #f7e6b8; --parchment-2: #efd59a; --ink: #3b2412; --ink-2: #6b4a2a;
-    --grass: #5e9e3f; --grass-dark: #3b5e2b; --gold: #ffd23f; --leaf: #b9e57a;
+    --night: #1c2340; --gold: #ffd23f; --leaf: #b9e57a;
     --pixel: "Jersey 10", ui-monospace, monospace;
     --read: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
   }
@@ -23,9 +24,15 @@
   html { scroll-behavior: smooth; }
   body {
     margin: 0; color: var(--ink); font: 400 17px/1.55 var(--read);
-    background: var(--grass);
-    background-image: radial-gradient(#ffffff26 1px, transparent 1.6px), radial-gradient(#2f5a2033 1px, transparent 1.6px);
-    background-size: 24px 24px, 24px 24px; background-position: 0 0, 12px 12px;
+    background-color: var(--night);
+    background-image:
+      radial-gradient(ellipse 70% 520px at 50% 0, #f2a65a33, transparent 70%),
+      radial-gradient(#fff6d8aa 1px, transparent 1.6px),
+      radial-gradient(#fff6d855 1px, transparent 1.4px),
+      linear-gradient(180deg, #2b2552 0%, var(--night) 45%, #141b2e 100%);
+    background-size: 100% 100%, 173px 157px, 97px 113px, 100% 100%;
+    background-position: 0 0, 0 0, 41px 67px, 0 0;
+    background-attachment: scroll, fixed, fixed, scroll;
   }
   a { color: inherit; }
   img, video { display: block; max-width: 100%; }
@@ -37,8 +44,11 @@
     box-shadow: inset 0 0 0 4px var(--wood-hi), 0 10px 0 rgba(40, 20, 5, .4); }
   .sign span { display: block; text-align: center; font: 400 clamp(56px, 11vw, 112px)/0.9 var(--pixel); letter-spacing: 3px; color: var(--parchment); text-shadow: 5px 5px 0 var(--wood-dark); }
   .sign span + span { color: var(--leaf); }
-  .posts { display: flex; justify-content: space-between; width: 62%; margin: -4px auto 0; height: 46px; }
-  .posts i { width: 16px; background: var(--wood); border: 4px solid var(--wood-dark); border-top: 0; }
+  /* the posts sit under the sign, sized to the sign rather than the page */
+  .signpost { display: inline-block; position: relative; }
+  .signpost .sign { z-index: 1; }
+  .posts { display: flex; justify-content: space-between; width: 56%; margin: -6px auto 0; height: 54px; }
+  .posts i { width: 20px; background: linear-gradient(90deg, var(--wood-light), var(--wood) 60%); border: 4px solid var(--wood-dark); border-top: 0; }
 
   /* parchment panels */
   .panel { background: var(--parchment); border: 5px solid var(--wood-dark); box-shadow: inset 0 0 0 4px var(--wood-hi), 0 8px 0 rgba(40, 20, 5, .35); padding: 24px 26px; }
@@ -111,8 +121,10 @@
 </head>
 <body>
 <header class="hero wrap">
-  <div class="sign" role="img" aria-label="Benefit Burrow"><span>Benefit</span><span>Burrow</span></div>
-  <div class="posts" aria-hidden="true"><i></i><i></i></div>
+  <div class="signpost">
+    <div class="sign" role="img" aria-label="Benefit Burrow"><span>Benefit</span><span>Burrow</span></div>
+    <div class="posts" aria-hidden="true"><i></i><i></i></div>
+  </div>
   <p class="tag outline"><b>$100B+ a year</b> in earned benefits goes unclaimed.</p>
   <p class="sub outline">A cozy multiplayer farming town where every benefit you're about to lose grows as a crop, and AI agents find the money, fill your claims and shop your perks.</p>
   <div class="chips"><span class="chip">Track every benefit</span><span class="chip">AI agents shop &amp; fill forms</span><span class="chip">You have the final say</span></div>
