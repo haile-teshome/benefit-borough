@@ -9,7 +9,7 @@ import { expire } from "@/lib/valley/expire";
 import { CROP_LOOK, ELDER_POS, slotPosition, usd } from "@/lib/valley/layout";
 import type { AppState, DispatchResult, Tile, Verdict } from "@/lib/types";
 import { playAudio, sound, speak } from "@/lib/valley/audio";
-import { clockLabel, gameHour, setHour } from "@/lib/valley/clock";
+import { clockLabel, dateLabel, gameHour, setHour } from "@/lib/valley/clock";
 import { anchors, registerLabel, setAnchor } from "@/lib/valley/labels";
 import { AVATARS, portrait } from "@/lib/valley/pixel/animals";
 import { BUILDINGS, DISTRICTS, NPCS } from "@/lib/valley/world";
@@ -48,7 +48,7 @@ export default function ValleyApp() {
   const [token, setToken] = useState<string | null>(null);
   const [failed, setFailed] = useState("");
   useEffect(() => {
-    ensureToken(slotKey()).then(setToken).catch((e) => setFailed(`Can’t reach the valley server (${(e as Error).message}). Is \`spacetime start\` running?`));
+    ensureToken(slotKey()).then(setToken).catch((e) => setFailed(`Can’t reach the Benefit Burrow server (${(e as Error).message}). Is \`spacetime start\` running?`));
   }, []);
   const builder = useMemo(() => {
     if (!token) return null;
@@ -61,7 +61,7 @@ export default function ValleyApp() {
       .onConnect((_c, _id, t) => localStorage.setItem(key, t));
   }, [token]);
   if (failed) return <div className="ev-loading">{failed}</div>;
-  if (!builder) return <div className="ev-loading">Walking into the valley…</div>;
+  if (!builder) return <div className="ev-loading">Walking into Benefit Burrow…</div>;
   const game = (
     <SpacetimeDBProvider connectionBuilder={builder}>
       <Valley />
@@ -321,7 +321,7 @@ function Valley() {
     if (!near || modal || title) return;
     sound.click();
     if (near.kind === "crop") { setModal({ kind: "crop", tileId: near.tileId }); setEmotes((e) => ({ ...e, [myHex]: { clip: "Interact", at: performance.now() } })); }
-    if (near.kind === "elder") { setModal({ kind: "elder", step: "hello" }); void speak("I audit every harvest in this valley. Show me what you want to buy with your FSA."); }
+    if (near.kind === "elder") { setModal({ kind: "elder", step: "hello" }); void speak("I audit every harvest in this burrow. Show me what you want to buy with your FSA."); }
     if (near.kind === "mailbox") void openGifts();
     if (near.kind === "place") worldApi.enter?.(near.id);
     if (near.kind === "exit") worldApi.exit?.();
@@ -351,12 +351,11 @@ function Valley() {
   function play() {
     sound.start();
     sound.click();
-    setHour(7); // every session starts at dawn, whatever the title screen idled through
     setTitle(false);
   }
 
   useEffect(() => {
-    if (process.env.NODE_ENV !== "production") (window as unknown as { __setHour?: (h: number) => void }).__setHour = setHour;
+    if (process.env.NODE_ENV !== "production") (window as unknown as { __setHour?: (h: number | null) => void }).__setHour = setHour;
   }, []);
 
   // A soft chime when something new comes within reach.
@@ -411,7 +410,7 @@ function Valley() {
         <Hud inside={Boolean(inside)} me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} onLibrary={() => setModal({ kind: "library" })} onAlmanac={() => setModal({ kind: "almanac" })} />
       )}
 
-      {convex && !title && !inside && <div className="ev-live-wrap" onClick={() => setModal({ kind: "almanac" })} title="Open the Valley Almanac"><LiveBoard players={players} myPid={pid} /></div>}
+      {convex && !title && !inside && <div className="ev-live-wrap" onClick={() => setModal({ kind: "almanac" })} title="Open the Burrow Almanac"><LiveBoard players={players} myPid={pid} /></div>}
       {near && !modal && !title && (
         <button className="ev-prompt" onClick={interact}><kbd>E</kbd> {near.label}</button>
       )}
@@ -421,7 +420,7 @@ function Valley() {
 
       {chatOpen && (
         <form className="ev-chat" onSubmit={(e) => { e.preventDefault(); const v = (e.currentTarget.elements.namedItem("t") as HTMLInputElement).value; if (v.trim() && conn) void conn.reducers.say({ text: v }); setChatOpen(false); }}>
-          <input name="t" autoFocus placeholder="Say something to the valley…" onKeyDown={(e) => e.key === "Escape" && setChatOpen(false)} />
+          <input name="t" autoFocus placeholder="Say something to the burrow…" onKeyDown={(e) => e.key === "Escape" && setChatOpen(false)} />
         </form>
       )}
 
@@ -582,12 +581,13 @@ function Labels({ plots, players, myHex, bubbles, bursts, nearElder, tiles, done
 
 function useClock() {
   const [label, setLabel] = useState(clockLabel());
+  const [date, setDate] = useState(dateLabel());
   const [night, setNight] = useState(false);
   useEffect(() => {
-    const id = setInterval(() => { setLabel(clockLabel()); const h = gameHour(); setNight(h < 6 || h >= 19); }, 1000);
+    const id = setInterval(() => { setLabel(clockLabel()); setDate(dateLabel()); const h = gameHour(); setNight(h < 6 || h >= 19); }, 1000);
     return () => clearInterval(id);
   }, []);
-  return { label, night };
+  return { label, night, date };
 }
 
 function UploadButton({ busy, onUpload, className, label }: { busy: boolean; onUpload: (f: File) => void; className: string; label: string }) {
@@ -606,8 +606,8 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
   return (
     <>
       <div className="ev-panel ev-date">
-        <div className="ev-title">Expire Valley</div>
-        <div className="ev-clock">Sat, Oct 24 · {clock.label} {clock.night ? "☾" : "☀"}</div>
+        <div className="ev-title">Benefit Burrow</div>
+        <div className="ev-clock">{clock.date} · {clock.label} {clock.night ? "☾" : "☀"}</div>
         {next && <div className="ev-sub">Next to wilt: {shortTitle(next.title).split(" ").slice(0, 3).join(" ")}… in {next.daysLeft}d</div>}
       </div>
       <div className="ev-panel ev-gold">
@@ -618,10 +618,10 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
         </div>
       </div>
       <div className="ev-panel ev-who" hidden={inside}>
-        <div className="ev-sub">{isActive ? `${others.length + (me ? 1 : 0)} in the valley` : "Connecting…"}</div>
+        <div className="ev-sub">{isActive ? `${others.length + (me ? 1 : 0)} in the burrow` : "Connecting…"}</div>
         {me && <div className="who"><i style={{ background: me.color }} />{me.name} (you)</div>}
         {others.map((p) => <div key={p.identity.toHexString()} className="who"><i style={{ background: p.color }} />{p.name}</div>)}
-        <button className="ev-link" onClick={onAlmanac}>Valley Almanac (leaderboard)</button>
+        <button className="ev-link" onClick={onAlmanac}>Burrow Almanac (leaderboard)</button>
         <button className="ev-link" onClick={onLibrary}>Find my plans (plan library)</button>
         <button className="ev-link" onClick={onRecord}>Ruth's record (audit trail)</button>
         <UploadButton busy={busy} onUpload={onUpload} className="ev-link" label="Plant a bank statement (CSV/PDF)" />
@@ -639,8 +639,8 @@ function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }
     <div className="ev-title-screen">
       <div className="ev-sign">
         <div className="ev-sign-board">
-          <span className="l1">Expire</span>
-          <span className="l2">Valley</span>
+          <span className="l1">Benefit</span>
+          <span className="l2">Burrow</span>
           <span className="denom">GROW YOUR PAPERWORK · HARVEST YOUR MONEY</span>
         </div>
       </div>
@@ -656,7 +656,7 @@ function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }
         <button className="ev-btn big" onClick={onPlay} disabled={!connected}>{connected ? "Play" : "Connecting…"}</button>
         <button className="ev-btn ghost" onClick={() => setHow((h) => !h)}>{how ? "Got it" : "How to play"}</button>
       </div>
-      <div className="ev-credit">Cal Hacks 13.0 · multiplayer on SpacetimeDB · powered by the Expire engine</div>
+      <div className="ev-credit">Cal Hacks 13.0 · multiplayer on SpacetimeDB · reviewed by Claude</div>
     </div>
   );
 }
@@ -695,7 +695,7 @@ function Intro({ busy, me, onPlant, onPick, onUpload, onLibrary }: { busy: boole
   const [name, setName] = useState("");
   const [color, setColor] = useState(me?.color ?? COLORS[0]);
   return (
-    <Dialogue speaker="Welcome to Expire Valley" actions={<button className="ev-btn" disabled={busy} onClick={() => onPlant(name, color, me?.avatar ?? "")}>{busy ? "Planting…" : "Plant my documents"}</button>}>
+    <Dialogue speaker="Welcome to Benefit Burrow" actions={<button className="ev-btn" disabled={busy} onClick={() => onPlant(name, color, me?.avatar ?? "")}>{busy ? "Planting…" : "Plant my documents"}</button>}>
       <p>Plant your paperwork and it grows: every benefit you’re about to lose becomes a crop bearing coins. The closer its deadline, the more it wilts. Harvest it before the date and the money is yours.</p>
       <div className="ev-field">Pick your farmer</div>
       <AvatarPicker value={me?.avatar ?? ""} onPick={onPick} />
@@ -761,7 +761,7 @@ function Confirm({ tile, others, onCancel, onConfirm }: { tile: Tile; others: Pl
               <i style={{ background: p.color }} />{p.name}
             </button>
           ))}
-          <button className={to === "" ? "on" : ""} onClick={() => setTo("")}>A classmate outside the valley</button>
+          <button className={to === "" ? "on" : ""} onClick={() => setTo("")}>A classmate outside the burrow</button>
         </div>
       )}
       <ul className="ev-options">
@@ -799,7 +799,7 @@ function ElderTalk({ step, verdict, onAsk, onClose, onRecord, pushBack }: { step
     <Dialogue speaker="Ruth, the Reviewer" onClose={onClose}
       actions={step === "hello" ? [...CARTS.map((c) => <button key={c.join()} className="ev-btn ghost" onClick={() => onAsk(c)}>Spend my FSA on {c.join(" + ").toLowerCase()}?</button>), <button key="rec" className="ev-btn ghost" onClick={onRecord}>Show me your record</button>] : step === "verdict" ? <button className="ev-btn ghost" onClick={() => onAsk(CARTS[0])}>Ask again</button> : null}
     >
-      {step === "hello" && <p>I audit every harvest in this valley. Merchants profit when you spend; I don’t. Show me what you want to buy with your FSA.</p>}
+      {step === "hello" && <p>I audit every harvest in this burrow. Merchants profit when you spend; I don’t. Show me what you want to buy with your FSA.</p>}
       {step === "thinking" && <p>Checking it against your receipts and stated needs…</p>}
       {step === "verdict" && verdict && (
         <div>

@@ -59,7 +59,7 @@ export const NPCS: Npc[] = [
   {
     id: "mayor", name: "Mayor Maple", species: "deer", x: 3.0, z: 3.4, outfit: { body: "#6A4C93", hat: "cap", hatColor: "#3A2357" },
     persona: { quirk: "A pompous but lovable mayor who turns every sentence into a campaign speech and keeps announcing ribbon cuttings.", style: "Booming, oratorical, 'fellow citizens', ends lines with a slogan.", catchphrase: "Not a single dollar left behind!", loves: "ribbon cuttings, slogans, open enrollment season", peeve: "wilted crops on Main Street", idle: "speech", voice: "b7187e84-fe22-4344-ba4a-bc013fcb533e" },
-    talk: ["Fellow citizen! Welcome to Expire Valley, where not a single dollar is left behind!", "Open enrollment opens November first at the Benefits Office. I will be cutting a ribbon. There is always a ribbon.", "My platform: zero wilted crops by December. Also, more benches. Mostly the crops."],
+    talk: ["Fellow citizen! Welcome to Benefit Burrow, where not a single dollar is left behind!", "Open enrollment opens November first at the Benefits Office. I will be cutting a ribbon. There is always a ribbon.", "My platform: zero wilted crops by December. Also, more benches. Mostly the crops."],
   },
   {
     id: "postman", name: "Postman Pete", species: "fox", x: 0, z: 6, outfit: { body: "#3E8ED0", hat: "cap", hatColor: "#2B5F8E" },
@@ -69,7 +69,7 @@ export const NPCS: Npc[] = [
   },
   {
     id: "granny", name: "Granny Fern", species: "rabbit", x: -6, z: -5.5, outfit: { scarf: "#E07BB0" },
-    persona: { quirk: "A sweet granny who hums constantly, feeds the ducks, and is secretly the sharpest financial mind in the valley.", style: "Warm and sing-song, then suddenly razor-precise about money.", catchphrase: "Now listen here, sugar.", loves: "ducks, humming, catching sneaky fees", peeve: "auto-renewals nobody asked for", idle: "note", voice: "a7b8d8fa-f6e5-4908-900e-0c11d1d82519" },
+    persona: { quirk: "A sweet granny who hums constantly, feeds the ducks, and is secretly the sharpest financial mind in the burrow.", style: "Warm and sing-song, then suddenly razor-precise about money.", catchphrase: "Now listen here, sugar.", loves: "ducks, humming, catching sneaky fees", peeve: "auto-renewals nobody asked for", idle: "note", voice: "a7b8d8fa-f6e5-4908-900e-0c11d1d82519" },
     talk: ["Hmm hmm hmm... oh! Hello, sugar. I feed the ducks every morning. They know about compound interest. I told them.", "Now listen here, sugar. A free trial is just a subscription wearing a costume. Cancel before it bills.", "Back in my day nobody read the benefits summary. I did. I read it twice and found forty dollars."],
     route: [[-6, -5.5], [-9.5, -9], [-12.6, -13], [-12.4, -15.6], [-12.6, -13], [-9.5, -9], [-6, -5.5], [-2.5, -3]],
   },
@@ -79,7 +79,7 @@ export const NPCS: Npc[] = [
 export type Chat = { a: string; b: string; lines: [0 | 1, string][] };
 export const CHATTER: Chat[] = [
   { a: "okafor", b: "nurse", lines: [[0, "Why did the crown wait for January? Fresh maximum! Ha!"], [1, "Okay so, that's the fourth time today, doctor."], [0, "And it gets funnier every time!"]] },
-  { a: "nurse", b: "okafor", lines: [[0, "Okay so, half the valley met their deductible!"], [1, "Then ordered imaging before January. That's the tooth!"], [0, "That's not even about teeth."], [1, "It's ALL about teeth."]] },
+  { a: "nurse", b: "okafor", lines: [[0, "Okay so, half the burrow met their deductible!"], [1, "Then ordered imaging before January. That's the tooth!"], [0, "That's not even about teeth."], [1, "It's ALL about teeth."]] },
   { a: "teller", b: "clerk", lines: [[0, "Someone downgraded inside the 30 days. Full refund."], [1, "Darling, that's magnificent!"], [0, "Yes. This is my magnificent face."]] },
   { a: "clerk", b: "teller", lines: [[0, "The AirPods dropped to $199.99! Scandal!"], [1, "That is a $49.01 difference. I counted."], [0, "Twice?"], [1, "Three times. It was a big day."]] },
   { a: "chef", b: "diner", lines: [[0, "Dining dollars expire like a soufflé! December 14!"], [1, "Sorry, is that, um, today?"], [0, "No, dear! Breathe. Send your extra to a friend."]] },
@@ -91,7 +91,7 @@ export const CHATTER: Chat[] = [
   { a: "postman", b: "teller", lines: [[0, "Statements! Mind the duplicate charges!"], [1, "I already found two. I counted them."]] },
   { a: "postman", b: "nurse", lines: [[0, "Explanation of benefits for the clinic!"], [1, "Okay so, step one: OPEN IT!"]] },
   { a: "granny", b: "bertie", lines: [[0, "Hmm hmm hmm... the ducks were hungry today, Bertie."], [1, "So was I. Mmm."], [0, "Now listen here, cancel that streaming trial before Saturday."], [1, "...How did you know?"]] },
-  { a: "granny", b: "mayor", lines: [[0, "Mayor, the pond crystals are glowing again."], [1, "Valley magic, Fern! Not a single sparkle left behind!"], [0, "Hmm. Your slogan needs work, sugar."]] },
+  { a: "granny", b: "mayor", lines: [[0, "Mayor, the pond crystals are glowing again."], [1, "Burrow magic, Fern! Not a single sparkle left behind!"], [0, "Hmm. Your slogan needs work, sugar."]] },
   { a: "postman", b: "granny", lines: [[0, "Hey Fern! You got a letter from the bank!"], [1, "Is it a fee? Give it here, sugar."], [0, "...She's terrifying. Gotta drop!"]] },
 ];
 

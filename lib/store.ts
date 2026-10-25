@@ -7,7 +7,7 @@ import type { AppState, AuditEvent } from "./types";
 
 // State lives in a local file and, when NEXT_PUBLIC_CONVEX_URL is set, in Convex too: every save
 // writes through, and a server with no local copy hydrates from Convex (see convex/states.ts).
-// One state per player so Expire Valley farmers keep separate ledgers; "default" is the solo app.
+// One state per player so Benefit Burrow farmers keep separate ledgers; "default" is the solo app.
 const fileFor = (pid: string) => path.join(process.cwd(), ".data", pid === "default" ? "state.json" : `state-${pid}.json`);
 const safe = (pid?: string | null) => (pid && /^[a-zA-Z0-9_-]{1,64}$/.test(pid) ? pid : "default");
 

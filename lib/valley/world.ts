@@ -14,9 +14,9 @@ export type BuildingDef = { id: string; kind: string; x: number; z: number; w: n
 // x, z is the bottom-center of the front wall; w is the width in tiles.
 export const BUILDINGS: BuildingDef[] = [
   { id: "pharmacy", kind: "pharmacy", x: -11.5, z: -3, w: 4, place: { name: "Pharmacy & Optical", categories: ["fsa", "fsa_claim", "vision"], line: "FSA money, prescriptions and your glasses allowance, all at one counter." } },
-  { id: "clinic", kind: "clinic", x: -18.5, z: -3, w: 6, place: { name: "Valley Hospital", categories: ["deductible"], line: "Imaging and labs. Your deductible is already met." } },
+  { id: "clinic", kind: "clinic", x: -18.5, z: -3, w: 6, place: { name: "Burrow General Hospital", categories: ["deductible"], line: "Imaging and labs. Your deductible is already met." } },
   { id: "dental", kind: "dental", x: -26.5, z: -3, w: 5, place: { name: "Dr. Okafor’s Dental", categories: ["dental"], line: "Crowns, fillings and cleanings." } },
-  { id: "bank", kind: "bank", x: 12.5, z: -3, w: 6, place: { name: "Valley Bank", categories: ["bank_bonus", "bank_fee", "dispute", "idle_cash"], line: "Checking and savings: bonuses, fees, disputes, idle cash." } },
+  { id: "bank", kind: "bank", x: 12.5, z: -3, w: 6, place: { name: "Burrow Bank", categories: ["bank_bonus", "bank_fee", "dispute", "idle_cash"], line: "Checking and savings: bonuses, fees, disputes, idle cash." } },
   { id: "store", kind: "cards", x: 20.5, z: -3, w: 5, place: { name: "The Card House", categories: ["card_credit", "annual_fee", "credit_move", "rotating", "promo_apr", "points"], line: "Every card you carry, managed in one place: credits, fees, cash back, store cards and miles." } },
   { id: "market", kind: "deals", x: 27, z: -3, w: 3, place: { name: "The Deal Desk", categories: ["price_adjust", "subscription"], line: "Price matches, returns and renewals before they bill." } },
   { id: "commons", kind: "commons", x: 17, z: -16, w: 8, place: { name: "Dining Commons", categories: ["dining"], line: "Meal-plan dollars spent here." } },

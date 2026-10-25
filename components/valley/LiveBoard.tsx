@@ -23,7 +23,7 @@ export function LiveBoard({ players, myPid }: { players: readonly Player[]; myPi
   if (!totals || !recent) return null;
   return (
     <div className="ev-panel ev-live">
-      <div className="ev-live-head"><span className="dot" /> Valley ledger <small>live · Convex</small></div>
+      <div className="ev-live-head"><span className="dot" /> Burrow ledger <small>live · Convex</small></div>
       {totals.length === 0 && <div className="ev-sub">No harvests yet. Be the first.</div>}
       <ol className="ev-board">
         {totals.slice(0, 3).map((t, i) => (

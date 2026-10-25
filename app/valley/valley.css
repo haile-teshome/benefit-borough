@@ -1,6 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Pixelify+Sans:wght@400;500;700&display=swap");
 
-/* Expire Valley: cozy pixel farm. Wooden frames, parchment, chunky pixel type. */
+/* Benefit Burrow: cozy pixel farm. Wooden frames, parchment, chunky pixel type. */
 :root {
   --wood-dark: #4a2a12;
   --wood: #8a4f22;
@@ -276,7 +276,7 @@ body { margin: 0; overflow: hidden; background: #8fc4e8; }
 .ev-lib-src { font-size: 12.5px; color: #6b4a2a; margin: 0; }
 .ev-lib-src a { color: var(--wood); margin-left: 6px; }
 
-/* Valley Almanac (green = rescued, purple = ahead of you; validated for color-blind readers) */
+/* Burrow Almanac (green = rescued, purple = ahead of you; validated for color-blind readers) */
 .ev-almanac { width: min(820px, 100%); }
 .ev-almanac-body { max-height: 58vh; overflow: auto; }
 .ev-live-wrap { cursor: pointer; }

@@ -13,7 +13,8 @@ import { BUILDINGS } from "@/lib/valley/world";
 const Reply = z.object({ reply: z.string().describe("1 to 3 short sentences, in character, spoken aloud") });
 type Turn = { from: "you" | "them"; text: string };
 
-const VALLEY = `Expire Valley is a cozy farming town where every benefit about to expire grows as a crop. Districts: the Healthcare District (Valley Hospital, Dr. Okafor's Dental, the Pharmacy & Optical), the Financial District (Valley Bank for checking and savings, the Card House for every credit card, the Deal Desk for price matches and renewals), the Dining Commons, the Benefits Office (open enrollment Nov 1-21), Farmland to the south, a pond with a dock, a fountain plaza. Ruth, an alpaca in reading glasses, is the Reviewer: she approves or rejects every harvest by her rules and can't be argued out of one. Today is October 24, 2026.`;
+const VALLEY = `Benefit Burrow is a cozy farming town where every benefit about to expire grows as a crop. Districts: the Healthcare District (Burrow General Hospital, Dr. Okafor's Dental, the Pharmacy & Optical), the Financial District (Burrow Bank for checking and savings, the Card House for every credit card, the Deal Desk for price matches and renewals), the Dining Commons, the Benefits Office (open enrollment Nov 1-21), Farmland to the south, a pond with a dock, a fountain plaza. Ruth, an alpaca in reading glasses, is the Reviewer: she approves or rejects every harvest by her rules and can't be argued out of one. `;
+const today = () => new Date().toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 
 export async function POST(req: Request) {
   const { pid, who, message, history = [] } = (await req.json()) as { pid?: string; who: string; message: string; history?: Turn[] };
@@ -33,8 +34,8 @@ export async function POST(req: Request) {
   const rescued = s.ledger.reduce((sum, l) => sum + l.amount, 0);
   const p = person.persona;
   const out = await callStructured({
-    system: `You are ${person.name}, a resident of Expire Valley, a cozy pixel-art farming game.
-${VALLEY}
+    system: `You are ${person.name}, a resident of Benefit Burrow, a cozy pixel-art farming game.
+${VALLEY} It is now ${today()}.
 Your personality: ${p.quirk} You talk like this: ${p.style} Catchphrase (use it sometimes, not every time): "${p.catchphrase}". You love ${p.loves}. Pet peeve: ${p.peeve}.
 Things you'd typically say: ${person.lines.map((l) => `"${l}"`).join(" ")}
 Rules: stay in character and keep it short (1-3 sentences, spoken aloud, no stage directions, no emoji). Be kind and funny. Only mention dollar amounts and dates that appear in the player's claims below; never invent numbers. You can point the player to a claim, a shop or Ruth, but you never take actions or promise money: harvesting happens through the crop cards, and Ruth reviews every one. If asked for personal financial or medical advice beyond the game, say in character that you'd ask Ruth or a professional.`,

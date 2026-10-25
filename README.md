@@ -2,9 +2,9 @@
 
 Trackers remind. Advisors suggest. **Expire rescues, in the best order, and does it.**
 
-## Expire Valley (the multiplayer game)
+## Benefit Burrow (the multiplayer game)
 
-A 3D multiplayer valley grown out of your paperwork: every benefit you're about to lose grows as a paper plant bearing coins. Its pages yellow as their deadline approaches. Harvesting one runs the real Expire action (booking call, transfer) through the Reviewer, and the money goes into your rescued total. Classmates farm next door in real time on **SpacetimeDB**: you see each other walk, chat, and harvest, and you can send surplus dining dollars to a friend's mailbox. Elder Ruth on the village square is the Reviewer: ask her to approve a sunscreen cart on your FSA and she says no.
+A cozy 2D multiplayer town grown out of your paperwork: every benefit you're about to lose grows as a paper plant bearing coins. Its pages yellow as their deadline approaches. Harvesting one runs the real Expire action (booking call, transfer) through the Reviewer, and the money goes into your rescued total. Classmates farm next door in real time on **SpacetimeDB**: you see each other walk, chat, and harvest, and you can send surplus dining dollars to a friend's mailbox. Elder Ruth on the village square is the Reviewer: ask her to approve a sunscreen cart on your FSA and she says no.
 
 ```bash
 # one time: install the SpacetimeDB CLI (https://spacetimedb.com/install), then
@@ -30,7 +30,7 @@ Open `http://localhost:3000/valley?farmer=2` in a second window for a second far
 ### 3-minute game demo
 1. Two laptops (or two windows). Each farmer plants their documents: six crops sprout, priced and wilting by deadline.
 2. Walk to the Tooth Lily, press E: "$1,900 becomes $1,550". Harvest: Expire calls Bright Smile Dental live in the dialogue box. +$350, and the other player sees the crop turn to "Rescued".
-3. Walk to Elder Ruth. "Spend my FSA on sunscreen?" She refuses, citing rule 2. "Every merchant in this valley profits when you spend. I don't."
+3. Walk to Elder Ruth. "Spend my FSA on sunscreen?" She refuses, citing rule 2. "Every merchant in this burrow profits when you spend. I don't."
 4. Harvest the Cafeteria Corn and send $195 to your classmate. A present appears on their mailbox in real time.
 
 Cal Hacks 13.0. Expire reads your benefits summary, dental treatment plan, EOBs, dining statement and card list, finds money that is about to expire, works out the cheapest way to rescue it, and acts (books the appointment, sends the transfer). A Reviewer has to approve every action first.

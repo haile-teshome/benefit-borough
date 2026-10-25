@@ -1,16 +1,17 @@
-// One shared game clock: a full valley day lasts DAY_SECONDS of real time, starting at 7 AM.
-// Six minutes means a 3-minute demo runs from morning to sunset.
-export const DAY_SECONDS = 360;
-const START_HOUR = 7;
-let t0 = typeof performance !== "undefined" ? performance.now() : 0;
+// The game clock follows real local time: when it's evening where you are, it's evening in the
+// burrow. A dev offset (window.__setHour) can shift it for testing.
+let offsetMs = 0;
 
-export function gameHour(now = performance.now()) {
-  return (START_HOUR + ((now - t0) / 1000 / DAY_SECONDS) * 24) % 24;
+const now = () => new Date(Date.now() + offsetMs);
+
+export function gameHour(d = now()) {
+  return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
 }
 
-// Jump the clock to a given hour (dev tooling and the title screen's restart).
-export function setHour(h: number) {
-  t0 = performance.now() - (((h - START_HOUR + 24) % 24) / 24) * DAY_SECONDS * 1000;
+// Shift the clock so it reads hour h (dev tooling only); setHour(null) returns to real time.
+export function setHour(h: number | null) {
+  if (h == null) { offsetMs = 0; return; }
+  offsetMs += ((h - gameHour() + 24) % 24) * 3600_000;
 }
 
 const smooth = (a: number, b: number, x: number) => {
@@ -24,10 +25,10 @@ export function nightAmount(h = gameHour()) {
   return smooth(17.5, 19.5, h);
 }
 
-export function clockLabel(h = gameHour()) {
-  const hh = Math.floor(h);
-  const mm = Math.floor((h - hh) * 6) * 10; // Stardew ticks in 10-minute steps
-  const ampm = hh < 12 ? "am" : "pm";
-  const h12 = hh % 12 === 0 ? 12 : hh % 12;
-  return `${h12}:${String(mm).padStart(2, "0")} ${ampm}`;
+export function clockLabel(d = now()) {
+  return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).toLowerCase();
+}
+
+export function dateLabel(d = now()) {
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
