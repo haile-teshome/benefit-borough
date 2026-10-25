@@ -16,7 +16,7 @@ const PRESETS: Preset[] = [
   { id: "parent", label: "Working parent", blurb: "Dependent care FSA, up to $7,500", plans: ["work-dcfsa"] },
   { id: "cards", label: "I have premium cards", blurb: "Every statement credit, before it resets", plans: [], extras: ["amex-platinum-2026", "amex-gold-2026", "chase-sapphire-reserve-2026", "venture-x-2026", "citi-strata-elite-2026"] },
   { id: "travel", label: "Frequent traveler", blurb: "Miles and points before they expire", plans: [], extras: ["points-aadvantage", "points-marriott", "points-hilton", "points-ihg"] },
-  { id: "cal", label: "UC Berkeley student", blurb: "SHIP health plan and Flex dollars", plans: ["ucb-ship-2026", "cal-dining-2026"] },
+  { id: "cal", label: "Education", blurb: "Campus health plan, dining dollars, learning stipends", plans: ["ucb-ship-2026", "cal-dining-2026"], extras: ["work-stipend"] },
 ];
 // The one to three questions per plan that change the answer most. Salary is asked once.
 const KEY: Record<string, string[]> = {
