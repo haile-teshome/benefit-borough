@@ -371,3 +371,6 @@ a.ev-btn { text-decoration: none; display: inline-block; }
 .ev-catalog em { font-style: normal; font-size: 13px; color: #6b4a2a; }
 .ev-catalog strong { white-space: nowrap; }
 @media (max-width: 700px) { .ev-acorns { top: 90px; right: 16px; } }
+
+.ev-redeem-form { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.ev-redeem-form input { flex: 1 1 160px; font: inherit; padding: 6px 8px; border: 2px solid var(--line, #8a6a44); border-radius: 6px; background: #fff8ec; }

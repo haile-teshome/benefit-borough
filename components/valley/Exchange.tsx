@@ -1,21 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { CATALOG, EARN, QUESTS, questProgress, type Rewards } from "@/lib/rewards";
+import { CATALOG, EARN, QUESTS, questProgress, type Contact, type Rewards } from "@/lib/rewards";
 
 // The Acorn Exchange: your streak and weekly quests, the reward catalog, and your history.
 // Cosmetics unlock instantly; real-world rewards are recorded for a rewards partner to fulfill.
 export function Exchange({ pid, rewards, onRewards, onWear, onClose }: { pid: string; rewards: Rewards; onRewards: (r: Rewards) => void; onWear: (color: string) => void; onClose: () => void }) {
   const [tab, setTab] = useState<"earn" | "rewards" | "history">("earn");
   const [msg, setMsg] = useState("");
+  const [asking, setAsking] = useState<string | null>(null);
+  const [contact, setContact] = useState<Contact>({});
   const owned = new Set(rewards.redemptions.map((r) => r.item));
 
   async function buy(id: string) {
     setMsg("");
-    const res = await fetch("/api/rewards", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pid, redeem: id }) });
+    const item = CATALOG.find((c) => c.id === id);
+    if ((item?.partner === "tango" || item?.partner === "coinbase") && asking !== id) { setAsking(id); return; }
+    const res = await fetch("/api/rewards", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pid, redeem: id, contact }) });
     const json = (await res.json()) as { rewards: Rewards; error?: string; redemption?: { name: string; status: string } };
     onRewards(json.rewards);
-    setMsg(json.error ?? (json.redemption?.status === "unlocked" ? `${json.redemption.name} unlocked. Wear it below.` : `${json.redemption?.name} requested. In this demo it's recorded but not sent.`));
+    if (!json.error) setAsking(null);
+    setMsg(json.error ?? (json.redemption?.status === "unlocked" ? `${json.redemption.name} unlocked. Wear it below.` : `${json.redemption?.name} requested. A person reviews every real reward before it's sent.`));
   }
 
   return (
@@ -71,12 +76,25 @@ export function Exchange({ pid, rewards, onRewards, onWear, onClose }: { pid: st
                       <strong>{c.cost.toLocaleString("en-US")} 🌰</strong>
                       {have ? <button className="ev-btn" onClick={() => onWear(c.color!)}>Wear it</button>
                         : <button className="ev-btn ghost" disabled={rewards.acorns < c.cost} onClick={() => void buy(c.id)}>{rewards.acorns < c.cost ? `${(c.cost - rewards.acorns).toLocaleString("en-US")} to go` : "Redeem"}</button>}
+                      {asking === c.id && (
+                        <div className="ev-redeem-form" onKeyDown={(e) => e.stopPropagation()}>
+                          {c.partner === "tango" ? (
+                            <>
+                              <input placeholder="First name" value={contact.firstName ?? ""} onChange={(e) => setContact({ ...contact, firstName: e.target.value })} />
+                              <input placeholder="Email for the gift card" type="email" value={contact.email ?? ""} onChange={(e) => setContact({ ...contact, email: e.target.value })} />
+                            </>
+                          ) : (
+                            <input placeholder="Your wallet on Base (0x…)" value={contact.wallet ?? ""} onChange={(e) => setContact({ ...contact, wallet: e.target.value })} />
+                          )}
+                          <button className="ev-btn" onClick={() => void buy(c.id)}>Send request</button>
+                        </div>
+                      )}
                     </li>
                   );
                 })}
               </ul>
               {msg && <p className="ev-good">{msg}</p>}
-              <p className="ev-sub">Real-world rewards need a funded rewards partner (a gift card API or a Coinbase payout). In this demo, requests are recorded as pending and nothing is sent.</p>
+              <p className="ev-sub">Real-world rewards need a funded rewards partner (a gift card API or a Coinbase payout). Every real reward is reviewed by a person first, and they're capped at $10 a month each.</p>
             </>
           )}
           {tab === "history" && (

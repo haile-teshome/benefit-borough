@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { CATALOG, QUESTS, fresh, record, redeem, type Event } from "@/lib/rewards";
+import { CATALOG, QUESTS, fresh, record, redeem, type Contact, type Event } from "@/lib/rewards";
 import { hydrate, load, log, save } from "@/lib/store";
 
 // Acorns. GET returns your balance, streak, quests and the reward catalog. POST records a visit,
@@ -15,12 +15,12 @@ export async function GET(req: Request) {
 const CLIENT_EVENTS = new Set(["visit", "shop", "chat"]);
 
 export async function POST(req: Request) {
-  const body = (await req.json()) as { pid?: string; event?: Event; redeem?: string };
+  const body = (await req.json()) as { pid?: string; event?: Event; redeem?: string; contact?: Contact };
   await hydrate(body.pid);
   const s = load(body.pid);
   const r = (s.rewards ??= fresh());
   if (body.redeem) {
-    const out = redeem(r, body.redeem);
+    const out = redeem(r, body.redeem, body.contact ?? {});
     if (!out.ok) return NextResponse.json({ error: out.error, rewards: r }, { status: 400 });
     log(s, "acorns", `Redeemed ${out.redemption.name} for ${out.redemption.cost} acorns (${out.redemption.status})`);
     save(s, body.pid);

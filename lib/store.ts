@@ -69,6 +69,15 @@ export function reset(pid?: string | null): AppState {
   return s;
 }
 
+// Every player who has a saved state on this server (for the rewards review queue).
+export function allPids(): string[] {
+  try {
+    return fs.readdirSync(path.join(process.cwd(), ".data")).flatMap((f) => (f === "state.json" ? ["default"] : f.match(/^state-([a-zA-Z0-9_-]+)\.json$/)?.[1] ?? [])).filter(Boolean) as string[];
+  } catch {
+    return [];
+  }
+}
+
 export function log(s: AppState, type: string, detail: string) {
   const e: AuditEvent = { at: new Date().toISOString(), type, detail };
   s.audit.unshift(e);

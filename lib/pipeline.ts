@@ -5,6 +5,7 @@ import { defend, review } from "./engine/reviewer";
 import { usd } from "./engine/spans";
 import { bookingCall } from "./integrations/cartesia";
 import { livePrices } from "./integrations/apify";
+import { paidPrices, txUrl, x402Enabled } from "./integrations/x402";
 import { requestAction } from "./integrations/request";
 import { peerTransfer } from "./integrations/transfer";
 import { hydrate, load, log, save } from "./store";
@@ -23,11 +24,24 @@ export async function scan(docs: SourceDoc[], pid?: string | null): Promise<AppS
   const watched = ex.balances.filter((b) => b.id.startsWith("up_") && b.category === "price_adjust");
   if (watched.length) {
     const urlOf = (ruleText: string) => ruleText.match(/Live price: (\S+)/)?.[1] ?? "";
-    const prices = await livePrices(watched.map((b) => urlOf(b.ruleText)).filter(Boolean));
+    const urls = watched.map((b) => urlOf(b.ruleText)).filter(Boolean);
+    let prices: Record<string, number | null>;
+    let bought = false;
+    if (x402Enabled()) {
+      // Ruth buys the price from the Burrow's price desk over x402.
+      const paid = await paidPrices(urls);
+      prices = paid.prices;
+      bought = Boolean(paid.payment);
+      if (paid.payment) log(s, "x402", `Paid ${paid.payment.price} USDC for ${urls.length} live price${urls.length > 1 ? "s" : ""} over x402 (Base Sepolia) · ${txUrl(paid.payment.transaction)}`);
+      else {
+        log(s, "x402", `x402 payment didn't go through (${paid.error ?? "no receipt"}); looked the price up directly instead`);
+        prices = await livePrices(urls);
+      }
+    } else prices = await livePrices(urls);
     for (const b of watched) {
       const p = prices[urlOf(b.ruleText)];
       if (p != null) ex.facts[`price_now:${b.id}`] = p;
-      log(s, "price", `${b.label}: paid $${b.amount}, live price ${p != null ? `$${p}` : "unavailable"} (Apify)`);
+      log(s, "price", `${b.label}: paid $${b.amount}, live price ${p != null ? `$${p}` : "unavailable"} (Apify${bought ? ", bought over x402" : ""})`);
     }
   }
   s.extraction = ex;

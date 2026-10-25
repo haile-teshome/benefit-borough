@@ -3,7 +3,12 @@
 // is ever rewarded for spending. Awarded on the server with a daily cap.
 
 export type Quest = { id: string; label: string; goal: number; reward: number };
-export type Redemption = { id: string; item: string; name: string; cost: number; at: string; status: "unlocked" | "pending fulfillment" };
+export type Contact = { email?: string; firstName?: string; wallet?: string };
+export type Redemption = {
+  id: string; item: string; name: string; cost: number; at: string;
+  status: "unlocked" | "awaiting review" | "sent" | "rejected" | "failed" | "pending fulfillment";
+  usd?: number; partner?: Partner; contact?: Contact; detail?: string; decidedAt?: string;
+};
 export type Rewards = {
   acorns: number; earned: number; streak: number; best: number; lastVisit?: string; // YYYY-MM-DD
   today: { day: string; earned: number };
@@ -23,17 +28,20 @@ export const QUESTS: Quest[] = [
   { id: "chat1", label: "Chat with a villager", goal: 1, reward: 20 },
 ];
 
-export type Reward = { id: string; name: string; cost: number; kind: "cosmetic" | "real"; blurb: string; color?: string };
+export type Partner = "tango" | "coinbase" | "manual";
+export type Reward = { id: string; name: string; cost: number; kind: "cosmetic" | "real"; blurb: string; color?: string; usd?: number; partner?: Partner; prefer?: string[] };
+// Real-world rewards per person per calendar month, in dollars. Every real reward is reviewed first.
+export const MONTHLY_USER_CAP = 10;
 export const CATALOG: Reward[] = [
   { id: "scarf-gold", name: "Golden scarf", cost: 150, kind: "cosmetic", blurb: "Everyone in the burrow sees it.", color: "#E9BC3C" },
   { id: "scarf-ruth", name: "Ruth's purple scarf", cost: 200, kind: "cosmetic", blurb: "The Reviewer's own shade.", color: "#6A4C93" },
   { id: "scarf-mint", name: "Mint-condition scarf", cost: 120, kind: "cosmetic", blurb: "Fresh, like a refunded fee.", color: "#3FA6A0" },
   { id: "scarf-ink", name: "Midnight scarf", cost: 250, kind: "cosmetic", blurb: "For night owls who check in late.", color: "#2F2340" },
-  { id: "tree", name: "Plant a real tree", cost: 1000, kind: "real", blurb: "Through a tree-planting partner." },
-  { id: "foodbank", name: "$5 to a local food bank", cost: 2000, kind: "real", blurb: "Donated in your name." },
-  { id: "coffee", name: "$5 coffee gift card", cost: 2500, kind: "real", blurb: "Emailed by our rewards partner." },
-  { id: "usdc", name: "$5 in USDC", cost: 2500, kind: "real", blurb: "Paid to your wallet (Coinbase)." },
-  { id: "giftcard10", name: "$10 gift card of your choice", cost: 5000, kind: "real", blurb: "Hundreds of brands." },
+  { id: "tree", name: "Plant a real tree", cost: 1000, kind: "real", blurb: "Through a tree-planting partner.", usd: 1, partner: "manual" },
+  { id: "foodbank", name: "$5 to a local food bank", cost: 2000, kind: "real", blurb: "Donated in your name.", usd: 5, partner: "manual" },
+  { id: "coffee", name: "$5 coffee gift card", cost: 2500, kind: "real", blurb: "Emailed via Tango Card.", usd: 5, partner: "tango", prefer: ["Starbucks", "Dunkin", "Peet"] },
+  { id: "usdc", name: "$5 in USDC", cost: 2500, kind: "real", blurb: "Sent to your wallet on Base via Coinbase.", usd: 5, partner: "coinbase" },
+  { id: "giftcard10", name: "$10 gift card", cost: 5000, kind: "real", blurb: "Emailed via Tango Card.", usd: 10, partner: "tango", prefer: ["Amazon", "Target", "Visa"] },
 ];
 
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -110,14 +118,36 @@ export function record(r: Rewards, e: Event, now = new Date()): { acorns: number
   return { acorns: got, notes };
 }
 
-export function redeem(r: Rewards, itemId: string, now = new Date()): { ok: true; redemption: Redemption } | { ok: false; error: string } {
+export function monthSpent(r: Rewards, now = new Date()) {
+  const m = now.toISOString().slice(0, 7);
+  return r.redemptions.filter((x) => x.usd && x.at.startsWith(m) && x.status !== "rejected" && x.status !== "failed").reduce((s, x) => s + (x.usd ?? 0), 0);
+}
+
+export function redeem(r: Rewards, itemId: string, contact: Contact = {}, now = new Date()): { ok: true; redemption: Redemption } | { ok: false; error: string } {
   const item = CATALOG.find((c) => c.id === itemId);
   if (!item) return { ok: false, error: "No such reward" };
   if (item.kind === "cosmetic" && r.redemptions.some((x) => x.item === itemId)) return { ok: false, error: "Already unlocked" };
   if (r.acorns < item.cost) return { ok: false, error: `You need ${item.cost - r.acorns} more acorns` };
+  if (item.partner === "tango" && !(contact.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email) && contact.firstName?.trim())) return { ok: false, error: "Enter your first name and email so we can send it" };
+  if (item.partner === "coinbase" && !/^0x[0-9a-fA-F]{40}$/.test(contact.wallet ?? "")) return { ok: false, error: "Enter a wallet address (0x…) on Base" };
+  if (item.usd && monthSpent(r, now) + item.usd > MONTHLY_USER_CAP) return { ok: false, error: `Real-world rewards are capped at $${MONTHLY_USER_CAP} a month. Try again next month.` };
   r.acorns -= item.cost;
-  const redemption: Redemption = { id: `R${r.redemptions.length + 1}-${now.getTime().toString(36)}`, item: item.id, name: item.name, cost: item.cost, at: now.toISOString(), status: item.kind === "cosmetic" ? "unlocked" : "pending fulfillment" };
+  const redemption: Redemption = {
+    id: `R${r.redemptions.length + 1}-${now.getTime().toString(36)}`, item: item.id, name: item.name, cost: item.cost, at: now.toISOString(),
+    status: item.kind === "cosmetic" ? "unlocked" : "awaiting review", usd: item.usd, partner: item.partner,
+    contact: item.partner === "tango" ? { email: contact.email!.trim(), firstName: contact.firstName!.trim() } : item.partner === "coinbase" ? { wallet: contact.wallet } : undefined,
+  };
   r.redemptions.unshift(redemption);
   r.history.unshift({ at: now.toISOString(), amount: -item.cost, note: `Redeemed: ${item.name}` });
   return { ok: true, redemption };
+}
+
+// A refused or failed real reward gives the acorns back.
+export function refund(r: Rewards, redemptionId: string, status: "rejected" | "failed", detail: string, now = new Date()) {
+  const x = r.redemptions.find((y) => y.id === redemptionId);
+  if (!x || x.status === "rejected" || x.status === "failed" || x.status === "sent") return false;
+  x.status = status; x.detail = detail; x.decidedAt = now.toISOString();
+  r.acorns += x.cost;
+  r.history.unshift({ at: now.toISOString(), amount: x.cost, note: `Refunded: ${x.name} (${status})` });
+  return true;
 }
