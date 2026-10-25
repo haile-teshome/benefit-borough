@@ -1,5 +1,5 @@
 import { hash, mix, shade } from "./draw";
-import { BOUNDS, POND, roadAt, zoneAt } from "../world";
+import { BOUNDS, POND, pavedDepth, roadAt, zoneAt } from "../world";
 
 // Bakes the whole ground layer once, pixel by pixel: grass, cobbles, dirt roads, district paving,
 // the pond and its dock. Sprites are drawn on top every frame.
@@ -73,6 +73,14 @@ const CIVIC = tint(SAND, "#DCD3F0", 0.4);
 const CURB = tint(SAND, "#FFF6E2", 0.45);
 const MORTAR: [string, string] = ["#B49773", "#C8AD88"];
 
+// The curb: a single row of rounded edging stones, lit on top.
+function curb(px: number, py: number) {
+  const seg = Math.floor((px + py) / 6);
+  const c = CURB[Math.floor(hash(seg, 7.3) * CURB.length) % CURB.length];
+  if ((px + py) % 6 === 0) return "#B49773";
+  return (py % 3 === 0) ? shade(c, 0.1) : c;
+}
+
 function paving(kind: string, px: number, py: number) {
   if (kind === "plaza") return stones(px, py, PLAZA, 8, 0, MORTAR, 0.6);
   if (kind === "health") return stones(px, py, HEALTH, 8, 0, MORTAR, 0.6);
@@ -97,17 +105,18 @@ export function bakeGround(): Ground {
     for (let px = 0; px < W; px++) {
       const x = BOUNDS.x0 + px / T, z = BOUNDS.z0 + py / T;
       let c = grass(px, py);
-      // Roads: a curb of pale edging stones, cobbles inside that get lighter where feet wear them,
-      // a thin shadow line under the curb, and grass tufts that spill over the edge.
-      const jitter = (vnoise(px / 6, py / 6) - 0.5) * 0.12;
-      const rd = roadAt(x, z) + jitter;
-      const tuft = hash(px, py * 1.7) > 0.72 && vnoise(px / 3, py / 3) > 0.5;
-      if (rd < -0.22) c = stones(px, py, ROAD, 8, Math.min(1, (-rd - 0.22) / 1.2) * 0.6, MORTAR, 0.6);
-      else if (rd < -0.04) c = tuft && rd > -0.1 ? GRASS[2] : stones(px + 3, py + 1, CURB, 5, 0, MORTAR, 0.5);
-      else if (rd < 0.02) c = "#9C7F5E";
-      else if (rd < 0.14) c = shade(c, -0.14);
+      // All stone paving (roads, plaza, districts) is one surface with one curb around its outside
+      // edge: pale edging stones, a thin shadow line, then a soft shadow on the grass. Where a road
+      // meets a plaza there's no curb, so the stones simply flow into each other.
+      const paved = pavedDepth(x, z);
       const zk = zoneAt(x, z);
-      if (zk) c = paving(zk, px, py);
+      if (zk === "deck") c = paving(zk, px, py);
+      else if (paved >= 0.2) {
+        const rd = roadAt(x, z);
+        c = zk ? paving(zk, px, py) : stones(px, py, ROAD, 8, Math.min(1, -rd / 1.2) * 0.6, MORTAR, 0.6);
+      } else if (paved >= 0.05) c = curb(px, py);
+      else if (paved >= 0) c = "#9C7F5E";
+      else if (paved > -0.14) c = shade(c, -0.14);
       const pd = Math.hypot(x - POND.x, z - POND.z) - POND.r + (vnoise(px / 12, py / 12) - 0.5) * 1.2;
       if (pd < 0.35 && pd >= 0) c = pd < 0.15 ? "#8C6A44" : "#B89668";
       if (pd < 0) {

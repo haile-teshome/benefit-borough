@@ -85,6 +85,18 @@ export function zoneAt(x: number, z: number): Zone["kind"] | null {
   return hit;
 }
 
+// How far inside the town's stone paving a point is (roads and stone zones together; the wooden
+// deck is separate). Positive inside, negative outside. Used to draw one clean curb around it all.
+export function pavedDepth(x: number, z: number) {
+  let best = -roadAt(x, z);
+  for (const zn of ZONES) {
+    if (zn.kind === "deck") continue;
+    if (zn.rect) best = Math.max(best, Math.min(x - zn.rect[0], zn.rect[2] - x, z - zn.rect[1], zn.rect[3] - z));
+    if (zn.circle) best = Math.max(best, zn.circle[2] - Math.hypot(x - zn.circle[0], z - zn.circle[1]));
+  }
+  return best;
+}
+
 // ---------- farms ----------
 export function farmLayout(farm: number) {
   const o = farmOrigin(farm);
