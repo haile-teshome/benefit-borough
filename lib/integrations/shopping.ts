@@ -1,16 +1,38 @@
 // Multi-store price feeds for the Bazaar's seller agents. One search returns live offers from many
 // retailers, so the agents compare real listings instead of guessing from web pages:
+// - Apify Google Shopping scraper (APIFY_TOKEN, already used for live prices): about 40 offers from
+//   many stores in a few seconds, with store, price, rating and review count. The link opens
+//   Google Shopping's compare-stores page for that product.
 // - SerpApi Google Shopping (SERPAPI_API_KEY): offers across thousands of stores, with price,
 //   store, rating and review count. Free tier: 250 searches a month.
 // - eBay Browse API (EBAY_CLIENT_ID + EBAY_CLIENT_SECRET): new, fixed-price listings with seller
 //   feedback. Free: 5,000 calls a day.
 // Both are optional; without them the agents search the web with Claude as before.
 
-export type FeedOffer = { title: string; merchant: string; url: string; price: number; rating: number | null; reviews: number | null; why: string; source: "google" | "ebay" };
+export type FeedOffer = { title: string; merchant: string; url: string; price: number; rating: number | null; reviews: number | null; why: string; source: "apify" | "google" | "ebay" };
 
 export const serpEnabled = () => Boolean(process.env.SERPAPI_API_KEY);
 export const ebayEnabled = () => Boolean(process.env.EBAY_CLIENT_ID && process.env.EBAY_CLIENT_SECRET);
-export const feedEnabled = () => serpEnabled() || ebayEnabled();
+export const apifyShoppingEnabled = () => Boolean(process.env.APIFY_TOKEN) && process.env.APIFY_SHOPPING !== "off";
+export const feedEnabled = () => apifyShoppingEnabled() || serpEnabled() || ebayEnabled();
+
+const SHOPPING_ACTOR = process.env.APIFY_SHOPPING_ACTOR ?? "damilo~google-shopping-apify";
+const money = (x: unknown) => { const n = parseFloat(String(x ?? "").replace(/[^0-9.]/g, "")); return Number.isFinite(n) ? n : 0; };
+async function apifyShopping(q: string, maxPrice: number): Promise<FeedOffer[]> {
+  const res = await fetch(`https://api.apify.com/v2/acts/${SHOPPING_ACTOR}/run-sync-get-dataset-items?timeout=40`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.APIFY_TOKEN}` },
+    body: JSON.stringify({ query: q, country: "us", language: "en", num: "40", max_pages: 1, date_range: "anytime" }),
+    signal: AbortSignal.timeout(45_000),
+  });
+  if (!res.ok) throw new Error(`Apify shopping ${res.status}`);
+  const items = (await res.json()) as { title?: string; source?: string; link?: string; price?: string | number; rating?: number; ratingCount?: number }[];
+  return items.flatMap((r) => {
+    const price = money(r.price);
+    if (!r.title || !r.link || !price || price > maxPrice + 0.01) return [];
+    return [{ title: r.title, merchant: r.source ?? "Google Shopping", url: r.link, price, rating: r.rating ?? null, reviews: r.ratingCount ?? null, why: r.source ? `Sold by ${r.source}, found on Google Shopping` : "Found on Google Shopping", source: "apify" as const }];
+  });
+}
 
 async function googleShopping(q: string, maxPrice: number): Promise<FeedOffer[]> {
   const u = new URL("https://serpapi.com/search.json");
@@ -55,7 +77,7 @@ export async function marketFeed(need: string, maxPrice: number): Promise<FeedOf
   const key = `${need.toLowerCase()}|${Math.ceil(maxPrice)}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < 600_000) return hit.offers;
-  const runs = [serpEnabled() ? googleShopping(need, maxPrice) : null, ebayEnabled() ? ebaySearch(need, maxPrice) : null].filter(Boolean) as Promise<FeedOffer[]>[];
+  const runs = [apifyShoppingEnabled() ? apifyShopping(need, maxPrice) : null, serpEnabled() ? googleShopping(need, maxPrice) : null, ebayEnabled() ? ebaySearch(need, maxPrice) : null].filter(Boolean) as Promise<FeedOffer[]>[];
   const settled = await Promise.allSettled(runs);
   for (const r of settled) if (r.status === "rejected") console.warn("[shopping] feed failed:", (r.reason as Error).message);
   const offers = settled.flatMap((r) => (r.status === "fulfilled" ? r.value : [])).filter((o) => o.price > 0 && o.price <= maxPrice + 0.01);

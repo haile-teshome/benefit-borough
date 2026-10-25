@@ -59,13 +59,13 @@ export async function runQuest(pid: string, req: { benefitId: string; need: stri
 
   // 2. Pool and de-duplicate the offers.
   const seen = new Set<string>();
-  const pool = results.flatMap((r) => r.offers.map((o) => ({ ...o, agent: AGENTS[r.id].keeper }))).filter((o) => { const k = o.url.split("?")[0]; if (seen.has(k)) return false; seen.add(k); return true; });
+  const pool = results.flatMap((r) => r.offers.map((o) => ({ ...o, agent: AGENTS[r.id].keeper }))).filter((o) => { const k = /google\.com\/search/.test(o.url) ? (o.url.match(/catalogid:(\d+)/)?.[1] ?? o.url) : o.url.split("?")[0]; if (seen.has(k)) return false; seen.add(k); return true; });
 
   // 3. Live prices for the cheapest few, via Apify (cached), so a stale quote can't win.
   // Capped at 45 seconds so a slow store page can't stall the quest; uncapped results stay cached.
   const timeout = new Promise<Record<string, number | null>>((ok) => setTimeout(() => ok({}), 45_000));
-  const live: Record<string, number | null> = apifyEnabled() && pool.length ? await Promise.race([livePrices(pool.slice().sort((x, y) => x.price - y.price).slice(0, 2).map((o) => o.url)).catch(() => ({})), timeout]) : {};
-  if (apifyEnabled() && pool.length && !Object.keys(live).length) notes.push("Live price check took too long, so prices are the agents' quotes.");
+  const live: Record<string, number | null> = apifyEnabled() && pool.length ? await Promise.race([livePrices(pool.filter((o) => !/google\.com\/search/.test(o.url)).sort((x, y) => x.price - y.price).slice(0, 2).map((o) => o.url)).catch(() => ({})), timeout]) : {};
+  if (apifyEnabled() && pool.some((o) => !/google\.com\/search/.test(o.url)) && !Object.keys(live).length) notes.push("Live price check took too long, so prices are the agents' quotes.");
 
   // 4. Ruth reviews each offer: fits the need, covered by the benefit, quality for the money.
   const rv = claudeEnabled() && pool.length ? await structured("rank", {
