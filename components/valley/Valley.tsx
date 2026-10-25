@@ -7,7 +7,7 @@ import { DbConnection, tables } from "@/lib/valley_bindings";
 import type { Player, Plot } from "@/lib/valley_bindings/types";
 import { expire } from "@/lib/valley/expire";
 import { CROP_LOOK, ELDER_POS, slotPosition, usd } from "@/lib/valley/layout";
-import type { AppState, DispatchResult, Packet, ShiftReport, Tile, Verdict } from "@/lib/types";
+import type { AppState, DispatchResult, Packet, Quest, ShiftReport, Tile, Verdict } from "@/lib/types";
 import { playAudio, sound, speak } from "@/lib/valley/audio";
 import { clockLabel, dateLabel, gameHour, setHour } from "@/lib/valley/clock";
 import { anchors, registerLabel, setAnchor } from "@/lib/valley/labels";
@@ -29,7 +29,7 @@ import { TermsNews } from "./TermsNews";
 import { AutopilotPanel, MorningReport } from "./Autopilot";
 import { VoiceCheckin } from "./VoiceCheckin";
 import { Household } from "./Household";
-import { Bazaar } from "./Bazaar";
+import { Bazaar, type QuestRequest } from "./Bazaar";
 import { SHELVES, payerFor } from "@/lib/market/shelves";
 import { shoppable } from "@/lib/market/shoppable";
 import { fresh as freshRewards, type Rewards } from "@/lib/rewards";
@@ -99,7 +99,7 @@ type Modal =
   | { kind: "autopilot" }
   | { kind: "voice" }
   | { kind: "household" }
-  | { kind: "bazaar"; preset?: { need: string; benefitId: string } }
+  | { kind: "bazaar"; preset?: { need: string; benefitId: string; shopId?: string }; quest?: Quest }
   | { kind: "morning"; report: ShiftReport }
   | { kind: "run"; tileId: string; lines: string[]; result: DispatchResult | null; to?: string }
   | { kind: "elder"; step: "hello" | "thinking" | "verdict"; verdict?: Verdict }
@@ -159,6 +159,38 @@ function Valley() {
   const [chatOpen, setChatOpen] = useState(false);
   const [toast, setToast] = useState("");
   const [title, setTitle] = useState(true);
+  // Shopping quests run in the background; when the agents finish, the shopkeeper calls you.
+  type Call = { id: string; need: string; shopId: string; status: "searching" | "ringing" | "missed"; quest?: Quest; error?: string };
+  const [calls, setCalls] = useState<Call[]>([]);
+  const keeperOf = (shopId: string) => KEEPERS[shopId] ?? KEEPERS.market;
+  async function startQuest(req: QuestRequest) {
+    const id = `${Date.now()}`, shopId = req.shopId ?? "market";
+    setCalls((c) => [...c, { id, need: req.need, shopId, status: "searching" }]);
+    try {
+      const res = await fetch("/api/quest", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pid, ...req }) });
+      const json = (await res.json()) as { quest?: Quest; error?: string };
+      setCalls((c) => c.map((x) => (x.id === id ? { ...x, status: "ringing", quest: json.quest, error: json.error } : x)));
+      if (json.quest) expire.state(pid).then((r) => setState(r.state)).catch(() => {});
+    } catch (e) {
+      setCalls((c) => c.map((x) => (x.id === id ? { ...x, status: "ringing", error: (e as Error).message } : x)));
+    }
+  }
+  const ringing = calls.find((c) => c.status === "ringing");
+  useEffect(() => {
+    if (!ringing) return;
+    sound.ring();
+    const t = setInterval(() => sound.ring(), 2600);
+    return () => clearInterval(t);
+  }, [ringing?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  function answer(call: Call) {
+    setCalls((c) => c.filter((x) => x.id !== call.id));
+    const k = keeperOf(call.shopId);
+    const best = call.quest?.offers.find((o) => o.url === call.quest?.best);
+    const line = call.error ? `Hi, it's ${k.name}. Sorry, the search hit a snag: ${call.error}` : best ? `Hi, it's ${k.name}! We found it: ${best.title.split(/[,(]/)[0].trim()}, ${best.merchant}, $${best.price.toFixed(2)}, and your ${call.quest!.benefit.label.toLowerCase()} covers $${best.covered.toFixed(2)} of it. Ruth checked it. Want to see the others?` : `Hi, it's ${k.name}. The agents looked everywhere, but Ruth didn't approve anything for "${call.need}". Come see why.`;
+    void speak(line, k.persona.voice);
+    setToast(line); setTimeout(() => setToast(""), 9000);
+    if (call.quest) setModal({ kind: "bazaar", quest: call.quest });
+  }
   // Show Ruth's morning report once, the first time you come back after a shift.
   const lastShift = state?.autopilot?.reports[0];
   useEffect(() => {
@@ -559,7 +591,7 @@ function Valley() {
                     const payer = payerFor(item, shoppable(state));
                     return (
                       <button key={item.label} disabled={!payer} title={payer ? `Paid with ${payer.label}` : "None of your unspent benefits covers this"}
-                        onClick={() => payer && setModal({ kind: "bazaar", preset: { need: item.need, benefitId: payer.id } })}>
+                        onClick={() => payer && setModal({ kind: "bazaar", preset: { need: item.need, benefitId: payer.id, shopId: modal.id } })}>
                         <i>{item.icon}</i><span>{item.label}</span><em>{payer ? `${payer.label.replace(/ balance$/i, "")} · $${Math.round(payer.amount)}` : "not covered"}</em>
                       </button>
                     );
@@ -597,7 +629,23 @@ function Valley() {
       {modal?.kind === "checkout" && <Checkout pid={pid} onClose={() => setModal(null)} />}
       {modal?.kind === "swap" && conn && <SwapMarket conn={conn} me={myHex} players={[...players]} onClose={() => setModal(null)} />}
       {modal?.kind === "terms" && <TermsNews onClose={() => setModal(null)} />}
-      {modal?.kind === "bazaar" && state && <Bazaar key={modal.preset?.need ?? "bazaar"} pid={pid} state={state} preset={modal.preset} onState={setState} onCheckout={() => setModal({ kind: "checkout" })} onClose={() => setModal(null)} />}
+      {modal?.kind === "bazaar" && state && <Bazaar key={modal.quest?.id ?? modal.preset?.need ?? "bazaar"} state={state} preset={modal.preset} quest={modal.quest} keeper={keeperOf(modal.preset?.shopId ?? "market").name}
+        searching={calls.filter((c) => c.status === "searching").map((c) => c.need)} onSearch={(req) => void startQuest(req)} onCheckout={() => setModal({ kind: "checkout" })} onClose={() => setModal(null)} />}
+      {!title && calls.length > 0 && (
+        <div className="ev-calls">
+          {calls.map((c) => {
+            const k = keeperOf(c.shopId);
+            return c.status === "searching" ? (
+              <div key={c.id} className="ev-panel ev-call searching"><span>🔎</span><div><b>{k.name}'s agents are searching</b><em>“{c.need}”</em></div></div>
+            ) : (
+              <div key={c.id} className={`ev-panel ev-call ${c.status}`}><span>{c.status === "ringing" ? "📞" : "☎️"}</span><div><b>{c.status === "ringing" ? `${k.name} is calling…` : `Missed call from ${k.name}`}</b><em>About “{c.need}”</em></div>
+                <button className="ev-btn" onClick={() => answer(c)}>{c.status === "ringing" ? "Answer" : "Call back"}</button>
+                {c.status === "ringing" && <button className="ev-btn ghost" onClick={() => setCalls((x) => x.map((y) => (y.id === c.id ? { ...y, status: "missed" as const } : y)))}>Later</button>}
+              </div>
+            );
+          })}
+        </div>
+      )}
       {modal?.kind === "household" && convex && <Household pid={pid} name={me?.name ?? "Farmer"} color={me?.color ?? "#E2574C"} onClose={() => setModal(null)} />}
       {modal?.kind === "voice" && <VoiceCheckin pid={pid} onState={async (s) => { setState(s); await plant(s); }} onClose={() => setModal(null)} />}
       {modal?.kind === "autopilot" && state && <AutopilotPanel pid={pid} state={state} live={Boolean(convex)} onState={setState} onOutbox={() => setModal({ kind: "outbox" })} onClose={() => setModal(null)} />}

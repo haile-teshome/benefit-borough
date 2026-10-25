@@ -383,3 +383,12 @@ a.ev-btn { text-decoration: none; display: inline-block; }
 .ev-shelf-grid i { grid-row: 1 / 3; font-style: normal; font-size: 22px; text-align: center; }
 .ev-shelf-grid span { font-weight: 700; line-height: 1.15; }
 .ev-shelf-grid em { font-style: normal; font-size: 12px; color: var(--ink-2); }
+
+.ev-calls { position: absolute; right: 16px; bottom: 64px; z-index: 85; display: flex; flex-direction: column; gap: 8px; max-width: min(380px, calc(100vw - 32px)); }
+.ev-call { display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+.ev-call > span { font-size: 26px; }
+.ev-call div { display: grid; flex: 1; min-width: 0; }
+.ev-call em { font-style: normal; font-size: 13px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-call.ringing { animation: ev-ring 0.5s steps(2) infinite; border-color: var(--ok); }
+.ev-call.searching > span { animation: ev-ring 1.6s steps(2) infinite; }
+@keyframes ev-ring { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-3px) rotate(-1deg); } }
