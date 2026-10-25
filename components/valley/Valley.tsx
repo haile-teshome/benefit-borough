@@ -295,6 +295,22 @@ function Valley() {
     if (!replanted.current) { replanted.current = true; void plant(state); }
   }, [title, me, state, myPlots.length, modal, plant]);
 
+  // Keep the farm in step with your claims: when a rescan, an upload or a new plan changes which
+  // claims you have, replant so every claim has its crop (and harvesting one never misses).
+  const plotKey = myPlots.map((p) => p.tileId).sort().join("|");
+  const tileKey = (state?.tiles ?? []).slice(0, 20).map((t) => t.id).sort().join("|");
+  useEffect(() => {
+    if (title || !me || !state?.tiles.length || !plotKey || plotKey === tileKey) return;
+    void plant(state);
+  }, [title, me, state, plotKey, tileKey, plant]);
+
+  // Record a harvest on the shared farm; if the crop isn't there (the farm was out of date),
+  // replant from the latest state, which carries the harvest with it.
+  const harvestOnFarm = useCallback(async (tileId: string, saved: number, s: AppState) => {
+    if (!conn) return;
+    try { await conn.reducers.harvest({ tileId, saved }); } catch { await plant(s); }
+  }, [conn, plant]);
+
   async function plantDocs(name: string, color: string, avatar: string) {
     if (!conn) return;
     setBusy(true); setError("");
@@ -364,7 +380,7 @@ function Valley() {
       const r = await expire.paid(pid, packet.id);
       setState(r.state);
       sound.coins();
-      await conn.reducers.harvest({ tileId: packet.tileId, saved: packet.amount });
+      await harvestOnFarm(packet.tileId, packet.amount, r.state);
       setToast(`+${usd(packet.amount)} rescued from ${packet.provider}. Nicely done.`); setTimeout(() => setToast(""), 5000);
     } catch (e) { setError((e as Error).message); }
   }
@@ -404,7 +420,7 @@ function Valley() {
       }
       setState(r.state);
       if (r.result.status === "confirmed") {
-        await conn.reducers.harvest({ tileId, saved: tile.action.savings });
+        await harvestOnFarm(tileId, tile.action.savings, r.state);
         const recipient = to ? players.find((p) => hex(p.identity) === to) : undefined;
         if (recipient) await conn.reducers.sendGift({ to: recipient.identity, amount: Number(tile.action.payload.amount), note: "Dining dollars, on me" });
       }
