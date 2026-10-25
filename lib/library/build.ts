@@ -1,6 +1,7 @@
 import type { SourceDoc } from "../documents";
 import type { Category } from "../types";
 import { LIBRARY, LIBRARY_MONTHS, type Plan } from "./catalog";
+import { eduFindings, eduLines } from "./education";
 
 // Turn a library plan plus a person's answers into a document (the plan's terms, then "your
 // numbers") and the findings it supports. Every finding quotes a line of that document.
@@ -48,6 +49,7 @@ function personalLines(plan: Plan, a: Answers): string[] {
     case "work-espp": return [`Enrolled in the ESPP: ${a.enrolled === "Yes" ? "yes" : "no"}.`, `Next enrollment window opens: ${fmtDate(String(a.window || "2026-11-15"))}.`, `My salary: ${usd(num(a.salary))}; I'd contribute ${num(a.pct, 5)}% at a ${num(a.discount, 15)}% discount.`];
     case "venture-x-2026": return [`My account anniversary: ${fmtDate(String(a.anniversary || "2027-02-15"))}.`, `Travel credit used this cardmember year: ${usd(num(a.used_amount))} of $300.`];
     default:
+      if (plan.category === "Education") return eduLines(plan, a);
       if (plan.credits) { const used = new Set((a.used as string[]) ?? []); return plan.credits.map((c) => `${c.name}: ${used.has(c.key) ? "used" : "not used yet"} this period.`); }
       if (plan.category === "Points & miles") return [`My balance: ${Math.round(num(a.balance)).toLocaleString("en-US")} points.`, `My last earning or redeeming: ${fmtDate(String(a.last_activity || "2025-01-15"))}.`, `Exempt from expiration: ${a.exempt === "Yes" ? "yes" : "no"}.`];
       return [];
@@ -133,5 +135,6 @@ export function libraryFindings(doc: SourceDoc, today: string): LibFinding[] {
     const balance = num(a.balance);
     if (balance > 0 && expires >= today) out.push({ id: id("points"), category: "points", label: plan.title, amount: round2((balance * cents) / 100), deadline: expires, span: line(/My last earning/), rule: plan.terms[0], facts: { balance, cents } });
   }
+  if (plan.category === "Education") out.push(...eduFindings(plan, a, line, id, today));
   return out.filter((f) => f.span);
 }

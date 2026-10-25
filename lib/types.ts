@@ -8,7 +8,9 @@ export type Category =
   // workplace benefits
   | "retirement" | "pto" | "stipend" | "dcfsa" | "espp"
   // health plan extras
-  | "fitness";
+  | "fitness"
+  // school, learning and student loans
+  | "education";
 
 export type Span = { doc: string; start: number; end: number; text: string };
 

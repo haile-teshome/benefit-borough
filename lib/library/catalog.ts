@@ -2,6 +2,8 @@
 // write them down once (with sources) and ask each person only for their own numbers. Every term
 // line becomes part of a document, so findings still quote the exact line they rely on.
 
+import { EDU_PLANS } from "./education";
+
 export type Question =
   | { key: string; ask: string; kind: "money" | "number" | "percent"; hint?: string; default?: number; optional?: boolean }
   | { key: string; ask: string; kind: "date"; hint?: string; default?: string; optional?: boolean }
@@ -11,7 +13,7 @@ export type Question =
 export type Credit = { key: string; name: string; amount: number; cadence: string; ends: string; note?: string };
 
 export type Plan = {
-  id: string; title: string; issuer: string; category: "Workplace benefit" | "Health plan" | "Dining" | "Credit card" | "Tax-advantaged account" | "Points & miles";
+  id: string; title: string; issuer: string; category: "Workplace benefit" | "Health plan" | "Dining" | "Credit card" | "Tax-advantaged account" | "Points & miles" | "Education";
   community?: string; year: string; tags: string[];
   sources: { label: string; url: string }[];
   checked: string; // when and against what we last checked these terms
@@ -293,6 +295,8 @@ export const LIBRARY: Plan[] = [
     ],
   })),
 ];
+
+LIBRARY.push(...EDU_PLANS);
 
 export const LIBRARY_MONTHS: Record<string, [number, number]> = { "points-aadvantage": [24, 1.3], "points-marriott": [24, 0.8], "points-hilton": [24, 0.5], "points-ihg": [12, 0.5] };
 export const libraryToday = TODAY;

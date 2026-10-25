@@ -45,6 +45,12 @@ export const SHELVES: Record<string, ShelfItem[]> = {
     { label: "Coffee and pastries", icon: "☕", need: "coffee and pastries on campus with my dining dollars", covers: ["dining"] },
     { label: "Campus market groceries", icon: "🥕", need: "groceries at the campus market that accept dining dollars", covers: ["dining"] },
   ],
+  library: [
+    { label: "Textbooks", icon: "📖", need: "the textbook for my class, cheapest new or rental", covers: ["stipend"] },
+    { label: "Laptop for school", icon: "💻", need: "a reliable laptop for school and work under $900", covers: ["stipend"] },
+    { label: "Certification exam", icon: "📝", need: "a professional certification exam voucher in my field", covers: ["stipend"] },
+    { label: "Language course", icon: "🗣️", need: "a well-reviewed online language course", covers: ["stipend"] },
+  ],
   hall: [
     { label: "Online course", icon: "🎓", need: "a well-reviewed online course to grow my career skills", covers: ["stipend"] },
     { label: "Professional books", icon: "📚", need: "the best recent book on my field, hardcover", covers: ["stipend"] },

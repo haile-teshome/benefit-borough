@@ -16,12 +16,13 @@ const PRESETS: Preset[] = [
   { id: "parent", label: "Working parent", blurb: "Dependent care FSA, up to $7,500", plans: ["work-dcfsa"] },
   { id: "cards", label: "I have premium cards", blurb: "Every statement credit, before it resets", plans: [], extras: ["amex-platinum-2026", "amex-gold-2026", "chase-sapphire-reserve-2026", "venture-x-2026", "citi-strata-elite-2026"] },
   { id: "travel", label: "Frequent traveler", blurb: "Miles and points before they expire", plans: [], extras: ["points-aadvantage", "points-marriott", "points-hilton", "points-ihg"] },
-  { id: "cal", label: "Education", blurb: "Campus health plan, dining dollars, learning stipends", plans: ["ucb-ship-2026", "cal-dining-2026"], extras: ["work-stipend"] },
+  { id: "cal", label: "Education", blurb: "Tuition help, education credits, student loans, FAFSA", plans: ["edu-credits", "edu-fafsa"], extras: ["edu-tuition-127", "edu-loan-repay", "edu-loan-interest", "edu-idr", "edu-529", "edu-drop-refund", "edu-student-perks", "ucb-ship-2026", "cal-dining-2026", "work-stipend"] },
 ];
 // The one to three questions per plan that change the answer most. Salary is asked once.
 const KEY: Record<string, string[]> = {
   "work-401k-match": ["pct", "rate", "cap"], "work-pto": ["days", "rollover"], "irs-fsa-2026": ["balance"], "work-stipend": ["type", "left"],
-  "work-dcfsa": ["balance", "receipts"], "health-fitness": ["insurer", "max", "monthly", "months"], "irs-hsa-2026": ["contributed"], "work-espp": ["enrolled", "window"], "work-vesting": ["unvested", "leaving"],
+  "work-dcfsa": ["balance", "receipts"], "health-fitness": ["insurer", "max", "monthly", "months"],
+  "edu-tuition-127": ["used", "pending"], "edu-loan-repay": ["monthly", "enrolled"], "edu-credits": ["paid", "which"], "edu-529": ["cap", "contributed"], "edu-loan-interest": ["interest"], "edu-idr": ["due", "now", "standard"], "edu-fafsa": ["grant", "deadline", "filed"], "edu-drop-refund": ["dropping", "tuition", "deadline"], "edu-student-perks": ["grad", "perks"], "irs-hsa-2026": ["contributed"], "work-espp": ["enrolled", "window"], "work-vesting": ["unvested", "leaving"],
   "ucb-ship-2026": ["deductible_met", "ordered_care"], "cal-dining-2026": ["balance"], "venture-x-2026": ["used_amount"],
   "points-aadvantage": ["balance", "last_activity"], "points-marriott": ["balance", "last_activity"], "points-hilton": ["balance", "last_activity"], "points-ihg": ["balance", "last_activity"],
 };

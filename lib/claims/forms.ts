@@ -113,6 +113,23 @@ export function draftFor(tile: Tile, s: AppState): Draft {
     case "pto": return { ...base, form: "Time-off request", provider: "your HR system", method: "portal", submitTo: "Your HR system (Workday, Rippling, BambooHR…) → Time off",
       fields: [P("fullName", "Employee", p), P("employeeId", "Employee ID", p, false), D("days", "Days", String(fact("days") ?? "")), YOU("dates", "Which dates?", ""), MINE("note", "Note to your manager", "Taking a few days I'd otherwise lose at year end. I'll make sure my work is covered.")],
       attachments: [], minutes: { you: 1, without: 10 } };
+    case "education": {
+      if (tile.id.includes("educredits")) return { ...base, form: "IRS Form 8863: Education Credits", provider: "your tax return", method: "portal", submitTo: "Your tax software or preparer (attach to your 2026 Form 1040)",
+        fields: [P("fullName", "Your name (as on your return)", p), YOU("school", "School name (on Form 1098-T)"), YOU("school_ein", "School's EIN (box on Form 1098-T)"),
+          D("expenses", "Qualified expenses paid in 2026", usd(fact("paid") ?? 0), cite), D("credit", fact("aotc") ? "American Opportunity credit (Part III)" : "Lifetime Learning credit (Part III)", usd(amount), cite),
+          MINE("note", "Note", "Ruth never asks for your Social Security number: your tax software adds it when you file.")],
+        attachments: [{ name: "Form 1098-T from your school", kind: "evidence", lines: [], todo: "Download Form 1098-T from your school's student portal (available by January 31) and attach it." }], minutes: { you: 3, without: 45 } };
+      if (tile.id.includes("edutuition127")) {
+        const { found, att } = proof(lines, /tuition|university|college|course|coursera|edx|udemy/i, "Tuition receipts from your statements");
+        return { ...base, form: "Tuition reimbursement request", provider: "your employer", method: "portal", submitTo: "Your employer's education benefits portal (Guild, EdAssist, Workday…)",
+          fields: [P("fullName", "Employee", p), P("employer", "Employer", p), P("employeeId", "Employee ID", p), YOU("course", "Course or program"), YOU("school", "School"), YOU("grade", "Final grade (most programs need C or better)"),
+            D("amount", "Amount requested", usd(amount), cite), MINE("attest", "Attestation", "This course relates to my job or degree program and hasn't been reimbursed elsewhere.")],
+          attachments: [found.length ? att : { name: "Tuition receipt", kind: "receipt", lines: [], todo: "Attach your tuition receipt or the school's statement of account." }], minutes: { you: 2, without: 30 } };
+      }
+      return { ...base, form: String(tile.action.payload.title ?? tile.title), provider: to, method: "portal", submitTo: to,
+        fields: [P("fullName", "Your name", p), D("what", "What Ruth will do", tile.action.summary, cite), D("amount", "Worth", usd(amount), cite)],
+        attachments: [], minutes: { you: 1, without: 20 }, message: String(tile.action.payload.steps ?? "").split("|").join("\n") };
+    }
     case "dining": return { ...base, form: "Flex dollars transfer", provider: "Cal Dining", method: "transfer", submitTo: "Cal Dining peer transfer",
       fields: [P("fullName", "From", p), D("amount", "Amount", usd(Number(tile.action.payload.amount ?? amount)), cite), { key: "to", label: "To (a friend's name or student ID; or pick a farmer next)", value: "", source: "you" }], attachments: [], minutes: { you: 1, without: 10 } };
     default: return { ...base, form: tile.action.payload.title ? String(tile.action.payload.title) : tile.action.kind === "book_call" ? `Booking call to ${to}` : tile.action.summary.slice(0, 60), provider: to, method: tile.action.kind === "book_call" ? "phone" : "portal", submitTo: to,

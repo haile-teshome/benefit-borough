@@ -150,6 +150,27 @@ test("library plans plus a person's answers become grounded findings", async () 
   for (const tile of tiles) assert.equal(ruleCheck({ kind: "tile", tile }, ex, docs.map((d) => d.text).join("\n")).verdict, "approve", tile.id);
 });
 
+test("education: credits, tuition assistance, 529, recertification, FAFSA", async () => {
+  const { buildDoc } = await import("../library/build");
+  const docs = [
+    buildDoc({ plan: "edu-credits", answers: { paid: 4000, which: "First 4 years of college", income: "Yes" } })!,
+    buildDoc({ plan: "edu-tuition-127", answers: { limit: 5250, used: 1000, pending: 1800, year_end: "2026-12-31" } })!,
+    buildDoc({ plan: "edu-529", answers: { cap: 5000, contributed: 1000, rate: 6, deadline: "2026-12-31" } })!,
+    buildDoc({ plan: "edu-idr", answers: { due: "2026-12-15", now: 180, standard: 420 } })!,
+    buildDoc({ plan: "edu-fafsa", answers: { grant: 3000, deadline: "2027-03-02", filed: "No" } })!,
+  ];
+  const ex = await extract(docs);
+  assert.equal(ex.dropped.length, 0);
+  const tiles = await optimize(ex);
+  const t = (plan: string) => tiles.find((x) => x.id === `tile_lib_${plan}_edu`)!;
+  assert.equal(t("educredits").atStake, 2500); // AOTC: 100% of $2,000 + 25% of the next $2,000
+  assert.equal(t("edutuition127").atStake, 1800); // pending receipts, within the $4,250 left
+  assert.equal(t("edu529").atStake, 240); // $4,000 of room x 6%
+  assert.equal(t("eduidr").atStake, 720); // $240/month jump x 3 months
+  assert.equal(t("edufafsa").atStake, 3000);
+  for (const x of tiles) assert.equal(ruleCheck({ kind: "tile", tile: x }, ex, docs.map((d) => d.text).join("\n")).verdict, "approve");
+});
+
 test("workplace benefits: 401(k) match, PTO, dependent care, stipend", async () => {
   const { buildDoc } = await import("../library/build");
   const docs = [

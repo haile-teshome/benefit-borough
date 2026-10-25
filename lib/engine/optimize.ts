@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { eduTile } from "../library/education";
 import { DEMO_TODAY } from "../documents";
 import type { Balance, Candidate, CareItem, Extraction, Span, Tile } from "../types";
 import { callStructured, claudeEnabled } from "./claude";
@@ -484,6 +485,7 @@ function libraryTiles(ex: Extraction): Tile[] {
       candidates: [{ id: "act", label: "Spend it on something you already planned", costToUser: 0, detail: "Gym, classes, books, a desk chair: whatever your program covers." }],
       headline: `${usd(b.amount)} of your ${b.label.toLowerCase()} resets ${by}, and stipends don't roll over.`, tradeoff: "Only on things you'd do or buy anyway.",
       doNothing: `${usd(b.amount)} resets ${by}.`, action: req("Use your stipend", "your stipend portal", ["Opening your stipend portal (Compt, Forma, Benepass…)", "Submitting a purchase you already planned", "Reimbursement approved"]) }];
+    if (kind === "edu") return [eduTile(b, base, fact, by, (title, to, lines, savings) => req(title, to, lines, savings))];
     if (kind === "fitness") return [{ ...base, id: `tile_${b.id}`, category: "fitness", title: `Get ${usd(b.amount)} of your gym fees back from your health plan`, live: true, atStake: b.amount, doNothingCost: b.amount,
       candidates: [{ id: "act", label: "Send the claim form with your gym charges", costToUser: 0, detail: `You paid about ${usd(fact("paid"))} this year; the plan pays back up to ${usd(fact("max"))}.` }],
       headline: `You've paid about ${usd(fact("paid"))} in gym fees this year. Your health plan pays back up to ${usd(fact("max"))}, but only if you send a claim by ${by}.`, tradeoff: "Money for something you already paid for. Some plans treat it as taxable income.",

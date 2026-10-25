@@ -7,7 +7,7 @@ import type { AppState } from "@/lib/types";
 // The plan library: search a curated set of plan and card terms, pick yours, answer only the
 // questions that are personal, and plant. No uploads needed.
 export type Answers = Record<string, string | number | string[]>;
-const CATS = ["All", "Health plan", "Dining", "Credit card", "Tax-advantaged account", "Points & miles"] as const;
+const CATS = ["All", "Workplace benefit", "Education", "Health plan", "Dining", "Credit card", "Tax-advantaged account", "Points & miles"] as const;
 
 function defaults(p: Plan): Answers {
   const a: Answers = {};

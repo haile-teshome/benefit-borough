@@ -23,7 +23,7 @@ export const BUILDINGS: BuildingDef[] = [
   { id: "hall", kind: "hall", x: 0, z: -10, w: 8, place: { name: "HR & Benefits Office", categories: ["tax_window", "insurance", "hsa", "retirement", "pto", "stipend", "dcfsa", "espp"], line: "Your workplace benefits: 401(k), PTO, stipends, dependent care, ESPP and open enrollment." } },
   // Homes and shops that make it a town (no balances live here, just flavor)
   { id: "cottage1", kind: "cottage1", x: -28, z: 8.8, w: 4, place: { name: "Rose Cottage", line: "Someone is baking cinnamon rolls." } },
-  { id: "library", kind: "library", x: -21.5, z: 8.8, w: 5, place: { name: "Library", line: "A whole shelf on reading your benefits summary." } },
+  { id: "library", kind: "library", x: -21.5, z: 8.8, w: 5, place: { name: "Library", categories: ["education"], line: "Tuition help, education tax credits, student loans and FAFSA deadlines. Also a whole shelf on reading your benefits summary." } },
   { id: "bakery", kind: "bakery", x: -15, z: 8.8, w: 4, place: { name: "Bakery", line: "Fresh bread. Accepts dining dollars." } },
   { id: "florist", kind: "florist", x: 15, z: 8.8, w: 4, place: { name: "Flower Shop", line: "Marigolds are in season." } },
   { id: "cottage2", kind: "cottage2", x: 21.5, z: 8.8, w: 5, place: { name: "Willow House", line: "Wind chimes ring on the porch." } },
