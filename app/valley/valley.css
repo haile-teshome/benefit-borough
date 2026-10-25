@@ -180,3 +180,31 @@ body { margin: 0; overflow: hidden; background: #8fc4e8; }
 .ev-feed em { font-style: normal; font-weight: 700; color: var(--ok); }
 .ev-feed li.new { background: #ffe58a; animation: ev-in 0.25s steps(3); }
 @media (max-width: 700px) { .ev-live { display: none; } }
+
+/* Ruth's record */
+.ev-record { width: min(820px, 100%); }
+.ev-record-body { max-height: 46vh; overflow: auto; }
+.ev-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+.ev-tabs button { font: 700 14px var(--pixel); padding: 4px 10px; border: 3px solid var(--wood-dark); background: #fff8e2; color: var(--ink); cursor: pointer; }
+.ev-tabs button.on { background: var(--wood); color: var(--parchment); }
+.ev-trail { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.ev-trail li { display: grid; grid-template-columns: 86px 1fr auto; gap: 8px; padding: 4px 8px; background: var(--parchment-2); font-size: 14px; align-items: baseline; }
+.ev-trail li.no { background: #f6d5cf; }
+.ev-trail li.ok { background: #d6e8a9; }
+.ev-trail .t { font: 700 11px var(--pixel); letter-spacing: 1px; color: var(--wood); }
+.ev-trail .w { font-size: 12px; color: var(--ink-2); }
+.ev-real { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.ev-real li { display: grid; grid-template-columns: 96px 1fr 1.2fr; gap: 8px; padding: 4px 8px; background: var(--parchment-2); font-size: 14px; align-items: baseline; }
+.ev-real b { font: 700 11px var(--pixel); letter-spacing: 1px; }
+.ev-real b.live { color: var(--ok); }
+.ev-real b.sim { color: var(--stamp); }
+.ev-real em { font-style: normal; color: var(--ink-2); }
+.ev-rules ul { margin: 0 0 8px; padding-left: 20px; }
+.ev-ask { background: #efe4fb; border: 3px solid #6a4c93; padding: 8px 12px; margin: 8px 0; }
+.ev-ask .who { font: 700 12px var(--pixel); letter-spacing: 1px; color: #6a4c93; }
+.ev-ask p { margin: 4px 0 8px; font: 700 18px var(--pixel); }
+.ev-ask-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.ev-push { margin-top: 8px; display: grid; gap: 6px; }
+.ev-push form { display: flex; gap: 8px; }
+.ev-push input { flex: 1; font: 500 15px var(--pixel); padding: 6px 8px; border: 3px solid var(--wood-dark); background: #fff8e2; color: var(--ink); }
+.ev-push-reply { margin: 0; padding: 6px 10px; background: #efe4fb; border-left: 4px solid #6a4c93; }

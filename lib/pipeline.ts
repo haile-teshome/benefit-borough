@@ -1,7 +1,7 @@
 import type { SourceDoc } from "./documents";
 import { extract } from "./engine/extract";
 import { optimize } from "./engine/optimize";
-import { review } from "./engine/reviewer";
+import { defend, review } from "./engine/reviewer";
 import { usd } from "./engine/spans";
 import { bookingCall } from "./integrations/cartesia";
 import { requestAction } from "./integrations/request";
@@ -50,6 +50,7 @@ export async function dispatch(tileId: string, pid?: string | null): Promise<{ s
   if (s.reviews[tileId]?.verdict !== "approve") throw new Error("Reviewer has not approved this action");
   if (s.done.includes(tileId)) throw new Error("Already done");
   if (tile.action.kind === "none") throw new Error("Nothing to dispatch");
+  if (tile.ask && s.answers?.[tileId] !== "go") throw new Error("Ruth is waiting for your answer first");
 
   log(s, "dispatch", `${tileId}: ${tile.action.summary}`);
   const result = tile.action.kind === "book_call" ? await bookingCall(tile.action) : tile.action.kind === "request" ? await requestAction(tile.action) : await peerTransfer(tile.action);
@@ -63,4 +64,32 @@ export async function dispatch(tileId: string, pid?: string | null): Promise<{ s
   }
   save(s, pid);
   return { state: s, result };
+}
+
+// The user answers a question Ruth asked. "keep" means don't act: she records it and stands down.
+export async function answer(tileId: string, reply: "go" | "keep", pid?: string | null) {
+  await hydrate(pid);
+  const s = load(pid);
+  const tile = s.tiles.find((t) => t.id === tileId);
+  if (!tile?.ask) throw new Error("Ruth didn't ask about that");
+  s.answers = { ...(s.answers ?? {}), [tileId]: reply };
+  log(s, "ask", `${tileId}: "${tile.ask}" → ${reply === "go" ? "user said go ahead" : "user said keep it"}`);
+  if (reply === "keep") {
+    s.reviews[tileId] = { verdict: "reject", rule_cited: 2, reason: "You told me you still use it, so I won't touch it. That's your call, not mine.", engine: "rules", at: new Date().toISOString() };
+  }
+  save(s, pid);
+  return s;
+}
+
+// The user pushes back on a verdict. Ruth explains and may soften her wording, but a pushback can
+// never loosen a rule: new facts have to arrive as documents, where they can be checked.
+export async function challenge(key: string, message: string, pid?: string | null) {
+  await hydrate(pid);
+  const s = load(pid);
+  const v = s.reviews[key];
+  if (!v) throw new Error("No verdict to challenge");
+  const reply = await defend(key, v, message.slice(0, 500), s);
+  log(s, "challenge", `${key}: user said "${message.slice(0, 120)}" → Ruth ${reply.stance === "hold" ? "held" : "acknowledged"} (${reply.engine})`);
+  save(s, pid);
+  return { state: s, reply };
 }

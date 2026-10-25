@@ -97,3 +97,16 @@ test("an uploaded CSV statement yields grounded findings", async () => {
   const tiles = await optimize(ex);
   for (const t of tiles.filter((t) => t.id.startsWith("tile_up_"))) assert.equal(ruleCheck({ kind: "tile", tile: t }, ex, csv).verdict, "approve");
 });
+
+test("Ruth waits for the user's answer before acting, and stands down on 'keep'", async () => {
+  const { scan, dispatch, answer } = await import("../pipeline");
+  const pid = "test_ask";
+  const s = await scan(SAMPLE_DOCS, pid);
+  assert.ok(s.tiles.find((t) => t.id === "tile_subs")?.ask);
+  await assert.rejects(dispatch("tile_subs", pid), /waiting for your answer/);
+  await answer("tile_subs", "go", pid);
+  assert.equal((await dispatch("tile_subs", pid)).result.status, "confirmed");
+  await answer("tile_annual_fee", "keep", pid);
+  await assert.rejects(dispatch("tile_annual_fee", pid), /Reviewer has not approved/);
+  (await import("node:fs")).rmSync(`.data/state-${pid}.json`, { force: true });
+});

@@ -251,6 +251,7 @@ function statementTiles(ex: Extraction): Tile[] {
 
   const gold = one("annual_fee");
   if (gold) add({
+    ask: "Will you use Gold's dining and Uber credits in the next year?",
     id: "tile_annual_fee", category: "annual_fee", title: "Amex Gold: you used $0 of its credits; downgrade before Nov 5",
     live: true, atStake: gold.amount,
     candidates: [
@@ -359,6 +360,7 @@ function statementTiles(ex: Extraction): Tile[] {
   if (subs.length) {
     const sum = round2(subs.reduce((s, b) => s + b.amount, 0));
     add({
+      ask: "Are you watching Hulu or using Duolingo?",
       id: "tile_subs", category: "subscription", title: "Cancel the Hulu trial and Duolingo renewal",
       live: true, atStake: sum,
       candidates: [{ id: "cancel", label: "Cancel both before they bill", costToUser: 0, detail: "Duolingo unopened since June; the Hulu trial converts Nov 2." }],
@@ -438,16 +440,16 @@ function uploadTiles(ex: Extraction): Tile[] {
       candidates: [{ id: "act", label: "Request a courtesy refund", costToUser: 0, detail: "Banks often waive an occasional fee." }],
       headline: `Ask your bank to reverse the ${usd(b.amount)} ${what.toLowerCase()}.`, tradeoff: "Refunds are discretionary; it costs nothing to ask.",
       doNothing: `${usd(b.amount)} stays charged.`, action: steps(`Request a refund of the ${what}`, "your bank", [`Expire: I was charged ${usd(b.amount)} (${what}). Could you refund it as a courtesy?`, "Bank: We've refunded it as a one-time courtesy."], "RFD") }];
-    if (b.category === "annual_fee") return [{ ...common, id: `tile_${b.id}`, category: "annual_fee", title: `Annual fee posted: downgrade by ${by} if it isn't worth it`,
+    if (b.category === "annual_fee") return [{ ...common, ask: "Will you use this card's perks enough to cover the fee?", id: `tile_${b.id}`, category: "annual_fee", title: `Annual fee posted: downgrade by ${by} if it isn't worth it`,
       candidates: [{ id: "act", label: "Downgrade to a no-fee card and get the fee back", costToUser: 0, detail: "Keeps your credit history; check the issuer's refund window." }, { id: "keep", label: "Keep the card", costToUser: b.amount, detail: "Worth it only if you'll use its credits." }],
       headline: `A ${usd(b.amount)} annual fee just posted. Most issuers refund it if you downgrade within about 30 days.`, tradeoff: "You lose the card's perks; downgrade rather than close.",
       doNothing: `${usd(b.amount)} is final after about ${by}.`, action: { kind: "book_call", summary: "Call the issuer to downgrade and refund the annual fee", savings: b.amount,
         payload: { to: "your card issuer", phone: "the number on your card", patient: "you", thisYear: "a product change to a no-fee card with the annual fee refunded", nextYear: "", date: DEMO_TODAY, nextDate: "" } } }];
-    if (b.category === "subscription") return [{ ...common, id: `tile_${b.id}`, category: "subscription", title: `Renews soon: ${what}`,
+    if (b.category === "subscription") return [{ ...common, ask: `Do you still use ${what}?`, id: `tile_${b.id}`, category: "subscription", title: `Renews soon: ${what}`,
       candidates: [{ id: "act", label: "Cancel if you don't use it", costToUser: 0, detail: "Keep it if you do; we only see that it bills." }],
       headline: `${what} bills about ${usd(b.amount)} again around ${by}. Cancel it if you've stopped using it.`, tradeoff: "Harvest only if you really don't use it.",
       doNothing: `${usd(b.amount)} bills again around ${by}.`, action: steps(`Cancel ${what}`, what, [`Opening ${what} → Account → Subscription`, "Turning off auto-renew", "Access continues until the end of the paid period"], "CXL") }];
-    if (b.category === "fsa_claim") return [{ ...common, id: `tile_${b.id}`, category: "fsa_claim", title: `Claim from your FSA/HSA: ${what}`,
+    if (b.category === "fsa_claim") return [{ ...common, ask: "Do you have an FSA or HSA this year?", id: `tile_${b.id}`, category: "fsa_claim", title: `Claim from your FSA/HSA: ${what}`,
       candidates: [{ id: "act", label: "Submit the receipt to your FSA or HSA", costToUser: 0, detail: "Only if you have one and the expense is eligible." }],
       headline: `${usd(b.amount)} at ${what} went on a regular card. If you have an FSA or HSA, get it back tax-free.`, tradeoff: "Eligibility depends on the item; keep the itemized receipt.",
       doNothing: `The ${usd(b.amount)} you already paid stays out of pocket (your FSA balance itself isn't forfeiting); most FSAs stop taking ${+b.deadline.slice(0, 4) - 1} claims around ${by}.`, action: steps(`Submit the ${what} receipt`, "your FSA/HSA portal", [`Uploading the ${what} receipt (${usd(b.amount)})`, "Claim submitted; reimbursement to your bank"], "FSA") }];

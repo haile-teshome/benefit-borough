@@ -14,6 +14,7 @@ import { anchors, registerLabel, setAnchor } from "@/lib/valley/labels";
 import { AVATARS, portrait } from "@/lib/valley/pixel/animals";
 import { DISTRICTS, NPCS } from "@/lib/valley/world";
 import { LiveBoard } from "./LiveBoard";
+import { PushBack, RuthAsks, RuthRecord } from "./Ruth";
 import World2D, { type Burst, type Emote, type Mood, type Near } from "./World2D";
 
 const DB = "expire-valley";
@@ -74,6 +75,7 @@ type Modal =
   | { kind: "elder"; step: "hello" | "thinking" | "verdict"; verdict?: Verdict }
   | { kind: "gift" }
   | { kind: "avatar" }
+  | { kind: "record" }
   | null;
 
 const hex = (id: { toHexString(): string } | undefined | null) => id?.toHexString() ?? "";
@@ -97,6 +99,7 @@ function Valley() {
   const myGifts = gifts.filter((g) => hex(g.to) === myHex && !g.opened);
 
   const [state, setState] = useState<AppState | null>(null);
+  const [integrations, setIntegrations] = useState<Record<string, boolean>>({});
   const [modal, setModal] = useState<Modal>(null);
   const [near, setNear] = useState<Near>(null);
   const [busy, setBusy] = useState(false);
@@ -110,7 +113,7 @@ function Valley() {
   const [ruthMood, setRuthMood] = useState<Mood>(null);
 
   useEffect(() => {
-    if (pid) expire.state(pid).then((r) => setState(r.state)).catch((e) => setError(e.message));
+    if (pid) expire.state(pid).then((r) => { setState(r.state); setIntegrations(r.integrations ?? {}); }).catch((e) => setError(e.message));
   }, [pid]);
 
   // Step into the valley once connected (creates this farmer on first visit).
@@ -272,6 +275,13 @@ function Valley() {
     void speak(`${r.verdict.verdict === "approve" ? "Fine." : "No."} ${r.verdict.reason}`);
   }
 
+  async function answerRuth(tileId: string, reply: "go" | "keep") {
+    sound.click();
+    const r = await expire.answer(pid, tileId, reply);
+    setState(r.state);
+    void speak(reply === "go" ? "All right. It's yours to harvest." : "Then I'll leave it alone.");
+  }
+
   async function openGifts() {
     if (!conn) return;
     for (const g of myGifts) await conn.reducers.openGift({ id: g.id });
@@ -375,7 +385,7 @@ function Valley() {
       {title ? (
         <Title onPlay={play} connected={isActive} />
       ) : (
-        <Hud me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} />
+        <Hud me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} />
       )}
 
       {convex && !title && <LiveBoard players={players} myPid={pid} />}
@@ -399,15 +409,17 @@ function Valley() {
         </Dialogue>
       )}
       {modal?.kind === "crop" && tileById(modal.tileId) && (
-        <CropCard tile={tileById(modal.tileId)!} state={state!} onClose={() => setModal(null)} onHarvest={() => setModal({ kind: "confirm", tileId: modal.tileId })} />
+        <CropCard tile={tileById(modal.tileId)!} state={state!} pid={pid} onState={setState} onAnswer={(r) => answerRuth(modal.tileId, r)} onClose={() => setModal(null)} onHarvest={() => setModal({ kind: "confirm", tileId: modal.tileId })} />
       )}
+      {modal?.kind === "record" && <RuthRecord state={state} pid={pid} integrations={integrations} live={Boolean(convex)} onClose={() => setModal(null)} />}
       {modal?.kind === "confirm" && tileById(modal.tileId) && (
         <Confirm tile={tileById(modal.tileId)!} others={others} onCancel={() => setModal({ kind: "crop", tileId: modal.tileId })} onConfirm={(to) => harvest(modal.tileId, to)} />
       )}
       {modal?.kind === "run" && tileById(modal.tileId) && (
         <Run tile={tileById(modal.tileId)!} lines={modal.lines} result={modal.result} toName={others.find((p) => hex(p.identity) === modal.to)?.name} onDone={() => setModal(null)} />
       )}
-      {modal?.kind === "elder" && <ElderTalk step={modal.step} verdict={modal.verdict} onAsk={askElder} onClose={() => setModal(null)} />}
+      {modal?.kind === "elder" && <ElderTalk step={modal.step} verdict={modal.verdict} onAsk={askElder} onClose={() => setModal(null)} onRecord={() => setModal({ kind: "record" })}
+        pushBack={state?.extraction?.balances.find((b) => b.category === "fsa") ? <PushBack pid={pid} verdictKey={`cart:${state!.extraction!.balances.find((b) => b.category === "fsa")!.id}`} onState={setState} /> : null} />}
       {modal?.kind === "gift" && (
         <Dialogue speaker="Letter" onClose={() => setModal(null)}>
           <p>{gifts.filter((g) => hex(g.to) === myHex).slice(-1).map((g) => `${players.find((p) => hex(p.identity) === hex(g.from))?.name ?? "A farmer"} sent you ${usd(g.amount)}: “${g.note}”`)[0] ?? "Nothing here yet."}</p>
@@ -508,7 +520,7 @@ function UploadButton({ busy, onUpload, className, label }: { busy: boolean; onU
   );
 }
 
-function Hud({ me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void }) {
+function Hud({ me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void }) {
   const next = state?.tiles.filter((t) => !state.done.includes(t.id) && t.atStake > 0).sort((a, b) => a.daysLeft - b.daysLeft)[0];
   const clock = useClock();
   return (
@@ -529,6 +541,7 @@ function Hud({ me, others, isActive, state, busy, onReplant, muted, onMute, onAv
         <div className="ev-sub">{isActive ? `${others.length + (me ? 1 : 0)} in the valley` : "Connecting…"}</div>
         {me && <div className="who"><i style={{ background: me.color }} />{me.name} (you)</div>}
         {others.map((p) => <div key={p.identity.toHexString()} className="who"><i style={{ background: p.color }} />{p.name}</div>)}
+        <button className="ev-link" onClick={onRecord}>Ruth's record (audit trail)</button>
         <UploadButton busy={busy} onUpload={onUpload} className="ev-link" label="Plant a bank statement (CSV/PDF)" />
         <button className="ev-link" disabled={busy} onClick={onReplant}>{busy ? "Replanting…" : "Replant (reset demo)"}</button>
         <button className="ev-link" onClick={onAvatar}>Change avatar</button>
@@ -615,10 +628,11 @@ function Intro({ busy, me, onPlant, onPick, onUpload }: { busy: boolean; me?: Pl
   );
 }
 
-function CropCard({ tile, state, onClose, onHarvest }: { tile: Tile; state: AppState; onClose: () => void; onHarvest: () => void }) {
+function CropCard({ tile, state, pid, onState, onAnswer, onClose, onHarvest }: { tile: Tile; state: AppState; pid: string; onState: (s: AppState) => void; onAnswer: (r: "go" | "keep") => void; onClose: () => void; onHarvest: () => void }) {
   const done = state.done.includes(tile.id);
   const verdict = state.reviews[tile.id];
-  const can = tile.live && tile.action.kind !== "none" && verdict?.verdict === "approve" && !done;
+  const asking = Boolean(tile.ask) && verdict?.verdict === "approve" && !done && !state.answers?.[tile.id];
+  const can = tile.live && tile.action.kind !== "none" && verdict?.verdict === "approve" && !done && !asking;
   const src = tile.sources[0];
   const doc = state.docs.find((d) => d.id === src?.doc);
   return (
@@ -640,6 +654,8 @@ function CropCard({ tile, state, onClose, onHarvest }: { tile: Tile; state: AppS
           <p className="ev-sub">{verdict.reason}</p>
         </div>
       )}
+      {asking && tile.ask && <RuthAsks question={tile.ask} onAnswer={onAnswer} />}
+      {verdict && !done && <PushBack key={tile.id} pid={pid} verdictKey={tile.id} onState={onState} />}
       {doc && src && <p className="ev-src"><span>{doc.name.replace(/\.txt$/, "")}:</span> <mark>{src.text}</mark></p>}
     </Dialogue>
   );
@@ -695,10 +711,10 @@ function Run({ tile, lines, result, toName, onDone }: { tile: Tile; lines: strin
 
 const CARTS = [["Sunscreen SPF 50", "Aloe vera gel"], ["Electric toothbrush"], ["Reading glasses"]];
 
-function ElderTalk({ step, verdict, onAsk, onClose }: { step: "hello" | "thinking" | "verdict"; verdict?: Verdict; onAsk: (items: string[]) => void; onClose: () => void }) {
+function ElderTalk({ step, verdict, onAsk, onClose, onRecord, pushBack }: { step: "hello" | "thinking" | "verdict"; verdict?: Verdict; onAsk: (items: string[]) => void; onClose: () => void; onRecord: () => void; pushBack: React.ReactNode }) {
   return (
     <Dialogue speaker="Ruth, the Reviewer" onClose={onClose}
-      actions={step === "hello" ? CARTS.map((c) => <button key={c.join()} className="ev-btn ghost" onClick={() => onAsk(c)}>Spend my FSA on {c.join(" + ").toLowerCase()}?</button>) : step === "verdict" ? <button className="ev-btn ghost" onClick={() => onAsk(CARTS[0])}>Ask again</button> : null}
+      actions={step === "hello" ? [...CARTS.map((c) => <button key={c.join()} className="ev-btn ghost" onClick={() => onAsk(c)}>Spend my FSA on {c.join(" + ").toLowerCase()}?</button>), <button key="rec" className="ev-btn ghost" onClick={onRecord}>Show me your record</button>] : step === "verdict" ? <button className="ev-btn ghost" onClick={() => onAsk(CARTS[0])}>Ask again</button> : null}
     >
       {step === "hello" && <p>I audit every harvest in this valley. Merchants profit when you spend; I don’t. Show me what you want to buy with your FSA.</p>}
       {step === "thinking" && <p>Checking it against your receipts and stated needs…</p>}
@@ -706,6 +722,7 @@ function ElderTalk({ step, verdict, onAsk, onClose }: { step: "hello" | "thinkin
         <div>
           <span className={`ev-stamp ${verdict.verdict === "approve" ? "ok" : "no"}`}>{verdict.verdict === "approve" ? "Approved" : "Declined"}{verdict.rule_cited ? <small>RULE {verdict.rule_cited}</small> : null}</span>
           <p className={verdict.verdict === "approve" ? "ev-good" : "ev-bad big"}>{verdict.verdict === "approve" ? "Fine. " : "No. "}{verdict.reason}</p>
+          {pushBack}
         </div>
       )}
     </Dialogue>

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Extraction, ReviewSubject, Verdict } from "../types";
+import type { AppState, Extraction, ReviewSubject, Verdict } from "../types";
 import { callStructured, claudeEnabled } from "./claude";
 import { usd } from "./spans";
 
@@ -68,4 +68,32 @@ Approve only if every rule holds. Reasons are one or two short sentences, readab
   });
   if (!out) return rules;
   return { ...out, modified_action: out.modified_action, engine: "claude", at: now() };
+}
+
+const DefenseSchema = z.object({
+  stance: z.enum(["hold", "acknowledge"]).describe("hold = the verdict stands; acknowledge = the user has a fair point about the wording or reasoning, but the verdict still stands until a document proves otherwise"),
+  reply: z.string().describe("Two or three short sentences in Ruth's voice: plain, kind, firm"),
+  rule_cited: z.number().int().nullable(),
+});
+export type Defense = z.infer<typeof DefenseSchema> & { engine: "claude" | "rules" };
+
+// Ruth answers a pushback on one of her verdicts. She can explain and concede wording, never flip it.
+export async function defend(key: string, v: Verdict, message: string, s: AppState): Promise<Defense> {
+  const rule = v.rule_cited ? RULES[v.rule_cited - 1] : null;
+  const fallback: Defense = {
+    stance: "hold", engine: "rules", rule_cited: v.rule_cited,
+    reply: `${v.reason}${rule ? ` That's rule ${v.rule_cited}: ${rule}` : ""} If something's changed, upload the document that shows it and I'll look again.`,
+  };
+  if (!claudeEnabled()) return fallback;
+  const tile = s.tiles.find((t) => t.id === key);
+  const out = await callStructured({
+    system: `You are Ruth, the Reviewer in Expire Valley. You protect people's money, not merchants'. A user is pushing back on one of your verdicts.
+Rules (cite by number):
+${RULES.map((r, i) => `${i + 1}. ${r}`).join("\n")}
+You never change a verdict because someone argues; new facts must arrive as documents you can check. Explain your reasoning, admit it plainly if the user has a fair point about how you phrased something, and tell them exactly what document would change your mind. Never invent facts.`,
+    user: `Your verdict: ${JSON.stringify(v)}\nWhat it was about: ${tile ? JSON.stringify({ title: tile.title, headline: tile.headline, do_nothing: tile.doNothing, action: tile.action.summary }) : key}\nThe user says: "${message}"`,
+    schema: DefenseSchema,
+    effort: "low",
+  });
+  return out ? { ...out, engine: "claude" } : fallback;
 }

@@ -9,7 +9,10 @@ async function call<T>(path: string, body?: unknown): Promise<T> {
 }
 
 export const expire = {
-  state: (pid: string) => call<{ state: AppState }>(`/api/state?pid=${pid}`),
+  state: (pid: string) => call<{ state: AppState; integrations: Record<string, boolean> }>(`/api/state?pid=${pid}`),
+  answer: (pid: string, tileId: string, reply: "go" | "keep") => call<{ state: AppState }>("/api/answer", { pid, tileId, reply }),
+  challenge: (pid: string, key: string, message: string) =>
+    call<{ state: AppState; reply: { stance: "hold" | "acknowledge"; reply: string; rule_cited: number | null; engine: string } }>("/api/challenge", { pid, key, message }),
   scan: (pid: string) => call<{ state: AppState }>("/api/scan", { pid }),
   dispatch: (pid: string, tileId: string) => call<{ state: AppState; result: DispatchResult }>("/api/dispatch", { pid, tileId }),
   reviewCart: (pid: string, balanceId: string, items: string[]) => call<{ state: AppState; verdict: Verdict }>("/api/review-cart", { pid, balanceId, items }),

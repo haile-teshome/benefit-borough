@@ -65,6 +65,7 @@ export type Tile = {
   action: Action;
   sources: Span[];
   engine: "claude" | "mock";
+  ask?: string; // Ruth asks the user this before acting, when only they know the answer
 };
 
 export type Verdict = {
@@ -100,5 +101,6 @@ export type AppState = {
   reviews: Record<string, Verdict>; // keyed by tile id or "cart:<balanceId>"
   ledger: LedgerEntry[];
   done: string[]; // tile ids whose action confirmed
+  answers?: Record<string, "go" | "keep">; // the user's replies to Ruth's questions
   audit: AuditEvent[];
 };
