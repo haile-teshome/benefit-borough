@@ -62,7 +62,9 @@ export function save(s: AppState, pid?: string | null) {
 }
 
 export function reset(pid?: string | null): AppState {
-  const s = empty();
+  // Resetting the farm never takes away acorns, streaks or rewards.
+  const keep = load(pid).rewards;
+  const s = { ...empty(), rewards: keep };
   save(s, pid);
   return s;
 }

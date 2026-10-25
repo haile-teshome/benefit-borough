@@ -153,3 +153,25 @@ test("workplace benefits: 401(k) match, PTO, dependent care, stipend", async () 
   assert.equal(t(/_stipend$/).atStake, 400);
   for (const tile of tiles) assert.equal(ruleCheck({ kind: "tile", tile }, ex, docs.map((d) => d.text).join("\n")).verdict, "approve", tile.id);
 });
+
+test("acorns: streaks, daily cap, quests, and redemption", async () => {
+  const { fresh, record, redeem, DAILY_CAP } = await import("../rewards");
+  const r = fresh();
+  const day = (d: number) => new Date(2026, 9, 20 + d, 10);
+  assert.equal(record(r, { kind: "visit" }, day(0)).acorns, 10);
+  assert.equal(record(r, { kind: "visit" }, day(0)).acorns, 0); // once a day
+  assert.equal(record(r, { kind: "visit" }, day(1)).acorns, 15); // 2-day streak
+  record(r, { kind: "visit" }, day(3)); // missed a day: streak resets
+  assert.equal(r.streak, 1);
+  assert.equal(record(r, { kind: "harvest", saved: 350, title: "Dental" }, day(3)).acorns, 22); // 5 + 17
+  const q = record(r, { kind: "harvest", saved: 40, title: "Fee" }, day(3));
+  assert.ok(q.notes.some((n) => n.includes("Harvest 2 crops")));
+  for (let i = 0; i < 50; i++) record(r, { kind: "harvest", saved: 1000, title: "x" }, day(4));
+  assert.equal(r.today.earned, DAILY_CAP); // capped
+  const before = r.acorns;
+  const out = redeem(r, "scarf-gold");
+  assert.ok(out.ok);
+  assert.equal(r.acorns, before - 150);
+  assert.equal(redeem(r, "scarf-gold").ok, false); // cosmetics unlock once
+  assert.equal(redeem(r, "giftcard10").ok, false); // not enough acorns
+});

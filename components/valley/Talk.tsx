@@ -7,7 +7,7 @@ import { speak } from "@/lib/valley/audio";
 // their personality sheet) and in their own Cartesia voice.
 type Turn = { from: "you" | "them"; text: string };
 
-export function TalkBox({ pid, who, name, voice }: { pid: string; who: string; name: string; voice: string }) {
+export function TalkBox({ pid, who, name, voice, onSaid }: { pid: string; who: string; name: string; voice: string; onSaid?: () => void }) {
   const [history, setHistory] = useState<Turn[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -22,6 +22,7 @@ export function TalkBox({ pid, who, name, voice }: { pid: string; who: string; n
       const json = (await res.json()) as { reply?: string; error?: string };
       const reply = json.reply ?? json.error ?? "…";
       setHistory([...next, { from: "them", text: reply }]);
+      onSaid?.();
       void speak(reply, voice);
     } catch {
       setHistory([...next, { from: "them", text: "Sorry, I didn't catch that." }]);

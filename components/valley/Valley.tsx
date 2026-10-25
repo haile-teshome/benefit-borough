@@ -21,6 +21,8 @@ import { Almanac } from "./Almanac";
 import { Claims } from "./Claims";
 import { Checkin } from "./Checkin";
 import { Onboarding } from "./Onboarding";
+import { Exchange } from "./Exchange";
+import { fresh as freshRewards, type Rewards } from "@/lib/rewards";
 import World2D, { type Burst, type Emote, type Mood, type Near, type WorldApi } from "./World2D";
 import { KEEPERS, RUTH_VOICE } from "@/lib/valley/people";
 
@@ -89,6 +91,7 @@ type Modal =
   | { kind: "almanac" }
   | { kind: "claims" }
   | { kind: "checkin" }
+  | { kind: "exchange" }
   | null;
 
 const hex = (id: { toHexString(): string } | undefined | null) => id?.toHexString() ?? "";
@@ -115,6 +118,19 @@ function Valley() {
   const [integrations, setIntegrations] = useState<Record<string, boolean>>({});
   const worldApi = useRef<WorldApi>({}).current;
   const [inside, setInside] = useState<string | null>(null);
+  const rewards: Rewards = state?.rewards ?? freshRewards();
+  const setRewards = (r: Rewards) => setState((cur) => (cur ? { ...cur, rewards: r } : cur));
+  // Tell the server about a visit, a shop or a chat; it decides what that's worth.
+  const acornEvent = useCallback(async (event: { kind: "visit" | "chat" } | { kind: "shop"; id: string }) => {
+    if (!pid) return;
+    try {
+      const res = await fetch("/api/rewards", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pid, event }) });
+      const json = (await res.json()) as { rewards: Rewards; gained?: { acorns: number; notes: string[] } };
+      setRewards(json.rewards);
+      if (json.gained?.acorns) { setToast(`+${json.gained.acorns} 🌰 acorns · ${json.gained.notes.join(" · ")}`); setTimeout(() => setToast(""), 4500); }
+    } catch { /* acorns are a bonus; never block play */ }
+  }, [pid]);
+
   const [modal, setModal] = useState<Modal>(null);
   const [near, setNear] = useState<Near>(null);
   const [busy, setBusy] = useState(false);
@@ -130,6 +146,14 @@ function Valley() {
   useEffect(() => {
     if (pid) expire.state(pid).then((r) => { setState(r.state); setIntegrations(r.integrations ?? {}); }).catch((e) => setError(e.message));
   }, [pid]);
+
+  // Daily visit: one acorn award per day, with a streak bonus.
+  const visited = useRef(false);
+  useEffect(() => {
+    if (title || !pid || !state || visited.current) return;
+    visited.current = true;
+    void acornEvent({ kind: "visit" });
+  }, [title, pid, state, acornEvent]);
 
   // Weekly check-in: open it from a calendar link (?checkin=1), or when a week has passed.
   const askedCheckin = useRef(false);
@@ -414,14 +438,14 @@ function Valley() {
         tiles={state?.tiles ?? []}
         done={state?.done ?? []}
         api={worldApi}
-        onScene={setInside}
+        onScene={(id) => { setInside(id); if (id) void acornEvent({ kind: "shop", id }); }}
       />
       {!title && <Labels plots={plots} players={players} myHex={myHex} bubbles={bubbles} bursts={bursts} nearElder={near?.kind === "elder"} tiles={state?.tiles ?? []} done={state?.done ?? []} inside={inside} />}
 
       {title ? (
         <Title onPlay={play} connected={isActive} />
       ) : (
-        <Hud inside={Boolean(inside)} me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} onLibrary={() => setModal({ kind: "library" })} onAlmanac={() => setModal({ kind: "almanac" })} onClaims={() => setModal({ kind: "claims" })} />
+        <Hud inside={Boolean(inside)} me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} onLibrary={() => setModal({ kind: "library" })} onAlmanac={() => setModal({ kind: "almanac" })} onClaims={() => setModal({ kind: "claims" })} onExchange={() => setModal({ kind: "exchange" })} acorns={rewards.acorns} streak={rewards.streak} />
       )}
 
       {convex && !title && !inside && <div className="ev-live-wrap" onClick={() => setModal({ kind: "almanac" })} title="Open the Burrow Almanac"><LiveBoard players={players} myPid={pid} /></div>}
@@ -455,7 +479,7 @@ function Valley() {
             actions={n.talk.length > 1 ? <button className="ev-btn ghost" onClick={() => { const i = (modal.line + 1) % n.talk.length; setModal({ ...modal, line: i }); void speak(n.talk[i], n.persona.voice); }}>Tell me more</button> : null}>
             <p className="ev-lead">{n.talk[modal.line]}</p>
             <p className="ev-sub ev-quirk">{n.persona.quirk}</p>
-            <TalkBox key={n.id} pid={pid} who={n.id} name={n.name} voice={n.persona.voice} />
+            <TalkBox key={n.id} pid={pid} who={n.id} name={n.name} voice={n.persona.voice} onSaid={() => void acornEvent({ kind: "chat" })} />
           </Dialogue>
         );
       })()}
@@ -483,12 +507,14 @@ function Valley() {
               </>
             ) : <p className="ev-sub">Nothing of yours expires here. Come back anytime.</p>}
             {modal.id === "hall" && <button className="ev-btn" onClick={() => setModal({ kind: "library" })}>Find my plans in the library</button>}
-            <TalkBox key={modal.id} pid={pid} who={modal.id} name={k.name} voice={k.persona.voice} />
+            <TalkBox key={modal.id} pid={pid} who={modal.id} name={k.name} voice={k.persona.voice} onSaid={() => void acornEvent({ kind: "chat" })} />
           </Dialogue>
         );
       })()}
       {modal?.kind === "claims" && state && <Claims state={state} pid={pid} onOpen={(tileId) => setModal({ kind: "crop", tileId })} onCheckin={() => setModal({ kind: "checkin" })} onClose={() => setModal(null)} />}
-      {modal?.kind === "checkin" && state && <Checkin state={state} pid={pid} onDone={async (s) => { setState(s); await plant(s); setModal(null); setToast("Check-in saved. Your farm is up to date."); setTimeout(() => setToast(""), 5000); }} onLibrary={() => setModal({ kind: "library" })} onClose={() => setModal(null)} />}
+      {modal?.kind === "checkin" && state && <Checkin state={state} pid={pid} onDone={async (s) => { setState(s); await plant(s); setModal(null); setToast(`Check-in saved. Your farm is up to date.${s.rewards?.week.checkin ? " +50 🌰" : ""}`); setTimeout(() => setToast(""), 5000); }} onLibrary={() => setModal({ kind: "library" })} onClose={() => setModal(null)} />}
+      {modal?.kind === "exchange" && <Exchange pid={pid} rewards={rewards} onRewards={setRewards} onClose={() => setModal(null)}
+        onWear={(color) => { if (conn && me) void conn.reducers.setProfile({ name: me.name, color, avatar: me.avatar }); setToast("Looking sharp."); setTimeout(() => setToast(""), 3000); }} />}
       {modal?.kind === "almanac" && <Almanac state={state} players={players} myPid={pid} live={Boolean(convex)} onClose={() => setModal(null)} />}
       {modal?.kind === "library" && <Library pid={pid} onPlanted={libraryPlanted} onClose={() => setModal(null)} />}
       {modal?.kind === "record" && <RuthRecord state={state} pid={pid} integrations={integrations} live={Boolean(convex)} onClose={() => setModal(null)} />}
@@ -617,7 +643,7 @@ function UploadButton({ busy, onUpload, className, label }: { busy: boolean; onU
   );
 }
 
-function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord, onLibrary, onAlmanac, onClaims }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean; onLibrary: () => void; onAlmanac: () => void; onClaims: () => void }) {
+function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord, onLibrary, onAlmanac, onClaims, onExchange, acorns, streak }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean; onLibrary: () => void; onAlmanac: () => void; onClaims: () => void; onExchange: () => void; acorns: number; streak: number }) {
   const next = state?.tiles.filter((t) => !state.done.includes(t.id) && t.atStake > 0).sort((a, b) => a.daysLeft - b.daysLeft)[0];
   const clock = useClock();
   return (
@@ -627,6 +653,9 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
         <div className="ev-clock">{clock.date} · {clock.label} {clock.night ? "☾" : "☀"}</div>
         {next && <div className="ev-sub">Next to wilt: {shortTitle(next.title).split(" ").slice(0, 3).join(" ")}… in {next.daysLeft}d</div>}
       </div>
+      <button className="ev-panel ev-acorns" onClick={onExchange} title="Open the Acorn Exchange">
+        <b>🌰 {acorns.toLocaleString("en-US")}</b><span>{streak > 1 ? `🔥 ${streak}-day streak` : "acorns"}</span>
+      </button>
       <div className="ev-panel ev-gold">
         <span className="coin" />
         <div>
@@ -639,6 +668,7 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
         {me && <div className="who"><i style={{ background: me.color }} />{me.name} (you)</div>}
         {others.map((p) => <div key={p.identity.toHexString()} className="who"><i style={{ background: p.color }} />{p.name}</div>)}
         <button className="ev-link strong" onClick={onClaims}>My claims (list) · L</button>
+        <button className="ev-link" onClick={onExchange}>Acorn Exchange (rewards)</button>
         <button className="ev-link" onClick={onAlmanac}>Burrow Almanac (leaderboard)</button>
         <button className="ev-link" onClick={onLibrary}>Find my plans (plan library)</button>
         <button className="ev-link" onClick={onRecord}>Ruth's record (audit trail)</button>

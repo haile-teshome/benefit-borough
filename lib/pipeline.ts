@@ -9,6 +9,7 @@ import { requestAction } from "./integrations/request";
 import { peerTransfer } from "./integrations/transfer";
 import { hydrate, load, log, save } from "./store";
 import type { AppState, DispatchResult } from "./types";
+import { fresh, record } from "./rewards";
 
 const docsText = (s: AppState) => s.docs.map((d) => `[${d.name}]\n${d.text}`).join("\n\n");
 
@@ -70,6 +71,9 @@ export async function dispatch(tileId: string, pid?: string | null): Promise<{ s
   if (result.status === "confirmed") {
     s.ledger.push({ id: `L${s.ledger.length + 1}`, tileId, amount: tile.action.savings, description: tile.action.summary, confirmation: result.confirmation, at: new Date().toISOString() });
     s.done.push(tileId);
+    const r = (s.rewards ??= fresh());
+    const got = record(r, { kind: "harvest", saved: tile.action.savings, title: tile.title });
+    if (got.acorns) log(s, "acorns", `+${got.acorns} acorns (${got.notes.join(", ")})`);
     log(s, "ledger", `+${usd(tile.action.savings)} confirmed by ${result.integration} (${result.confirmation})`);
   } else {
     log(s, "dispatch", `${tileId} failed; ledger unchanged`);

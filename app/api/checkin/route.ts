@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { buildDoc, type Answers } from "@/lib/library/build";
 import { scan } from "@/lib/pipeline";
 import { hydrate, load, save } from "@/lib/store";
+import { fresh, record } from "@/lib/rewards";
 
 // The weekly check-in: update answers for the library plans you planted (credits used, balances),
 // then rescan so the farm matches your week. Harvests already confirmed stay confirmed.
@@ -16,6 +17,7 @@ export async function POST(req: Request) {
   });
   const state = await scan(docs, pid);
   state.checkedInAt = new Date().toISOString();
+  const gained = record((state.rewards ??= fresh()), { kind: "checkin" });
   save(state, pid);
-  return NextResponse.json({ state });
+  return NextResponse.json({ state, gained });
 }

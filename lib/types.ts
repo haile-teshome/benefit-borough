@@ -107,5 +107,6 @@ export type AppState = {
   done: string[]; // tile ids whose action confirmed
   answers?: Record<string, "go" | "keep">; // the user's replies to Ruth's questions
   checkedInAt?: string; // last weekly check-in
+  rewards?: import("./rewards").Rewards; // acorns, streaks, quests, redemptions
   audit: AuditEvent[];
 };

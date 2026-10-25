@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { LIBRARY } from "@/lib/library/catalog";
 import { buildDoc, type Pick } from "@/lib/library/build";
 import { scan } from "@/lib/pipeline";
-import { load } from "@/lib/store";
+import { load, save } from "@/lib/store";
+import { fresh, record } from "@/lib/rewards";
 
 // The plan library: GET lists it; POST plants the plans someone picked (plus their answers).
 // Picked plans replace the sample documents; uploaded statements are kept.
@@ -16,5 +17,7 @@ export async function POST(req: Request) {
   if (!docs.length) return NextResponse.json({ error: "Pick at least one plan" }, { status: 400 });
   const uploads = load(pid).docs.filter((d) => d.id.startsWith("upload_"));
   const state = await scan([...docs, ...uploads], pid);
-  return NextResponse.json({ state, found: state.tiles.length });
+  const gained = record((state.rewards ??= fresh()), { kind: "plant" });
+  save(state, pid);
+  return NextResponse.json({ state, found: state.tiles.length, gained });
 }
