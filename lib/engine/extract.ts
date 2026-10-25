@@ -30,7 +30,7 @@ export const FACT_KEYS = [
   "promo_balance",
 ] as const;
 
-const ExtractionSchema = z.object({
+export const ExtractionSchema = z.object({
   balances: z.array(
     z.object({
       balance_id: z.string(),
@@ -62,7 +62,7 @@ const ExtractionSchema = z.object({
   ),
 });
 
-const SYSTEM = `You extract expiring money from a person's benefits, insurance, dining and card documents.
+export const SYSTEM = `You extract expiring money from a person's benefits, insurance, dining and card documents.
 Return every balance that expires, resets or forfeits by a deadline, every pending or planned care item with its fee, spending rates, and the plan parameters listed in the schema.
 Rules:
 - source_span must be copied verbatim from the document, character for character, and must contain the number you report. Spans that are not verbatim are discarded.
@@ -109,7 +109,7 @@ async function extractDocs(docs: SourceDoc[], all: SourceDoc[]): Promise<Extract
 }
 
 // Attach real character offsets to every claim; drop any claim whose span is not in a document.
-function ground(docs: SourceDoc[], raw: z.infer<typeof ExtractionSchema>, engine: "claude" | "mock"): Extraction {
+export function ground(docs: SourceDoc[], raw: z.infer<typeof ExtractionSchema>, engine: "claude" | "mock"): Extraction {
   const dropped: string[] = [];
   const balances: Balance[] = [];
   for (const b of raw.balances) {
@@ -134,7 +134,7 @@ function ground(docs: SourceDoc[], raw: z.infer<typeof ExtractionSchema>, engine
 }
 
 // Deterministic extraction of the sample documents, used when no API key is configured.
-function mockExtraction(): z.infer<typeof ExtractionSchema> {
+export function mockExtraction(): z.infer<typeof ExtractionSchema> {
   const b = (balance_id: string, category: (typeof CATEGORIES)[number], label: string, amount: number, deadline: string, source_doc: string, source_span: string, rule_text: string) =>
     ({ balance_id, category, label, amount, deadline, source_doc, source_span, rule_text });
   const fact = (key: (typeof FACT_KEYS)[number], value: number, source_doc: string, source_span: string) => ({ key, value, source_doc, source_span });

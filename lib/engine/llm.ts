@@ -33,12 +33,12 @@ export function routeFor(task: Task): Route {
 const OLLAMA = () => process.env.OLLAMA_URL ?? "http://localhost:11434";
 
 // One structured call to a local model. Ollama enforces the JSON schema while generating.
-export async function ollamaStructured<S extends z.ZodType>(model: string, opts: { system: string; user: string; schema: S; timeoutMs?: number }): Promise<z.infer<S> | null> {
+export async function ollamaStructured<S extends z.ZodType>(model: string, opts: { system: string; user: string; schema: S; timeoutMs?: number; numCtx?: number }): Promise<z.infer<S> | null> {
   try {
     const res = await fetch(`${OLLAMA()}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model, stream: false, format: z.toJSONSchema(opts.schema), options: { temperature: 0.2 }, messages: [{ role: "system", content: opts.system }, { role: "user", content: opts.user }] }),
+      body: JSON.stringify({ model, stream: false, format: z.toJSONSchema(opts.schema), options: { temperature: 0.2, num_ctx: opts.numCtx ?? 16384 }, think: false, messages: [{ role: "system", content: opts.system }, { role: "user", content: opts.user }] }),
       signal: AbortSignal.timeout(opts.timeoutMs ?? 90_000),
     });
     if (!res.ok) return null;

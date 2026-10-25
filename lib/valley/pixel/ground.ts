@@ -35,31 +35,6 @@ function grass(px: number, py: number) {
   return GRASS[i];
 }
 
-// Rounded cobblestones: a jittered grid of stone centers (Voronoi). Mortar where two stones meet,
-// a lit top-left and shaded bottom-right on each stone, and per-stone color variation.
-function stones(px: number, py: number, palette: string[], size = 7, wear = 0, mortar: [string, string] = ["#5A4636", "#7A6150"], relief = 1) {
-  const gx = Math.floor(px / size), gy = Math.floor(py / size);
-  let d1 = 1e9, d2 = 1e9, cx = 0, cy = 0, id = 0;
-  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
-    const cxi = gx + i, cyi = gy + j;
-    const sx = (cxi + 0.2 + hash(cxi, cyi) * 0.6) * size, sy = (cyi + 0.2 + hash(cyi * 3.7, cxi * 1.3) * 0.6) * size;
-    const d = Math.hypot((px - sx) * 1.08, py - sy);
-    if (d < d1) { d2 = d1; d1 = d; cx = sx; cy = sy; id = hash(cxi * 7.1, cyi * 3.3); } else if (d < d2) d2 = d;
-  }
-  if (d2 - d1 < 1.15) {
-    const h = hash(px * 1.3, py * 2.1);
-    if (h > 0.992) return h > 0.997 ? "#F7A8C4" : "#8CC65E"; // a tiny flower or moss in the cracks
-    return d2 - d1 < 0.55 ? mortar[0] : mortar[1]; // mortar, softer at its edge
-  }
-  let c = palette[Math.floor(id * palette.length) % palette.length];
-  c = shade(c, wear * 0.18);
-  const dx = (px - cx) / size, dy = (py - cy) / size;
-  if (dx + dy < -0.38) c = shade(c, 0.16 * relief); // light from the top-left
-  else if (dx + dy > 0.34) c = shade(c, -0.14 * relief);
-  if (hash(px, py) > 0.985) c = shade(c, -0.2); // pits and speckle
-  return c;
-}
-
 // One paving family for the whole town: soft, rounded sandstone with gentle mortar. Districts get
 // only a faint tint (mint for health, rose for finance, lavender for civic) so they read as areas
 // without clashing patterns.
@@ -73,6 +48,48 @@ const CIVIC = tint(SAND, "#DCD3F0", 0.4);
 const CURB = tint(SAND, "#FFF6E2", 0.45);
 const MORTAR: [string, string] = ["#B49773", "#C8AD88"];
 
+// Neat rounded pavers in a staggered (running bond) pattern: each stone lit along its top edge,
+// shaded along its bottom, with soft rounded corners.
+function pavers(px: number, py: number, pal: string[], w = 8, h = 5, tone = 0) {
+  const row = Math.floor(py / h), off = (row & 1) * (w >> 1);
+  const col = Math.floor((px + off) / w);
+  const ix = (px + off) % w, iy = py % h;
+  if (ix === w - 1 || iy === h - 1) return crack(px, py, MORTAR[0]);
+  if ((ix === 0 || ix === w - 2) && (iy === 0 || iy === h - 2)) return MORTAR[1];
+  let c = shade(pal[Math.floor(hash(col, row) * pal.length) % pal.length], tone);
+  if (iy === 0) c = shade(c, 0.12);
+  else if (iy === h - 2) c = shade(c, -0.1);
+  if (hash(px, py) > 0.99) c = shade(c, -0.12);
+  return c;
+}
+const crack = (px: number, py: number, c: string) => { const h = hash(px * 1.3, py * 2.1); return h > 0.994 ? (h > 0.998 ? "#F7A8C4" : "#8CC65E") : c; };
+
+// The town square: stones laid in rings that fan around the center, a rose ring every few rows,
+// a compass rose inlaid around the fountain, and a darker frame at the edge.
+const ROSE = ["#E9B9A8", "#E3AE9C", "#EEC3B3"];
+const TERRA = ["#C97B63", "#BF6F57"];
+function plaza(x: number, z: number) {
+  const r = Math.hypot(x, z), R = 7.5;
+  let th = Math.atan2(z, x); if (th < 0) th += Math.PI * 2;
+  // Compass rose: four long points (N/E/S/W) and four short ones, between the two inlay rings.
+  const card = Math.abs(((th + Math.PI / 4) % (Math.PI / 2)) - Math.PI / 4); // angle to nearest cardinal
+  const diag = Math.abs((th % (Math.PI / 2)) - Math.PI / 4); // angle to nearest diagonal
+  if (r > 1.9 && r < 4.3 && card < 0.34 * (4.3 - r) / 2.4) return card < 0.03 * (4.3 - r) ? "#F4E6C8" : TERRA[r < 3 ? 0 : 1];
+  if (r > 1.9 && r < 3.2 && diag < 0.26 * (3.2 - r) / 1.3) return ROSE[1];
+  if ((r > 1.75 && r < 1.95) || (r > 4.3 && r < 4.5)) return "#B07E66"; // inlay rings
+  // Fan stones.
+  const W = 0.55, ring = Math.floor(r / W), fr = r / W - ring;
+  const segs = Math.max(8, Math.round((Math.PI * 2 * (ring + 0.5) * W) / 0.62));
+  const s = (th / (Math.PI * 2)) * segs + (ring & 1) * 0.5, fs = s - Math.floor(s);
+  const arc = (Math.PI * 2 * r) / segs;
+  if (fr < 0.13 || fs * arc < 0.06) return MORTAR[0];
+  const frame = r > R - 1.15;
+  const pal = frame ? tint(SAND, "#B98E66", 0.45) : ring % 4 === 2 ? ROSE : PLAZA;
+  let c = pal[Math.floor(hash(ring, Math.floor(s)) * pal.length) % pal.length];
+  if (fr > 0.82) c = shade(c, 0.1); else if (fr < 0.28) c = shade(c, -0.08);
+  return c;
+}
+
 // The curb: a single row of rounded edging stones, lit on top.
 function curb(px: number, py: number) {
   const seg = Math.floor((px + py) / 6);
@@ -81,11 +98,11 @@ function curb(px: number, py: number) {
   return (py % 3 === 0) ? shade(c, 0.1) : c;
 }
 
-function paving(kind: string, px: number, py: number) {
-  if (kind === "plaza") return stones(px, py, PLAZA, 8, 0, MORTAR, 0.6);
-  if (kind === "health") return stones(px, py, HEALTH, 8, 0, MORTAR, 0.6);
-  if (kind === "credit") return stones(px, py, FINANCE, 8, 0, MORTAR, 0.6);
-  if (kind === "slab") return stones(px, py, CIVIC, 8, 0, MORTAR, 0.6);
+function paving(kind: string, px: number, py: number, x = 0, z = 0) {
+  if (kind === "plaza") return plaza(x, z);
+  if (kind === "health") return pavers(px, py, HEALTH);
+  if (kind === "credit") return pavers(px, py, FINANCE);
+  if (kind === "slab") return pavers(px, py, CIVIC, 12, 6);
   // deck
   const plank = Math.floor(py / 4);
   if (py % 4 === 3 || (px + plank * 11) % 30 === 0) return "#7A4E2D";
@@ -113,7 +130,7 @@ export function bakeGround(): Ground {
       if (zk === "deck") c = paving(zk, px, py);
       else if (paved >= 0.2) {
         const rd = roadAt(x, z);
-        c = zk ? paving(zk, px, py) : stones(px, py, ROAD, 8, Math.min(1, -rd / 1.2) * 0.6, MORTAR, 0.6);
+        c = zk ? paving(zk, px, py, x, z) : pavers(px, py, ROAD, 8, 5, Math.min(1, -rd / 1.2) * 0.08);
       } else if (paved >= 0.05) c = curb(px, py);
       else if (paved >= 0) c = "#9C7F5E";
       else if (paved > -0.14) c = shade(c, -0.14);
