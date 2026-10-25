@@ -58,6 +58,7 @@ export function RuthRecord({ state, pid, integrations, live, onClose }: { state:
     ["Voice check-in", Boolean(integrations.cartesia), integrations.cartesia ? "Cartesia speech-to-text, Claude maps it onto your plans, Ruth answers in her voice" : "Typed check-in"],
     ["Payday and savings moves", Boolean(integrations.nessie), integrations.nessie ? "Paychecks read from Nessie; savings moves are real Nessie transfers you submit" : "Not connected"],
     ["Fine-print watch", true, integrations.termsActor ? "Benefit Terms Watcher, a custom Apify actor" : "Same checks run on this server until the Apify actor is deployed"],
+    ["Benefit Bazaar (agents shop for you)", Boolean(integrations.claude), integrations.claude ? `Three shopkeeper agents search the live web (Claude web search) and sell quotes over x402; Apify checks live prices; Ruth reviews. She never buys.` : "Needs Claude"],
     ["Swap Market", true, "SpacetimeDB: live offers between players; the transfer itself happens in each program's app"],
     ["Phone calls to offices", false, "Voice is real; the other side of the call is scripted"],
     ["Forms, chats and app taps (refunds, disputes, cancels)", false, "Scripted: each provider's API is the next step"],

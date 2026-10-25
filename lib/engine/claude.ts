@@ -37,3 +37,40 @@ export async function callStructured<S extends z.ZodType>(opts: {
     return null;
   }
 }
+
+// A structured answer that may search the web first (Claude's web search server tool). Long
+// searches can pause mid-turn; we resume until Claude finishes or we hit the limit.
+export async function searchStructured<S extends z.ZodType>(opts: {
+  system: string;
+  user: string;
+  schema: S;
+  maxSearches?: number;
+  effort?: "low" | "medium" | "high";
+}): Promise<{ data: z.infer<S> | null; searches: number }> {
+  client ??= new Anthropic();
+  const messages: Anthropic.Beta.Messages.BetaMessageParam[] = [{ role: "user", content: opts.user }];
+  let searches = 0;
+  try {
+    for (let turn = 0; turn < 4; turn++) {
+      const res = await client.beta.messages.parse({
+        model: MODEL,
+        max_tokens: 16000,
+        betas: ["server-side-fallback-2026-07-01"],
+        fallbacks: "default",
+        thinking: { type: "adaptive" },
+        tools: [{ type: "web_search_20260209", name: "web_search", max_uses: opts.maxSearches ?? 4 }],
+        output_config: { effort: opts.effort ?? "low", format: betaZodOutputFormat(opts.schema) },
+        system: opts.system,
+        messages,
+      });
+      searches += res.content.filter((b) => b.type === "server_tool_use").length;
+      if (res.stop_reason === "pause_turn") { messages.push({ role: "assistant", content: res.content as Anthropic.Beta.Messages.BetaContentBlockParam[] }); continue; }
+      if (res.stop_reason === "refusal") return { data: null, searches };
+      if (process.env.DEBUG_SEARCH) console.log("[search]", res.stop_reason, JSON.stringify(res.parsed_output)?.slice(0, 300), res.content.filter((x) => x.type === "text").map((x) => (x as { text: string }).text.slice(0, 300)));
+      return { data: (res.parsed_output as z.infer<S> | null) ?? null, searches };
+    }
+  } catch (err) {
+    console.warn("[claude] search failed", err instanceof Anthropic.APIError ? err.status : err);
+  }
+  return { data: null, searches };
+}

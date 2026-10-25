@@ -135,6 +135,21 @@ export type AppState = {
   packets?: Packet[]; // Ruth's outbox: prepared, never submitted without you
   autopilot?: Autopilot;
   lastPayday?: string; // when Ruth last saw a paycheck land (ISO)
+  quests?: Quest[]; // shopping quests in the Benefit Bazaar
+};
+
+// The Benefit Bazaar: you name a need and an unspent benefit; shopkeeper agents compete with live
+// web offers, Ruth pays each for its quote over x402, checks live prices, and reviews every offer.
+export type QuestOffer = {
+  title: string; merchant: string; url: string; price: number; livePrice?: number | null; rating: number | null; reviews: number | null; why: string; agent: string;
+  verdict: { ok: boolean; fits: boolean; eligible: boolean; quality: number; note: string };
+  covered: number; outOfPocket: number; score: number;
+};
+export type Quest = {
+  id: string; at: string; need: string; maxPrice: number;
+  benefit: { id: string; label: string; amount: number; deadline: string; category: Category };
+  agents: { id: string; shop: string; keeper: string; strategy: string; offers: number; paid?: { price: string; tx: string } ; note?: string }[];
+  offers: QuestOffer[]; best?: string; notes: string[]; spent: number;
 };
 
 // Ruth's Autopilot: what you let her do on a night shift. She may rescan, buy data within a

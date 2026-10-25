@@ -22,8 +22,8 @@ import type { Packet, Profile } from "./types";
 const month = () => new Date().toISOString().slice(0, 7);
 const usdOf = (price: string) => parseFloat(price.replace("$", ""));
 function spentThisMonth(s: AppState) { return s.autopilot?.spent.month === month() ? s.autopilot.spent.usd : 0; }
-function canSpend(s: AppState, price: string) { return x402Enabled() && spentThisMonth(s) + usdOf(price) <= (s.autopilot?.mandate.dataBudget ?? 0.25) + 1e-9; }
-function addSpend(s: AppState, price: string) {
+export function canSpend(s: AppState, price: string) { return x402Enabled() && spentThisMonth(s) + usdOf(price) <= (s.autopilot?.mandate.dataBudget ?? 0.25) + 1e-9; }
+export function addSpend(s: AppState, price: string) {
   s.autopilot ??= { mandate: { on: false, hour: 2, tzOffset: new Date().getTimezoneOffset(), prepare: "all", dataBudget: 0.25, signedAt: "" }, spent: { month: month(), usd: 0 }, reports: [] };
   s.autopilot.spent = { month: month(), usd: Math.round((spentThisMonth(s) + usdOf(price)) * 1000) / 1000 };
 }

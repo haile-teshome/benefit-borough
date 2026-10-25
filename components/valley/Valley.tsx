@@ -29,6 +29,9 @@ import { TermsNews } from "./TermsNews";
 import { AutopilotPanel, MorningReport } from "./Autopilot";
 import { VoiceCheckin } from "./VoiceCheckin";
 import { Household } from "./Household";
+import { Bazaar } from "./Bazaar";
+import { SHELVES, payerFor } from "@/lib/market/shelves";
+import { shoppable } from "@/lib/market/shoppable";
 import { fresh as freshRewards, type Rewards } from "@/lib/rewards";
 import World2D, { type Burst, type Emote, type Mood, type Near, type WorldApi } from "./World2D";
 import { KEEPERS, RUTH_VOICE } from "@/lib/valley/people";
@@ -96,6 +99,7 @@ type Modal =
   | { kind: "autopilot" }
   | { kind: "voice" }
   | { kind: "household" }
+  | { kind: "bazaar"; preset?: { need: string; benefitId: string } }
   | { kind: "morning"; report: ShiftReport }
   | { kind: "run"; tileId: string; lines: string[]; result: DispatchResult | null; to?: string }
   | { kind: "elder"; step: "hello" | "thinking" | "verdict"; verdict?: Verdict }
@@ -482,7 +486,7 @@ function Valley() {
         <Title onPlay={play} connected={isActive} />
       ) : (
         <Hud inside={Boolean(inside)} me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} onLibrary={() => setModal({ kind: "library" })} onAlmanac={() => setModal({ kind: "almanac" })} onClaims={() => setModal({ kind: "claims" })} onExchange={() => setModal({ kind: "exchange" })} acorns={rewards.acorns} streak={rewards.streak}
-          onOutbox={() => setModal({ kind: "outbox" })} onAutopilot={() => setModal({ kind: "autopilot" })} onVoice={() => setModal({ kind: "voice" })} onHousehold={convex ? () => setModal({ kind: "household" }) : undefined} onCheckout={() => setModal({ kind: "checkout" })} onSwap={() => setModal({ kind: "swap" })} onTerms={() => setModal({ kind: "terms" })} />
+          onOutbox={() => setModal({ kind: "outbox" })} onAutopilot={() => setModal({ kind: "autopilot" })} onVoice={() => setModal({ kind: "voice" })} onHousehold={convex ? () => setModal({ kind: "household" }) : undefined} onBazaar={() => setModal({ kind: "bazaar" })} onCheckout={() => setModal({ kind: "checkout" })} onSwap={() => setModal({ kind: "swap" })} onTerms={() => setModal({ kind: "terms" })} />
       )}
 
       {convex && !title && !inside && <div className="ev-live-wrap" onClick={() => setModal({ kind: "almanac" })} title="Open the Burrow Almanac"><LiveBoard players={players} myPid={pid} /></div>}
@@ -546,6 +550,23 @@ function Valley() {
             {modal.id === "hall" && <button className="ev-btn" onClick={() => setModal({ kind: "library" })}>Find my plans in the library</button>}
             {modal.id === "bank" && <PaydayButtons pid={pid} onState={async (s, tileId) => { setState(s); await plant(s); if (tileId) setModal({ kind: "crop", tileId }); }} />}
             {modal.id === "store" && <button className="ev-btn" onClick={() => setModal({ kind: "checkout" })}>Before you buy: which card should I use?</button>}
+            {SHELVES[modal.id] && state && (
+              <div className="ev-shelves">
+                <b>On the shelves</b>
+                <span className="ev-sub">Pick something you need: the burrow's agents find the best one your benefits cover, for the least money.</span>
+                <div className="ev-shelf-grid">
+                  {SHELVES[modal.id].map((item) => {
+                    const payer = payerFor(item, shoppable(state));
+                    return (
+                      <button key={item.label} disabled={!payer} title={payer ? `Paid with ${payer.label}` : "None of your unspent benefits covers this"}
+                        onClick={() => payer && setModal({ kind: "bazaar", preset: { need: item.need, benefitId: payer.id } })}>
+                        <i>{item.icon}</i><span>{item.label}</span><em>{payer ? `${payer.label.replace(/ balance$/i, "")} · $${Math.round(payer.amount)}` : "not covered"}</em>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {(modal.id === "market" || modal.id === "commons") && <button className="ev-btn" onClick={() => setModal({ kind: "swap" })}>Open the Swap Market</button>}
             <TalkBox key={modal.id} pid={pid} who={modal.id} name={k.name} voice={k.persona.voice} onSaid={() => void acornEvent({ kind: "chat" })} />
           </Dialogue>
@@ -576,6 +597,7 @@ function Valley() {
       {modal?.kind === "checkout" && <Checkout pid={pid} onClose={() => setModal(null)} />}
       {modal?.kind === "swap" && conn && <SwapMarket conn={conn} me={myHex} players={[...players]} onClose={() => setModal(null)} />}
       {modal?.kind === "terms" && <TermsNews onClose={() => setModal(null)} />}
+      {modal?.kind === "bazaar" && state && <Bazaar key={modal.preset?.need ?? "bazaar"} pid={pid} state={state} preset={modal.preset} onState={setState} onCheckout={() => setModal({ kind: "checkout" })} onClose={() => setModal(null)} />}
       {modal?.kind === "household" && convex && <Household pid={pid} name={me?.name ?? "Farmer"} color={me?.color ?? "#E2574C"} onClose={() => setModal(null)} />}
       {modal?.kind === "voice" && <VoiceCheckin pid={pid} onState={async (s) => { setState(s); await plant(s); }} onClose={() => setModal(null)} />}
       {modal?.kind === "autopilot" && state && <AutopilotPanel pid={pid} state={state} live={Boolean(convex)} onState={setState} onOutbox={() => setModal({ kind: "outbox" })} onClose={() => setModal(null)} />}
@@ -702,7 +724,7 @@ function UploadButton({ busy, onUpload, className, label }: { busy: boolean; onU
   );
 }
 
-function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord, onLibrary, onAlmanac, onClaims, onExchange, acorns, streak, onOutbox, onCheckout, onSwap, onTerms, onAutopilot, onVoice, onHousehold }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean; onLibrary: () => void; onAlmanac: () => void; onClaims: () => void; onExchange: () => void; acorns: number; streak: number; onOutbox: () => void; onCheckout: () => void; onSwap: () => void; onTerms: () => void; onAutopilot: () => void; onVoice: () => void; onHousehold?: () => void }) {
+function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord, onLibrary, onAlmanac, onClaims, onExchange, acorns, streak, onOutbox, onCheckout, onSwap, onTerms, onAutopilot, onVoice, onHousehold, onBazaar }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean; onLibrary: () => void; onAlmanac: () => void; onClaims: () => void; onExchange: () => void; acorns: number; streak: number; onOutbox: () => void; onCheckout: () => void; onSwap: () => void; onTerms: () => void; onAutopilot: () => void; onVoice: () => void; onHousehold?: () => void; onBazaar: () => void }) {
   const waiting = (state?.packets ?? []).filter((p) => p.status !== "submitted");
   const next = state?.tiles.filter((t) => !state.done.includes(t.id) && t.atStake > 0).sort((a, b) => a.daysLeft - b.daysLeft)[0];
   const clock = useClock();
@@ -731,6 +753,7 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
         <button className="ev-link strong" onClick={onOutbox}>Ruth's outbox{waiting.length ? ` (${waiting.filter((p) => p.status === "ready").length} ready, ${waiting.length - waiting.filter((p) => p.status === "ready").length} need you)` : ""}</button>
         <button className="ev-link strong" onClick={onAutopilot}>Ruth's Autopilot {state?.autopilot?.mandate.on ? `(on, ${state.autopilot.mandate.hour % 12 || 12}${state.autopilot.mandate.hour < 12 ? "am" : "pm"})` : "(off)"}</button>
         <button className="ev-link" onClick={onVoice}>Talk to Ruth (voice check-in)</button>
+        <button className="ev-link strong" onClick={onBazaar}>Benefit Bazaar (agents shop for you)</button>
         <button className="ev-link" onClick={onCheckout}>Before you buy (which card?)</button>
         <button className="ev-link" onClick={onSwap}>Swap Market (trade leftovers)</button>
         {onHousehold && <button className="ev-link" onClick={onHousehold}>Household (share with family)</button>}

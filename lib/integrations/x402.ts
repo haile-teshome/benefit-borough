@@ -19,6 +19,7 @@ export const MARKET = {
   prices: { shop: "The Deal Desk", path: "/api/x402/prices", price: "$0.01", what: "Live store price for a price-match check" },
   eligibility: { shop: "Pharmacy & Optical", path: "/api/x402/fsa-eligible", price: "$0.005", what: "FSA/HSA eligibility check for a purchase" },
   terms: { shop: "The Card House", path: "/api/x402/card-terms", price: "$0.01", what: "Whether a card's credit terms are still current" },
+  quote: { shop: "Any shopkeeper agent", path: "/api/x402/quote", price: "$0.02", what: "A shopping agent's quote: real products that fit your need and budget" },
 } as const;
 
 // Buy one answer from a shop. Returns the data and the on-chain receipt, or why it didn't go through.
