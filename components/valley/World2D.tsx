@@ -11,6 +11,10 @@ import { animalFrames, type Dir, type Outfit, speciesOf } from "@/lib/valley/pix
 import { mix, type Sprite } from "@/lib/valley/pixel/draw";
 import { bakeGround, fieldPatch, type Ground } from "@/lib/valley/pixel/ground";
 import * as P from "@/lib/valley/pixel/props";
+import { bakeRoom, furniture, pedestal, poster, rugSprite } from "@/lib/valley/pixel/interior";
+import { blockedInside, doorSpot, INTERIORS, type Interior } from "@/lib/valley/interiors";
+import { CHATTER, KEEPERS } from "@/lib/valley/people";
+import type { Tile } from "@/lib/types";
 import {
   BOUNDS, BUILDINGS, blocked, DECOR, doorOf, FARM_MEADOW, farmLayout, FOUNTAIN, GLOWS, NPCS, SOLID_DECOR, STRINGS, TREE_KINDS, type Place,
 } from "@/lib/valley/world";
@@ -24,7 +28,12 @@ export type Near =
   | { kind: "elder"; label: string }
   | { kind: "mailbox"; label: string }
   | { kind: "place"; id: string; place: Place; label: string }
+  | { kind: "npc"; id: string; label: string }
+  | { kind: "keeper"; id: string; label: string }
+  | { kind: "claim"; tileId: string; label: string }
+  | { kind: "exit"; label: string }
   | null;
+export type WorldApi = { enter?: (buildingId: string) => void; exit?: () => void };
 export type Emote = { clip: "Cheer" | "Interact"; at: number } | null;
 export type Mood = { kind: "approve" | "reject" | "thinking"; at: number } | null;
 export type Burst = { id: number; at: [number, number, number]; amount: number; born: number };
@@ -33,6 +42,7 @@ type Props = {
   me?: Player; players: readonly Player[]; plots: readonly Plot[]; myHex: string; giftsWaitingFor: Set<string>;
   canMove: boolean; onNear: (n: Near) => void; conn: DbConnection | null; myGiftCount: number; attract: boolean;
   bursts: Burst[]; onBurstDone: (id: number) => void; emotes: Record<string, Emote>; ruthMood: Mood;
+  tiles: Tile[]; done: string[]; api: WorldApi; onScene: (buildingId: string | null) => void;
 };
 
 const hex = (id: { toHexString(): string }) => id.toHexString();
@@ -116,8 +126,10 @@ export default function World2D(props: Props) {
     const ctx = cv.getContext("2d")!;
     const art = makeArt();
     let scale = 3, cw = 0, ch = 0;
+    let roomFit: Interior | null = null; // set while inside a shop, so the room fills the screen
     const resize = () => {
       scale = Math.max(2, Math.round(Math.min(window.innerWidth / (T * 24), window.innerHeight / (T * 15))));
+      if (roomFit) scale = Math.max(scale, Math.floor(Math.min((window.innerWidth + 8) / (roomFit.w * T), (window.innerHeight - 70) / (roomFit.h * T))));
       cw = Math.ceil(window.innerWidth / scale); ch = Math.ceil(window.innerHeight / scale);
       cv.width = cw; cv.height = ch;
       cv.style.width = `${cw * scale}px`; cv.style.height = `${ch * scale}px`;
@@ -153,6 +165,44 @@ export default function World2D(props: Props) {
     });
     const wrap = (v: number, c: number, span: number) => v - Math.round((v - c) / span) * span;
 
+    // ---------- shops ----------
+    let inside: Interior | null = null;
+    const rooms = new Map<string, HTMLCanvasElement>();
+    const furn = new Map<string, Sprite>();
+    const posters = new Map<string, Sprite>();
+    const stand = pedestal(), rug = rugSprite();
+    const sprite = (k: string, make: () => Sprite) => memo(furn, k, make);
+    live.current.api.enter = (id: string) => {
+      const r = INTERIORS[id];
+      if (!r || !pos) return;
+      inside = r;
+      roomFit = r; resize();
+      nearKey = ""; live.current.onNear(null);
+      const d = doorSpot(r);
+      pos = { x: d.x, z: d.z - 0.6 };
+      myDir = "up"; target = null;
+      sound.click();
+      live.current.onScene(id);
+    };
+    live.current.api.exit = () => {
+      if (!inside) return;
+      const b = BUILDINGS.find((x) => x.id === inside!.id)!;
+      inside = null;
+      roomFit = null; resize();
+      nearKey = ""; live.current.onNear(null);
+      pos = { x: b.x, z: b.z + 1.1 };
+      cam = { ...pos };
+      myDir = "down"; target = null;
+      sound.click();
+      live.current.onScene(null);
+    };
+
+    // ---------- villagers ----------
+    const folk = new Map(NPCS.map((n) => [n.id, { x: n.x, z: n.z, dir: "down" as Dir, walk: 0, seg: 0, pauseUntil: 0 }]));
+    const bubbles = new Map<string, { text: string; until: number }>();
+    let chat: { lines: [string, string][]; i: number; next: number } | null = null;
+    let nextChat = performance.now() + 2500;
+
     // Dev hooks so tests can drive the farmer without synthesizing clicks.
     if (process.env.NODE_ENV !== "production") Object.assign(window, { __walkTo: (x: number, z: number) => { target = { x, z }; }, __pos: () => pos && { ...pos }, __tp: (x: number, z: number) => { pos = { x, z }; cam = { x, z }; target = null; } });
 
@@ -178,7 +228,95 @@ export default function World2D(props: Props) {
       ctx.beginPath(); ctx.ellipse(Math.round(sx), Math.round(sy), rx, rx * 0.38, 0, 0, Math.PI * 2); ctx.fill();
     };
 
-    const solids = SOLID_DECOR.concat(NPCS.map((n) => ({ x: n.x, z: n.z, r: 0.5 })), [{ x: ELDER_POS[0], z: ELDER_POS[2], r: 0.5 }]);
+    const solids = SOLID_DECOR.concat(NPCS.filter((n) => !n.route).map((n) => ({ x: n.x, z: n.z, r: 0.5 })), [{ x: ELDER_POS[0], z: ELDER_POS[2], r: 0.5 }]);
+
+    // Move every DOM label to its anchor. Inside a shop only that room's labels show.
+    const projectLabels = () => {
+      for (const [id, el] of labelEls) {
+        const a = anchors.get(id);
+        const here = inside ? /^(claim:|keeper$|player:|say:)/.test(id) && (!id.startsWith("player:") || id === `player:${live.current.myHex}`) : !/^(claim:|keeper$)/.test(id);
+        if (!a || !here) { el.style.visibility = "hidden"; continue; }
+        const sx = (a.x * T - camLeft) * scale, sy = (a.z * T - a.y * T - camTop) * scale;
+        const vis = sx > -100 && sy > -40 && sx < cw * scale + 100 && sy < ch * scale + 80;
+        el.style.visibility = vis ? "visible" : "hidden";
+        // Crop tags hang under their plant like garden markers; everything else floats above its anchor.
+        el.style.transform = `translate(${Math.round(sx)}px, ${Math.round(sy)}px) translate(-50%, ${id.startsWith("crop:") ? "0" : "-100%"})`;
+        if (id.startsWith("crop:")) el.classList.toggle("far", Math.hypot(a.x - focus.x, a.z - focus.z) > 1.6);
+        if (id.startsWith("claim:") && pos) el.classList.toggle("far", Math.hypot(a.x - pos.x, a.z - pos.z) > 1.4);
+      }
+
+    };
+
+    // ---------- inside a shop ----------
+    const drawInside = (r: Interior, now: number, t: number, moving: boolean) => {
+      const p = live.current, here = pos!, me = p.me!;
+      camLeft = Math.round((r.w * T) / 2 - cw / 2);
+      camTop = Math.round((r.h * T) / 2 - ch / 2 + 6);
+      ctx.imageSmoothingEnabled = false;
+      ctx.fillStyle = "#2A1E1A"; ctx.fillRect(0, 0, cw, ch);
+      const room = memo(rooms, r.id, () => bakeRoom(r));
+      ctx.drawImage(room, -camLeft, -camTop);
+      for (const f of r.furniture) {
+        if (f.kind === "poster") blit(memo(posters, String(f.v ?? 0), () => poster(f.v ?? 0)), f.x, f.z + 0.2);
+        if (f.kind === "rug") blit(rug, f.x, f.z);
+      }
+      type D = { z: number; draw: () => void; sh?: [number, number, number] };
+      const list: D[] = [];
+      for (const f of r.furniture) {
+        if (f.kind === "poster" || f.kind === "rug") continue;
+        const s = sprite(`${f.kind}${f.v ?? 0}${f.color ?? ""}${f.w ?? ""}`, () => furniture(f.kind, f.v, f.color, f.w));
+        list.push({ z: f.z, draw: () => blit(s, f.x, f.z) });
+      }
+      const keeper = KEEPERS[r.id];
+      if (keeper) {
+        setAnchor("keeper", r.keeper.x, 1.8, r.keeper.z);
+        const look: Dir = Math.abs(here.x - r.keeper.x) > 2 ? (here.x < r.keeper.x ? "left" : "right") : "down";
+        list.push({ z: r.keeper.z, sh: [r.keeper.x, r.keeper.z, 6], draw: () => { const fr = animalFrames(keeper.species, keeper.outfit)[look]; blit(fr[0], r.keeper.x, r.keeper.z, Math.round(Math.max(0, Math.sin(t * 2)) * 0.8)); } });
+      }
+      // Claims on display: every balance this shop handles, richest first.
+      const cats = BUILDINGS.find((b) => b.id === r.id)?.place?.categories ?? [];
+      const claims = p.tiles.filter((x) => cats.includes(x.category)).sort((a, b) => b.atStake - a.atStake).slice(0, r.spots.length);
+      for (const [id] of anchors) if (id.startsWith("claim:") && !claims.some((c) => `claim:${c.id}` === id)) anchors.delete(id);
+      claims.forEach((c, i) => {
+        const at = r.spots[i];
+        const harvested = p.done.includes(c.id);
+        const wilt = harvested ? 0 : c.daysLeft <= 14 ? 0.8 : c.daysLeft <= 30 ? 0.45 : 0;
+        const plant = memo(art.crops, `${c.category}${wilt}${harvested}`, () => P.crop(c.category, wilt, harvested));
+        setAnchor(`claim:${c.id}`, at.x, -0.15, at.z);
+        list.push({ z: at.z, sh: [at.x, at.z, 9], draw: () => {
+          blit(stand, at.x, at.z);
+          blit(plant, at.x, at.z, 8 + (harvested ? 0 : Math.round(Math.sin(t * 2 + i) * 0.6)));
+          if (!harvested && c.live && c.action.kind !== "none") blit(art.coin, at.x + 0.5, at.z, 30 + Math.round(Math.sin(t * 3 + i) * 2));
+        } });
+      });
+      setAnchor(`player:${p.myHex}`, here.x, 1.75, here.z);
+      const e = p.emotes[p.myHex];
+      list.push({ z: here.z, sh: [here.x, here.z, 6], draw: () => {
+        const fr = animalFrames(speciesOf(me.avatar), { scarf: me.color })[myDir];
+        blit(fr[moving ? Math.floor((walkT + 0.13) * 8) % 4 : 0], here.x, here.z);
+        if (e && e.clip === "Interact" && now - e.at < 800) blit(art.bubbles["!"], here.x + 0.4, here.z, 30);
+      } });
+      ctx.fillStyle = "rgba(40, 24, 50, 0.22)";
+      for (const d of list) if (d.sh) shadow(d.sh[0], d.sh[1], d.sh[2]);
+      list.sort((a, b) => a.z - b.z);
+      for (const d of list) d.draw();
+      // warm lamp light
+      const g = ctx.createRadialGradient(cw / 2, ch * 0.35, 10, cw / 2, ch * 0.35, Math.max(cw, ch) * 0.7);
+      g.addColorStop(0, "rgba(255, 220, 160, 0.10)"); g.addColorStop(1, "rgba(30, 15, 30, 0.25)");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, cw, ch);
+      projectLabels();
+
+      // what's in reach
+      let best: Near = null, id = "", bestD = 1.35;
+      const kd = Math.hypot(here.x - r.keeper.x, here.z - r.keeper.z);
+      if (keeper && kd < 2) { id = "keeper"; bestD = Math.min(bestD, kd - 0.6); best = { kind: "keeper", id: r.id, label: `Talk to ${keeper.name}` }; }
+      claims.forEach((c, i) => {
+        const d = Math.hypot(here.x - r.spots[i].x, here.z - r.spots[i].z);
+        if (d < bestD) { bestD = d; id = `claim:${c.id}`; best = { kind: "claim", tileId: c.id, label: p.done.includes(c.id) ? `Look at ${c.title}` : `Inspect: ${c.title}` }; }
+      });
+      if (here.z > r.h - 1.4 && Math.abs(here.x - r.w / 2) < 1.4) { id = "exit"; best = { kind: "exit", label: "Leave (walk out the door)" }; }
+      if (id !== nearKey) { nearKey = id; p.onNear(best); }
+    };
 
     let raf = 0, last = performance.now();
     const frame = (now: number) => {
@@ -211,8 +349,9 @@ export default function World2D(props: Props) {
           const step = SPEED * dt;
           const nx = pos.x + dx * step, nz = pos.z + dz * step;
           const before = { ...pos };
-          if (!blocked(nx, pos.z, solids)) pos.x = nx;
-          if (!blocked(pos.x, nz, solids)) pos.z = nz;
+          const stop = (x: number, z: number) => (inside ? blockedInside(inside, x, z) : blocked(x, z, solids));
+          if (!stop(nx, pos.z)) pos.x = nx;
+          if (!stop(pos.x, nz)) pos.z = nz;
           moving = Math.hypot(pos.x - before.x, pos.z - before.z) > step * 0.2;
           if (!moving && target && (stuck += dt) > 0.4) { target = null; stuck = 0; }
           if (moving) stuck = 0;
@@ -220,7 +359,8 @@ export default function World2D(props: Props) {
         }
         if (moving) { walkT += dt; if (now - lastStep > 300) { lastStep = now; sound.step2(); } } else walkT = 0;
         focus.x = pos.x; focus.z = pos.z;
-        if (p.conn && now - lastSent.t > 100 && (Math.abs(lastSent.x - pos.x) > 0.03 || Math.abs(lastSent.z - pos.z) > 0.03)) {
+        if (inside && pos.z > inside.h - 0.35 && Math.abs(pos.x - inside.w / 2) < 1) p.api.exit?.();
+        if (!inside && p.conn && now - lastSent.t > 100 && (Math.abs(lastSent.x - pos.x) > 0.03 || Math.abs(lastSent.z - pos.z) > 0.03)) {
           lastSent.t = now; lastSent.x = pos.x; lastSent.z = pos.z;
           void p.conn.reducers.move({ x: pos.x, z: pos.z, facing: Math.atan2(dx, dz) }).catch(() => {});
         }
@@ -235,6 +375,8 @@ export default function World2D(props: Props) {
       }
       camLeft = Math.round(Math.max(BOUNDS.x0 * T, Math.min(BOUNDS.x1 * T - cw, cam.x * T - cw / 2)));
       camTop = Math.round(Math.max(BOUNDS.z0 * T, Math.min(BOUNDS.z1 * T - ch, cam.z * T - ch / 2)));
+
+      if (inside && pos && me) { drawInside(inside, now, t, moving); return; }
 
       // ---------- ground ----------
       ctx.imageSmoothingEnabled = false;
@@ -311,9 +453,46 @@ export default function World2D(props: Props) {
         blit(fr[walk > 0 ? Math.floor(walk * 8) % 4 : 0], x, z, lift);
       };
       const hop = (e: Emote | undefined) => (e && e.clip === "Cheer" && now - e.at < 1200 ? Math.round(Math.abs(Math.sin(((now - e.at) / 1000) * Math.PI * 3)) * 6) : 0);
+      // Villagers: wanderers walk their routes, everyone pauses to chat when a conversation starts.
       for (const n of NPCS) {
-        const look: Dir = Math.sin(t * 0.3 + n.x) > 0.6 ? (n.x > 0 ? "left" : "right") : "down";
-        list.push({ z: n.z, draw: () => drawAnimal(n.species, n.outfit as Outfit, n.x, n.z, look, 0, Math.round(Math.max(0, Math.sin(t * 2 + n.x)) * 0.8)), sh: [n.x, n.z, 6] });
+        const f = folk.get(n.id)!;
+        if (n.route && now > f.pauseUntil) {
+          const [tx, tz] = n.route[f.seg % n.route.length];
+          const dx = tx - f.x, dz = tz - f.z, d = Math.hypot(dx, dz);
+          if (d < 0.1) f.seg++;
+          else { const st = Math.min(d, 1.7 * dt); f.x += (dx / d) * st; f.z += (dz / d) * st; f.dir = dirOf(dx, dz, f.dir); }
+          f.walk = d < 0.1 ? 0 : f.walk + dt;
+        } else f.walk = 0;
+        setAnchor(`npc:${n.id}`, f.x, 1.7, f.z);
+        const b = bubbles.get(n.id);
+        if (b && now < b.until) setAnchor(`say:${n.id}`, f.x, 2.45, f.z); else anchors.delete(`say:${n.id}`);
+        const look: Dir = n.route ? f.dir : f.dir !== "down" && now < f.pauseUntil ? f.dir : Math.sin(t * 0.3 + n.x) > 0.6 ? (n.x > 0 ? "left" : "right") : "down";
+        list.push({ z: f.z, draw: () => drawAnimal(n.species, n.outfit as Outfit, f.x, f.z, look, f.walk, f.walk ? 0 : Math.round(Math.max(0, Math.sin(t * 2 + n.x)) * 0.8)), sh: [f.x, f.z, 6] });
+      }
+      // Small talk: start a conversation between two villagers standing near each other, near you.
+      if (!chat && now > nextChat) {
+        const close = CHATTER.filter((c) => {
+          const A = folk.get(c.a)!, B = folk.get(c.b)!;
+          return Math.hypot(A.x - B.x, A.z - B.z) < 3.4 && (!pos || Math.hypot(A.x - pos.x, A.z - pos.z) < 15);
+        });
+        if (close.length) {
+          const c = close[Math.floor(Math.random() * close.length)];
+          const fill = (txt: string) => txt.replace("{player}", p.me?.name ?? "A farmer").replace("{rescued}", usd(p.me?.rescued ?? 0));
+          chat = { lines: c.lines.map(([who, txt]) => [who === 0 ? c.a : c.b, fill(txt)] as [string, string]), i: 0, next: now };
+          const A = folk.get(c.a)!, B = folk.get(c.b)!;
+          const until = now + c.lines.length * 2900 + 600;
+          A.pauseUntil = B.pauseUntil = until;
+          A.dir = dirOf(B.x - A.x, B.z - A.z, A.dir); B.dir = dirOf(A.x - B.x, A.z - B.z, B.dir);
+        } else nextChat = now + 1500;
+      }
+      if (chat && now >= chat.next) {
+        if (chat.i < chat.lines.length) {
+          const [who, txt] = chat.lines[chat.i++];
+          bubbles.set(who, { text: txt, until: now + 2800 });
+          const el = labelEls.get(`say:${who}`);
+          if (el) el.firstElementChild!.textContent = txt;
+          chat.next = now + 2900;
+        } else { chat = null; nextChat = now + 4000 + Math.random() * 5000; }
       }
       // Ruth, the Reviewer: an alpaca in reading glasses behind her audit desk.
       {
@@ -501,17 +680,7 @@ export default function World2D(props: Props) {
         ctx.globalCompositeOperation = "source-over";
       }
 
-      // ---------- labels ----------
-      for (const [id, el] of labelEls) {
-        const a = anchors.get(id);
-        if (!a) { el.style.visibility = "hidden"; continue; }
-        const sx = (a.x * T - camLeft) * scale, sy = (a.z * T - a.y * T - camTop) * scale;
-        const vis = sx > -100 && sy > -40 && sx < cw * scale + 100 && sy < ch * scale + 80;
-        el.style.visibility = vis ? "visible" : "hidden";
-        // Crop tags hang under their plant like garden markers; everything else floats above its anchor.
-        el.style.transform = `translate(${Math.round(sx)}px, ${Math.round(sy)}px) translate(-50%, ${id.startsWith("crop:") ? "0" : "-100%"})`;
-        if (id.startsWith("crop:")) el.classList.toggle("far", Math.hypot(a.x - focus.x, a.z - focus.z) > 1.6);
-      }
+      projectLabels();
 
       // ---------- what's in reach ----------
       if (!pos || !me || p.attract) return;
@@ -526,7 +695,12 @@ export default function World2D(props: Props) {
         if (!b.place) continue;
         const dr = doorOf(b);
         const d = Math.hypot(pos.x - dr.x, pos.z - dr.z);
-        if (d < bestD) { bestD = d; id = `place:${b.id}`; best = { kind: "place", id: b.id, place: b.place, label: `Visit ${b.place.name}` }; }
+        if (d < bestD) { bestD = d; id = `place:${b.id}`; best = { kind: "place", id: b.id, place: b.place, label: `Enter ${b.place.name}` }; }
+      }
+      for (const n of NPCS) {
+        const f = folk.get(n.id)!;
+        const d = Math.hypot(pos.x - f.x, pos.z - f.z);
+        if (d < Math.min(bestD, 1.5)) { bestD = d; id = `npc:${n.id}`; best = { kind: "npc", id: n.id, label: `Talk to ${n.name}` }; }
       }
       if (Math.hypot(pos.x - ELDER_POS[0], pos.z - (ELDER_POS[2] + 1.6)) < REACH + 0.3) { id = "elder"; best = { kind: "elder", label: "Talk to Ruth, the Reviewer" }; }
       const [mx, , mz] = mailboxPosition(me.farm);

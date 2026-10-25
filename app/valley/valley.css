@@ -208,3 +208,15 @@ body { margin: 0; overflow: hidden; background: #8fc4e8; }
 .ev-push form { display: flex; gap: 8px; }
 .ev-push input { flex: 1; font: 500 15px var(--pixel); padding: 6px 8px; border: 3px solid var(--wood-dark); background: #fff8e2; color: var(--ink); }
 .ev-push-reply { margin: 0; padding: 6px 10px; background: #efe4fb; border-left: 4px solid #6a4c93; }
+
+/* villagers and shops */
+.ev-bubble.npc-say { max-width: 200px; font-size: 13px; }
+.ev-bubble.npc-say:empty { display: none; }
+.ev-name.keeper { background: #3FA66B; border-color: #22501a; }
+.ev-name.keeper:empty { display: none; }
+.ev-claims { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+.ev-claims button { width: 100%; display: flex; justify-content: space-between; gap: 10px; font: 600 15px var(--pixel); padding: 6px 10px; border: 3px solid var(--wood-dark); background: #fff8e2; color: var(--ink); cursor: pointer; text-align: left; }
+.ev-claims button:hover { background: #ffe9b0; }
+.ev-claims button.done { background: #d6e8a9; }
+.ev-claims b { color: var(--ok); white-space: nowrap; }
+.ev-who[hidden] { display: none; }

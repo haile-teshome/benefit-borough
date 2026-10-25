@@ -238,14 +238,7 @@ export const FARM_MEADOW: Decor[][] = Array.from({ length: 8 }, (_, f) => {
 });
 
 // ---------- NPCs ----------
-export type Npc = { id: string; name: string; species: string; x: number; z: number; outfit: Record<string, unknown> };
-export const NPCS: Npc[] = [
-  { id: "okafor", name: "Dr. Okafor", species: "bear", x: -24.6, z: -1.6, outfit: { body: "#F4F4F0", badge: "#4AA3E0" } },
-  { id: "nurse", name: "Nurse Pip", species: "rabbit", x: -16.4, z: -1.6, outfit: { body: "#F4F4F0", badge: "#E04848" } },
-  { id: "teller", name: "Teller Mo", species: "cat", x: 14.6, z: -1.6, outfit: { body: "#3FA66B", hat: "cap", hatColor: "#2F6E46" } },
-  { id: "clerk", name: "Clerk Juno", species: "fox", x: 22.6, z: -1.6, outfit: { body: "#8E5BD0", hat: "cap", hatColor: "#5E3A99" } },
-  { id: "chef", name: "Chef Bun", species: "rabbit", x: 19.2, z: -14.6, outfit: { body: "#FFFFFF", hat: "chef" } },
-];
+export { NPCS, type Npc } from "./people";
 
 // ---------- collision ----------
 export function blocked(x: number, z: number, others: { x: number; z: number; r: number }[] = []) {

@@ -12,10 +12,11 @@ import { playAudio, sound, speak } from "@/lib/valley/audio";
 import { clockLabel, gameHour, setHour } from "@/lib/valley/clock";
 import { anchors, registerLabel, setAnchor } from "@/lib/valley/labels";
 import { AVATARS, portrait } from "@/lib/valley/pixel/animals";
-import { DISTRICTS, NPCS } from "@/lib/valley/world";
+import { BUILDINGS, DISTRICTS, NPCS } from "@/lib/valley/world";
 import { LiveBoard } from "./LiveBoard";
 import { PushBack, RuthAsks, RuthRecord } from "./Ruth";
-import World2D, { type Burst, type Emote, type Mood, type Near } from "./World2D";
+import World2D, { type Burst, type Emote, type Mood, type Near, type WorldApi } from "./World2D";
+import { KEEPERS } from "@/lib/valley/people";
 
 const DB = "expire-valley";
 // Convex holds saved state and the ledger; its live queries drive the valley leaderboard.
@@ -76,6 +77,8 @@ type Modal =
   | { kind: "gift" }
   | { kind: "avatar" }
   | { kind: "record" }
+  | { kind: "npc"; id: string; line: number }
+  | { kind: "keeper"; id: string }
   | null;
 
 const hex = (id: { toHexString(): string } | undefined | null) => id?.toHexString() ?? "";
@@ -100,6 +103,8 @@ function Valley() {
 
   const [state, setState] = useState<AppState | null>(null);
   const [integrations, setIntegrations] = useState<Record<string, boolean>>({});
+  const worldApi = useRef<WorldApi>({}).current;
+  const [inside, setInside] = useState<string | null>(null);
   const [modal, setModal] = useState<Modal>(null);
   const [near, setNear] = useState<Near>(null);
   const [busy, setBusy] = useState(false);
@@ -302,13 +307,11 @@ function Valley() {
     if (near.kind === "crop") { setModal({ kind: "crop", tileId: near.tileId }); setEmotes((e) => ({ ...e, [myHex]: { clip: "Interact", at: performance.now() } })); }
     if (near.kind === "elder") { setModal({ kind: "elder", step: "hello" }); void speak("I audit every harvest in this valley. Show me what you want to buy with your FSA."); }
     if (near.kind === "mailbox") void openGifts();
-    if (near.kind === "place") {
-      const cats = near.place.categories ?? [];
-      const here = (state?.tiles ?? []).filter((t) => cats.includes(t.category));
-      const tile = here.filter((t) => !state!.done.includes(t.id)).sort((a, b) => b.atStake - a.atStake)[0] ?? here[0];
-      if (tile) setModal({ kind: "crop", tileId: tile.id });
-      else { setToast(`${near.place.name}: ${near.place.line}`); setTimeout(() => setToast(""), 4000); }
-    }
+    if (near.kind === "place") worldApi.enter?.(near.id);
+    if (near.kind === "exit") worldApi.exit?.();
+    if (near.kind === "claim") setModal({ kind: "crop", tileId: near.tileId });
+    if (near.kind === "keeper") { setModal({ kind: "keeper", id: near.id }); void speak(KEEPERS[near.id]?.hello ?? ""); }
+    if (near.kind === "npc") { const n = NPCS.find((x) => x.id === near.id); setModal({ kind: "npc", id: near.id, line: 0 }); if (n) void speak(n.talk[0]); }
   }
 
   // Keyboard: E to interact, Esc to close, Enter to chat.
@@ -379,13 +382,17 @@ function Valley() {
         onBurstDone={(id) => setBursts((b) => b.filter((x) => x.id !== id))}
         emotes={emotes}
         ruthMood={ruthMood}
+        tiles={state?.tiles ?? []}
+        done={state?.done ?? []}
+        api={worldApi}
+        onScene={setInside}
       />
-      {!title && <Labels plots={plots} players={players} myHex={myHex} bubbles={bubbles} bursts={bursts} nearElder={near?.kind === "elder"} />}
+      {!title && <Labels plots={plots} players={players} myHex={myHex} bubbles={bubbles} bursts={bursts} nearElder={near?.kind === "elder"} tiles={state?.tiles ?? []} done={state?.done ?? []} inside={inside} />}
 
       {title ? (
         <Title onPlay={play} connected={isActive} />
       ) : (
-        <Hud me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} />
+        <Hud inside={Boolean(inside)} me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} />
       )}
 
       {convex && !title && <LiveBoard players={players} myPid={pid} />}
@@ -394,7 +401,7 @@ function Valley() {
       )}
       {toast && <div className="ev-toast">{toast}</div>}
       {error && <div className="ev-toast bad" onClick={() => setError("")}>{error}</div>}
-      {!title && <div className="ev-help">WASD or click to walk · E to interact · Enter to chat · M to mute</div>}
+      {!title && <div className="ev-help">{inside ? `Inside ${BUILDINGS.find((b) => b.id === inside)?.place?.name} · walk to the door mat to leave` : "WASD or click to walk · E to interact or enter shops · Enter to chat · M to mute"}</div>}
 
       {chatOpen && (
         <form className="ev-chat" onSubmit={(e) => { e.preventDefault(); const v = (e.currentTarget.elements.namedItem("t") as HTMLInputElement).value; if (v.trim() && conn) void conn.reducers.say({ text: v }); setChatOpen(false); }}>
@@ -411,6 +418,41 @@ function Valley() {
       {modal?.kind === "crop" && tileById(modal.tileId) && (
         <CropCard tile={tileById(modal.tileId)!} state={state!} pid={pid} onState={setState} onAnswer={(r) => answerRuth(modal.tileId, r)} onClose={() => setModal(null)} onHarvest={() => setModal({ kind: "confirm", tileId: modal.tileId })} />
       )}
+      {modal?.kind === "npc" && (() => {
+        const n = NPCS.find((x) => x.id === modal.id)!;
+        return (
+          <Dialogue speaker={n.name} onClose={() => setModal(null)}
+            actions={n.talk.length > 1 ? <button className="ev-btn ghost" onClick={() => { const i = (modal.line + 1) % n.talk.length; setModal({ ...modal, line: i }); void speak(n.talk[i]); }}>Tell me more</button> : null}>
+            <p className="ev-lead">{n.talk[modal.line]}</p>
+          </Dialogue>
+        );
+      })()}
+      {modal?.kind === "keeper" && (() => {
+        const k = KEEPERS[modal.id];
+        const cats = BUILDINGS.find((b) => b.id === modal.id)?.place?.categories ?? [];
+        const here = (state?.tiles ?? []).filter((t) => cats.includes(t.category)).sort((a, b) => b.atStake - a.atStake);
+        const open = here.filter((t) => !state!.done.includes(t.id));
+        const total = open.reduce((sum, t) => sum + t.atStake, 0);
+        return (
+          <Dialogue speaker={k.name} onClose={() => setModal(null)}>
+            <p className="ev-lead">{k.hello}</p>
+            {here.length ? (
+              <>
+                <p className="ev-sub">{open.length ? `${open.length} thing${open.length > 1 ? "s" : ""} to claim here, worth ${usd(total)}. They're on the stands too.` : "You've claimed everything here. Nicely done."}</p>
+                <ul className="ev-claims">
+                  {here.map((t) => (
+                    <li key={t.id}>
+                      <button className={state!.done.includes(t.id) ? "done" : ""} onClick={() => setModal({ kind: "crop", tileId: t.id })}>
+                        <span>{t.title}</span><b>{state!.done.includes(t.id) ? "Claimed" : t.atStake ? usd(t.atStake) : "Options"}</b>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : <p className="ev-sub">Nothing of yours expires here. Come back anytime.</p>}
+          </Dialogue>
+        );
+      })()}
       {modal?.kind === "record" && <RuthRecord state={state} pid={pid} integrations={integrations} live={Boolean(convex)} onClose={() => setModal(null)} />}
       {modal?.kind === "confirm" && tileById(modal.tileId) && (
         <Confirm tile={tileById(modal.tileId)!} others={others} onCancel={() => setModal({ kind: "crop", tileId: modal.tileId })} onConfirm={(to) => harvest(modal.tileId, to)} />
@@ -429,10 +471,10 @@ function Valley() {
   );
 }
 
-type LabelProps = { plots: readonly Plot[]; players: readonly Player[]; myHex: string; bubbles: Map<string, string>; bursts: Burst[]; nearElder: boolean };
+type LabelProps = { plots: readonly Plot[]; players: readonly Player[]; myHex: string; bubbles: Map<string, string>; bursts: Burst[]; nearElder: boolean; tiles: Tile[]; done: string[]; inside: string | null };
 
 // All floating labels, rendered by the main React tree and positioned by <Projector>.
-function Labels({ plots, players, myHex, bubbles, bursts, nearElder }: LabelProps) {
+function Labels({ plots, players, myHex, bubbles, bursts, nearElder, tiles, done, inside }: LabelProps) {
   useEffect(() => { setAnchor("elder", ELDER_POS[0], 2.1, ELDER_POS[2]);
     for (const d of DISTRICTS) setAnchor(`district:${d.id}`, d.x, 1.15, d.z);
     for (const n of NPCS) setAnchor(`npc:${n.id}`, n.x, 1.7, n.z); }, []);
@@ -482,6 +524,22 @@ function Labels({ plots, players, myHex, bubbles, bursts, nearElder }: LabelProp
           <div className="ev-name npc">{n.name}</div>
         </div>
       ))}
+      {NPCS.map((n) => (
+        <div key={`say-${n.id}`} ref={registerLabel(`say:${n.id}`)} className="ev-anchor">
+          <div className="ev-bubble npc-say" />
+        </div>
+      ))}
+      <div ref={registerLabel("keeper")} className="ev-anchor">
+        <div className="ev-name keeper">{inside ? KEEPERS[inside]?.name : ""}</div>
+      </div>
+      {tiles.map((t) => (
+        <div key={`claim-${t.id}`} ref={registerLabel(`claim:${t.id}`)} className="ev-anchor">
+          <div className={`ev-tag ${done.includes(t.id) ? "good" : t.daysLeft <= 30 ? "warn" : ""}`}>
+            <b>{done.includes(t.id) ? `+${usd(t.action.savings || t.atStake)}` : t.atStake ? usd(t.atStake) : "Options"}</b>
+            <span>{done.includes(t.id) ? "Claimed" : `${CROP_LOOK[t.category]?.name ?? "Claim"} · ${t.daysLeft}d`}</span>
+          </div>
+        </div>
+      ))}
       <div ref={registerLabel("elder")} className="ev-anchor">
         <div className="ev-name-wrap"><div className={`ev-name elder ${nearElder ? "hl" : ""}`}>Ruth · the Reviewer</div></div>
       </div>
@@ -520,7 +578,7 @@ function UploadButton({ busy, onUpload, className, label }: { busy: boolean; onU
   );
 }
 
-function Hud({ me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void }) {
+function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean }) {
   const next = state?.tiles.filter((t) => !state.done.includes(t.id) && t.atStake > 0).sort((a, b) => a.daysLeft - b.daysLeft)[0];
   const clock = useClock();
   return (
@@ -537,7 +595,7 @@ function Hud({ me, others, isActive, state, busy, onReplant, muted, onMute, onAv
           <div className="ev-sub">rescued</div>
         </div>
       </div>
-      <div className="ev-panel ev-who">
+      <div className="ev-panel ev-who" hidden={inside}>
         <div className="ev-sub">{isActive ? `${others.length + (me ? 1 : 0)} in the valley` : "Connecting…"}</div>
         {me && <div className="who"><i style={{ background: me.color }} />{me.name} (you)</div>}
         {others.map((p) => <div key={p.identity.toHexString()} className="who"><i style={{ background: p.color }} />{p.name}</div>)}
