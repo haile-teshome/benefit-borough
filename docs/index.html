@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#4fa3e3">
+<meta name="theme-color" content="#2b2552">
 <title>Benefit Burrow</title>
 <meta name="description" content="A cozy multiplayer farming town where your expiring benefits grow as crops, and AI agents find the money, fill your claims and shop your perks. Cal Hacks 13.0.">
 <meta property="og:title" content="Benefit Burrow">
@@ -16,7 +16,7 @@
   :root {
     --wood-dark: #4a2a12; --wood: #8a4f22; --wood-light: #c9813f; --wood-hi: #e3a35a;
     --parchment: #f7e6b8; --parchment-2: #efd59a; --ink: #3b2412; --ink-2: #6b4a2a;
-    --sky: #8cccf2; --gold: #ffd23f; --leaf: #b9e57a;
+    --night: #1c2340; --sky: #8cccf2; --gold: #ffd23f; --leaf: #b9e57a;
     --pixel: "Jersey 10", ui-monospace, monospace;
     --read: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
   }
@@ -24,17 +24,50 @@
   html { scroll-behavior: smooth; }
   body {
     margin: 0; color: var(--ink); font: 400 17px/1.55 var(--read);
-    background-color: var(--sky);
+    background-color: var(--night);
     background-image:
-      radial-gradient(circle 220px at 88% 70px, #fff7d0cc, #fff2b000 70%),
-      radial-gradient(ellipse 90px 26px at 30% 40%, #ffffffe6 60%, transparent 62%),
-      radial-gradient(ellipse 60px 22px at 36% 37%, #ffffffe6 60%, transparent 62%),
-      radial-gradient(ellipse 110px 28px at 75% 70%, #ffffffd9 60%, transparent 62%),
-      radial-gradient(ellipse 70px 24px at 81% 66%, #ffffffd9 60%, transparent 62%),
-      linear-gradient(180deg, #4fa3e3 0%, var(--sky) 45%, #c9ecfb 100%);
-    background-size: 100% 100%, 900px 700px, 900px 700px, 900px 700px, 900px 700px, 100% 100%;
-    background-repeat: no-repeat, repeat, repeat, repeat, repeat, no-repeat;
+      radial-gradient(ellipse 70% 520px at 50% 0, #f2a65a33, transparent 70%),
+      radial-gradient(#fff6d8aa 1px, transparent 1.6px),
+      radial-gradient(#fff6d855 1px, transparent 1.4px),
+      linear-gradient(180deg, #2b2552 0%, var(--night) 45%, #141b2e 100%);
+    background-size: 100% 100%, 173px 157px, 97px 113px, 100% 100%;
+    background-position: 0 0, 0 0, 41px 67px, 0 0;
+    background-attachment: scroll, fixed, fixed, scroll;
   }
+  /* daytime sky, chosen with the toggle */
+  html[data-sky="day"] body {
+    background: linear-gradient(180deg, #4fa3e3 0%, var(--sky) 45%, #c9ecfb 100%) fixed;
+  }
+  header.hero, main, footer { position: relative; z-index: 1; }
+
+  /* the daytime sky: a turning sun and pixel clouds drifting past (day only) */
+  .daysky { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; display: none; }
+  html[data-sky="day"] .daysky { display: block; }
+  .sun { position: absolute; top: 74px; right: 9%; width: 96px; height: 96px; }
+  .sun .glow { position: absolute; inset: -70px; border-radius: 50%; background: radial-gradient(circle, #fff6c2cc 0%, #ffe9874d 38%, transparent 68%); animation: pulse 6s ease-in-out infinite; }
+  .sun .rays { position: absolute; inset: -34px; border-radius: 50%;
+    background: repeating-conic-gradient(#ffe27a 0 9deg, transparent 9deg 30deg);
+    -webkit-mask: radial-gradient(circle, transparent 50px, #000 51px, #000 70px, transparent 71px);
+            mask: radial-gradient(circle, transparent 50px, #000 51px, #000 70px, transparent 71px);
+    animation: spin 40s linear infinite; }
+  .sun .disc { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 38% 36%, #fffbe0 0 18%, #ffe066 45%, #ffbf3a 100%);
+    box-shadow: 0 0 0 5px #ffd23f, 0 0 0 9px #f6a93066; }
+  .cloud { position: absolute; left: 0; animation: drift linear infinite; will-change: transform; }
+  .cloud i { display: block; width: var(--px); height: var(--px); animation: bob 7s ease-in-out infinite; }
+  @keyframes drift { from { transform: translateX(-340px); } to { transform: translateX(calc(100vw + 40px)); } }
+  @keyframes bob { 50% { transform: translateY(6px); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 50% { opacity: .7; transform: scale(1.06); } }
+  @media (prefers-reduced-motion: reduce) {
+    .cloud, .cloud i, .sun .rays, .sun .glow { animation: none; }
+    .cloud { transform: translateX(var(--rest)); }
+  }
+  .sky-toggle { position: fixed; top: 12px; right: 12px; z-index: 5; display: flex; align-items: center; gap: 6px;
+    font: 700 15px var(--read); color: var(--ink); background: var(--parchment); border: 4px solid var(--wood-dark);
+    box-shadow: inset 0 0 0 3px var(--wood-hi), 0 4px 0 rgba(40, 20, 5, .4); padding: 6px 12px; cursor: pointer; }
+  .sky-toggle:hover { filter: brightness(1.05); }
+  .sky-toggle:focus-visible { outline: 4px solid var(--gold); outline-offset: 3px; }
+  .sky-toggle .ico { font-size: 17px; line-height: 1; }
   a { color: inherit; }
   img, video { display: block; max-width: 100%; }
   .wrap { width: min(1120px, 100% - 32px); margin-inline: auto; }
@@ -121,6 +154,9 @@
 </style>
 </head>
 <body>
+<script>try { if (localStorage.getItem("sky") === "day") document.documentElement.dataset.sky = "day"; } catch (e) {}</script>
+<div class="daysky" aria-hidden="true"><div class="sun"><div class="glow"></div><div class="rays"></div><div class="disc"></div></div></div>
+<button class="sky-toggle" type="button" aria-pressed="false"><span class="ico" aria-hidden="true">☀</span><span class="txt">Day</span></button>
 <header class="hero wrap">
   <div class="signpost">
     <div class="sign" role="img" aria-label="Benefit Burrow"><span>Benefit</span><span>Burrow</span></div>
@@ -290,6 +326,46 @@
   <p></p>
 </dialog>
 <script>
+  // Day or night sky; remembered on this device.
+  const sky = document.querySelector(".sky-toggle");
+  const paint = () => {
+    const day = document.documentElement.dataset.sky === "day";
+    sky.querySelector(".ico").textContent = day ? "☾" : "☀";
+    sky.querySelector(".txt").textContent = day ? "Night" : "Day";
+    sky.setAttribute("aria-label", day ? "Switch to the night sky" : "Switch to the day sky");
+    document.querySelector('meta[name="theme-color"]').content = day ? "#4fa3e3" : "#2b2552";
+  };
+  sky.addEventListener("click", () => {
+    const day = document.documentElement.dataset.sky !== "day";
+    if (day) document.documentElement.dataset.sky = "day"; else delete document.documentElement.dataset.sky;
+    try { localStorage.setItem("sky", day ? "day" : "night"); } catch (e) {}
+    paint();
+  });
+  paint();
+
+  // Pixel clouds, drawn from little maps (X = cloud, s = shaded underside) as box-shadows.
+  const CLOUDS = [
+    ["......XXXX..........", "....XXXXXXXX.XXX....", "...XXXXXXXXXXXXXXX..", ".XXXXXXXXXXXXXXXXXX.", "XXXXXXXXXXXXXXXXXXXX", "ssssssssssssssssssss", ".ssssssssssssssssss."],
+    ["....XXXX.....", "..XXXXXXXX...", ".XXXXXXXXXXX.", "XXXXXXXXXXXXX", "sssssssssssss"],
+    [".........XXXX.........", "...XXX.XXXXXXXX.......", "..XXXXXXXXXXXXXXXXX...", ".XXXXXXXXXXXXXXXXXXXXX", "XXXXXXXXXXXXXXXXXXXXXX", ".sssssssssssssssssssss", "...ssssssssssssssss..."],
+  ];
+  const layer = document.querySelector(".daysky");
+  [[0, 7, 9, 95, 0.95], [1, 6, 22, 70, 0.9], [2, 8, 15, 120, 1], [1, 5, 35, 85, 0.8], [0, 5, 48, 105, 0.75], [2, 6, 62, 140, 0.7], [1, 7, 78, 90, 0.85]]
+    .forEach(([shape, px, top, secs, alpha], k) => {
+      const map = CLOUDS[shape], shadows = [];
+      map.forEach((row, y) => [...row].forEach((c, x) => {
+        if (c !== ".") shadows.push(`${x * px}px ${y * px}px 0 ${c === "X" ? "#ffffff" : "#d4ebfa"}`);
+      }));
+      const el = document.createElement("div"); el.className = "cloud";
+      el.style.top = top + "%"; el.style.opacity = alpha;
+      el.style.animationDuration = secs + "s"; el.style.animationDelay = -(secs * ((k * 0.37) % 1)) + "s";
+      el.style.setProperty("--rest", (k * 14 % 90) + "vw");
+      const dot = document.createElement("i"); dot.style.setProperty("--px", px + "px");
+      dot.style.boxShadow = shadows.join(","); dot.style.background = "transparent";
+      dot.style.animationDelay = -k * 1.3 + "s";
+      el.appendChild(dot); layer.appendChild(el);
+    });
+
   // Click a screenshot to see it full size.
   const dlg = document.getElementById("zoom");
   document.querySelectorAll(".shot").forEach((b) => b.addEventListener("click", () => {
