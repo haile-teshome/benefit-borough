@@ -16,7 +16,9 @@ export function checkPacket(p: Omit<Packet, "check" | "status" | "hash">, tile: 
   const passed: string[] = [], issues: string[] = [];
   const verdict = s.reviews[tile.id];
   (verdict?.verdict === "approve" ? passed : issues).push(verdict?.verdict === "approve" ? "Ruth approved this claim" : "Ruth hasn't approved this claim");
-  (p.amount <= tile.action.savings + 0.01 ? passed : issues).push(p.amount <= tile.action.savings + 0.01 ? `Asks for ${fmt(p.amount)}, no more than the documents support` : `Asks for ${fmt(p.amount)}, more than the ${fmt(tile.action.savings)} the documents support`);
+  // A savings move is capped by what was rescued; a claim by what the documents support.
+  const cap = tile.action.payload.rail === "nessie-savings" ? Number(tile.action.payload.amount) : tile.action.savings;
+  (p.amount <= cap + 0.01 ? passed : issues).push(p.amount <= cap + 0.01 ? `Asks for ${fmt(p.amount)}, no more than the documents support` : `Asks for ${fmt(p.amount)}, more than the ${fmt(cap)} the documents support`);
   const blank = p.fields.filter((f) => f.required && !f.value.trim());
   if (blank.length) issues.push(`Only you can fill: ${blank.map((f) => f.label).join(", ")}`); else passed.push("Every required field is filled");
   const ungrounded = p.fields.filter((f) => f.source === "document" && f.cite && !s.docs.some((d) => d.text.includes(f.cite!)));
@@ -74,6 +76,11 @@ export function attachProof(p: Packet, name: string, text: string, tile: Tile, s
   const att = { name: `Receipt you attached: ${name}`, kind: "receipt" as const, lines: lines.length ? lines : [`${name} (attached by you)`] };
   const attachments = [...p.attachments.filter((a) => !a.todo), att];
   return finish({ ...p, attachments }, tile, s);
+}
+
+// Ruth adds evidence she bought or found (e.g. an eligibility check) to a packet.
+export function withEvidence(p: Packet, att: Packet["attachments"][number], tile: Tile, s: AppState): Packet {
+  return finish({ ...p, attachments: [...p.attachments.filter((a) => a.name !== att.name), att] }, tile, s);
 }
 
 // Fill blanks in packets that are waiting, after you've updated your profile.

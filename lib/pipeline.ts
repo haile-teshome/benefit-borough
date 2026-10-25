@@ -7,7 +7,9 @@ import { bookingCall } from "./integrations/cartesia";
 import { livePrices } from "./integrations/apify";
 import { nessieEnabled, nessieStatement } from "./integrations/nessie";
 import { attachProof } from "./claims/packet";
-import { paidPrices, txUrl, x402Enabled } from "./integrations/x402";
+import { MARKET, buy, paidPrices, txUrl, x402Enabled } from "./integrations/x402";
+import { statementLines } from "./claims/forms";
+import { withEvidence } from "./claims/packet";
 import { requestAction } from "./integrations/request";
 import { peerTransfer } from "./integrations/transfer";
 import { hydrate, load, log, save } from "./store";
@@ -16,10 +18,20 @@ import { fresh, record } from "./rewards";
 import { editPacket, fingerprint, preparePacket, profileFromDocs, refreshFromProfile } from "./claims/packet";
 import type { Packet, Profile } from "./types";
 
+// Ruth's data budget for x402 purchases: your Autopilot mandate's, or $0.25 a month by default.
+const month = () => new Date().toISOString().slice(0, 7);
+const usdOf = (price: string) => parseFloat(price.replace("$", ""));
+function spentThisMonth(s: AppState) { return s.autopilot?.spent.month === month() ? s.autopilot.spent.usd : 0; }
+function canSpend(s: AppState, price: string) { return x402Enabled() && spentThisMonth(s) + usdOf(price) <= (s.autopilot?.mandate.dataBudget ?? 0.25) + 1e-9; }
+function addSpend(s: AppState, price: string) {
+  s.autopilot ??= { mandate: { on: false, hour: 2, tzOffset: new Date().getTimezoneOffset(), prepare: "all", dataBudget: 0.25, signedAt: "" }, spent: { month: month(), usd: 0 }, reports: [] };
+  s.autopilot.spent = { month: month(), usd: Math.round((spentThisMonth(s) + usdOf(price)) * 1000) / 1000 };
+}
+
 const docsText = (s: AppState) => s.docs.map((d) => `[${d.name}]\n${d.text}`).join("\n\n");
 
 // Extract → Optimize → Reviewer, for every tile. The board only offers a tap on approved tiles.
-export async function scan(docs: SourceDoc[], pid?: string | null): Promise<AppState> {
+export async function scan(docs: SourceDoc[], pid?: string | null, opts: { payForData?: boolean } = {}): Promise<AppState> {
   await hydrate(pid);
   const s = load(pid);
   s.docs = docs;
@@ -31,11 +43,12 @@ export async function scan(docs: SourceDoc[], pid?: string | null): Promise<AppS
     const urls = watched.map((b) => urlOf(b.ruleText)).filter(Boolean);
     let prices: Record<string, number | null>;
     let bought = false;
-    if (x402Enabled()) {
+    if (x402Enabled() && opts.payForData !== false) {
       // Ruth buys the price from the Burrow's price desk over x402.
       const paid = await paidPrices(urls);
       prices = paid.prices;
       bought = Boolean(paid.payment);
+      if (paid.payment) addSpend(s, paid.payment.price);
       if (paid.payment) log(s, "x402", `Paid ${paid.payment.price} USDC for ${urls.length} live price${urls.length > 1 ? "s" : ""} over x402 (Base Sepolia) · ${txUrl(paid.payment.transaction)}`);
       else {
         log(s, "x402", `x402 payment didn't go through (${paid.error ?? "no receipt"}); looked the price up directly instead`);
@@ -86,7 +99,28 @@ export async function prepare(tileId: string, pid?: string | null, by: Packet["p
   if (nessieEnabled() && !s.docs.some((d) => d.id === "upload_nessie")) {
     try { s.docs = [...s.docs, await nessieStatement()]; log(s, "prepare", "Read your live bank activity (Capital One Nessie) to find receipts"); } catch { /* receipts can still be uploaded */ }
   }
-  const packet = await preparePacket(tile, s, by);
+  let packet = await preparePacket(tile, s, by);
+  // Ruth buys the checks a claim needs from the burrow's shops over x402, within your data budget.
+  if (["fsa_claim", "fsa"].includes(tile.category) && canSpend(s, MARKET.eligibility.price)) {
+    const items = statementLines(s).filter((l) => packet.attachments.some((a) => a.lines.includes(l.text))).map((l) => l.what);
+    if (items.length) {
+      const r = await buy<{ items: { item: string; eligible: boolean }[] }>(`${MARKET.eligibility.path}?${items.map((i) => `item=${encodeURIComponent(i)}`).join("&")}`);
+      if (r.payment && r.data) {
+        addSpend(s, r.payment.price);
+        log(s, "x402", `Bought an FSA eligibility check from ${MARKET.eligibility.shop} for ${r.payment.price} USDC · ${txUrl(r.payment.transaction)}`);
+        packet = withEvidence(packet, { name: `Eligibility checked at ${MARKET.eligibility.shop} (x402)`, kind: "evidence", lines: [...r.data.items.map((x) => `${x.item}: ${x.eligible ? "FSA-eligible" : "not eligible"}`), `Paid ${r.payment.price} USDC · ${txUrl(r.payment.transaction)}`] }, tile, s);
+      } else log(s, "x402", `Couldn't buy an eligibility check (${r.error}); prepared without it`);
+    }
+  }
+  const planId = s.docs.find((d) => tile.sources.some((x) => x.doc === d.id))?.meta?.plan;
+  if (["card_credit", "annual_fee", "credit_move"].includes(tile.category) && planId && canSpend(s, MARKET.terms.price)) {
+    const r = await buy<{ checkedAt: string; url: string; findings: { name: string; status: string }[] }>(`${MARKET.terms.path}?plan=${encodeURIComponent(planId)}`);
+    if (r.payment && r.data) {
+      addSpend(s, r.payment.price);
+      log(s, "x402", `Bought a terms check from ${MARKET.terms.shop} for ${r.payment.price} USDC · ${txUrl(r.payment.transaction)}`);
+      packet = withEvidence(packet, { name: `Card terms checked at ${MARKET.terms.shop} (x402)`, kind: "evidence", lines: [...r.data.findings.slice(0, 6).map((f) => `${f.name}: ${f.status}`), `Checked ${new Date(r.data.checkedAt).toLocaleDateString("en-US")} at ${r.data.url}`, `Paid ${r.payment.price} USDC · ${txUrl(r.payment.transaction)}`] }, tile, s);
+    } else if (r.error && !/No recent check/.test(r.error)) log(s, "x402", `Couldn't buy a terms check (${r.error})`);
+  }
   s.packets = [packet, ...(s.packets ?? []).filter((x) => x.id !== packet.id)];
   log(s, "prepare", `${by === "autopilot" ? "Autopilot" : "Ruth"} filled the ${packet.form} (${packet.fields.filter((f) => f.value).length}/${packet.fields.length} fields, ${packet.check.ok ? "ready for you to submit" : `${packet.check.issues.length} thing${packet.check.issues.length > 1 ? "s" : ""} need you`}). Not sent.`);
   save(s, pid);
@@ -164,7 +198,10 @@ export async function dispatch(tileId: string, pid?: string | null, approval?: {
   log(s, "dispatch", `${tileId}: ${tile.action.summary}`);
   const result = tile.action.kind === "book_call" ? await bookingCall(tile.action) : tile.action.kind === "request" ? await requestAction(tile.action) : await peerTransfer(tile.action);
   // Rule 6: the ledger moves only on a confirmed action.
-  if (result.status === "confirmed") {
+  if (result.status === "confirmed" && tile.action.savings <= 0) {
+    s.done.push(tileId);
+    log(s, "dispatch", `${tileId} confirmed by ${result.integration} (${result.confirmation}); moved, not rescued, so the ledger is unchanged`);
+  } else if (result.status === "confirmed") {
     s.ledger.push({ id: `L${s.ledger.length + 1}`, tileId, amount: tile.action.savings, description: tile.action.summary, confirmation: result.confirmation, at: new Date().toISOString() });
     s.done.push(tileId);
     const r = (s.rewards ??= fresh());

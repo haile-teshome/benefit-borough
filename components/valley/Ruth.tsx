@@ -53,6 +53,12 @@ export function RuthRecord({ state, pid, integrations, live, onClose }: { state:
     ["Store prices for price matches", Boolean(integrations.apify), integrations.apify ? "Read live from the store's page with Apify" : "Price from the sample statement"],
     ["Ruth pays for the data she uses", Boolean(integrations.x402), integrations.x402 ? "Coinbase x402: $0.01 USDC per price check, settled on Base Sepolia" : "Not connected"],
     ["Dining-dollar transfers", Boolean(integrations.nessie), integrations.nessie ? "Posted as a Nessie transfer" : "Simulated x402 payment"],
+    ["Filling in claim forms", true, "Ruth fills every claim (form, receipts, message, PDF) from your documents; you review and submit"],
+    ["Night shifts (Autopilot)", Boolean(integrations.convex), integrations.convex ? "Scheduled by a Convex cron; prepares claims, never submits" : "Scheduled on this server; prepares claims, never submits"],
+    ["Voice check-in", Boolean(integrations.cartesia), integrations.cartesia ? "Cartesia speech-to-text, Claude maps it onto your plans, Ruth answers in her voice" : "Typed check-in"],
+    ["Payday and savings moves", Boolean(integrations.nessie), integrations.nessie ? "Paychecks read from Nessie; savings moves are real Nessie transfers you submit" : "Not connected"],
+    ["Fine-print watch", true, integrations.termsActor ? "Benefit Terms Watcher, a custom Apify actor" : "Same checks run on this server until the Apify actor is deployed"],
+    ["Swap Market", true, "SpacetimeDB: live offers between players; the transfer itself happens in each program's app"],
     ["Phone calls to offices", false, "Voice is real; the other side of the call is scripted"],
     ["Forms, chats and app taps (refunds, disputes, cancels)", false, "Scripted: each provider's API is the next step"],
   ];

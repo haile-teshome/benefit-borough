@@ -7,7 +7,7 @@ import { DbConnection, tables } from "@/lib/valley_bindings";
 import type { Player, Plot } from "@/lib/valley_bindings/types";
 import { expire } from "@/lib/valley/expire";
 import { CROP_LOOK, ELDER_POS, slotPosition, usd } from "@/lib/valley/layout";
-import type { AppState, DispatchResult, Packet, Tile, Verdict } from "@/lib/types";
+import type { AppState, DispatchResult, Packet, ShiftReport, Tile, Verdict } from "@/lib/types";
 import { playAudio, sound, speak } from "@/lib/valley/audio";
 import { clockLabel, dateLabel, gameHour, setHour } from "@/lib/valley/clock";
 import { anchors, registerLabel, setAnchor } from "@/lib/valley/labels";
@@ -26,6 +26,8 @@ import { Outbox, PacketReview } from "./Outbox";
 import { Checkout } from "./Checkout";
 import { SwapMarket } from "./SwapMarket";
 import { TermsNews } from "./TermsNews";
+import { AutopilotPanel, MorningReport } from "./Autopilot";
+import { VoiceCheckin } from "./VoiceCheckin";
 import { fresh as freshRewards, type Rewards } from "@/lib/rewards";
 import World2D, { type Burst, type Emote, type Mood, type Near, type WorldApi } from "./World2D";
 import { KEEPERS, RUTH_VOICE } from "@/lib/valley/people";
@@ -90,6 +92,9 @@ type Modal =
   | { kind: "checkout" }
   | { kind: "swap" }
   | { kind: "terms" }
+  | { kind: "autopilot" }
+  | { kind: "voice" }
+  | { kind: "morning"; report: ShiftReport }
   | { kind: "run"; tileId: string; lines: string[]; result: DispatchResult | null; to?: string }
   | { kind: "elder"; step: "hello" | "thinking" | "verdict"; verdict?: Verdict }
   | { kind: "gift" }
@@ -148,6 +153,12 @@ function Valley() {
   const [chatOpen, setChatOpen] = useState(false);
   const [toast, setToast] = useState("");
   const [title, setTitle] = useState(true);
+  // Show Ruth's morning report once, the first time you come back after a shift.
+  const lastShift = state?.autopilot?.reports[0];
+  useEffect(() => {
+    if (!title && !modal && lastShift && state?.autopilot?.seen !== lastShift.at && lastShift.why === "schedule") setModal({ kind: "morning", report: lastShift });
+  }, [title, modal, lastShift, state?.autopilot?.seen]);
+  const seenReport = useCallback(() => { if (pid) void fetch("/api/autopilot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pid, action: "seen" }) }).then((r) => r.json()).then((j: { state?: AppState }) => j.state && setState(j.state)); }, [pid]);
   const [muted, setMuted] = useState(false);
   const [bursts, setBursts] = useState<Burst[]>([]);
   const [emotes, setEmotes] = useState<Record<string, Emote>>({});
@@ -469,7 +480,7 @@ function Valley() {
         <Title onPlay={play} connected={isActive} />
       ) : (
         <Hud inside={Boolean(inside)} me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} onLibrary={() => setModal({ kind: "library" })} onAlmanac={() => setModal({ kind: "almanac" })} onClaims={() => setModal({ kind: "claims" })} onExchange={() => setModal({ kind: "exchange" })} acorns={rewards.acorns} streak={rewards.streak}
-          onOutbox={() => setModal({ kind: "outbox" })} onCheckout={() => setModal({ kind: "checkout" })} onSwap={() => setModal({ kind: "swap" })} onTerms={() => setModal({ kind: "terms" })} />
+          onOutbox={() => setModal({ kind: "outbox" })} onAutopilot={() => setModal({ kind: "autopilot" })} onVoice={() => setModal({ kind: "voice" })} onCheckout={() => setModal({ kind: "checkout" })} onSwap={() => setModal({ kind: "swap" })} onTerms={() => setModal({ kind: "terms" })} />
       )}
 
       {convex && !title && !inside && <div className="ev-live-wrap" onClick={() => setModal({ kind: "almanac" })} title="Open the Burrow Almanac"><LiveBoard players={players} myPid={pid} /></div>}
@@ -531,6 +542,7 @@ function Valley() {
               </>
             ) : <p className="ev-sub">Nothing of yours expires here. Come back anytime.</p>}
             {modal.id === "hall" && <button className="ev-btn" onClick={() => setModal({ kind: "library" })}>Find my plans in the library</button>}
+            {modal.id === "bank" && <PaydayButtons pid={pid} onState={async (s, tileId) => { setState(s); await plant(s); if (tileId) setModal({ kind: "crop", tileId }); }} />}
             {modal.id === "store" && <button className="ev-btn" onClick={() => setModal({ kind: "checkout" })}>Before you buy: which card should I use?</button>}
             {(modal.id === "market" || modal.id === "commons") && <button className="ev-btn" onClick={() => setModal({ kind: "swap" })}>Open the Swap Market</button>}
             <TalkBox key={modal.id} pid={pid} who={modal.id} name={k.name} voice={k.persona.voice} onSaid={() => void acornEvent({ kind: "chat" })} />
@@ -555,13 +567,16 @@ function Valley() {
       )}
       {modal?.kind === "packet" && (
         <PacketReview key={modal.packet.hash} pid={pid} packet={modal.packet} onState={(s, p) => { setState(s); setModal({ kind: "packet", packet: p }); }}
-          onSubmit={(p) => (tileById(p.tileId)?.action.kind === "transfer" ? setModal({ kind: "confirm", tileId: p.tileId, packet: p }) : void harvest(p.tileId, p))}
+          onSubmit={(p) => (tileById(p.tileId)?.action.kind === "transfer" && tileById(p.tileId)?.action.payload.rail !== "nessie-savings" ? setModal({ kind: "confirm", tileId: p.tileId, packet: p }) : void harvest(p.tileId, p))}
           onClose={() => setModal(null)} />
       )}
       {modal?.kind === "outbox" && state && <Outbox state={state} onOpen={(p) => setModal({ kind: "packet", packet: p })} onClose={() => setModal(null)} />}
       {modal?.kind === "checkout" && <Checkout pid={pid} onClose={() => setModal(null)} />}
       {modal?.kind === "swap" && conn && <SwapMarket conn={conn} me={myHex} players={[...players]} onClose={() => setModal(null)} />}
       {modal?.kind === "terms" && <TermsNews onClose={() => setModal(null)} />}
+      {modal?.kind === "voice" && <VoiceCheckin pid={pid} onState={async (s) => { setState(s); await plant(s); }} onClose={() => setModal(null)} />}
+      {modal?.kind === "autopilot" && state && <AutopilotPanel pid={pid} state={state} live={Boolean(convex)} onState={setState} onOutbox={() => setModal({ kind: "outbox" })} onClose={() => setModal(null)} />}
+      {modal?.kind === "morning" && <MorningReport report={modal.report} onOutbox={() => { seenReport(); setModal({ kind: "outbox" }); }} onClose={() => { seenReport(); setModal(null); }} />}
       {modal?.kind === "run" && tileById(modal.tileId) && (
         <Run tile={tileById(modal.tileId)!} lines={modal.lines} result={modal.result} toName={others.find((p) => hex(p.identity) === modal.to)?.name} onDone={() => setModal(null)} />
       )}
@@ -684,7 +699,7 @@ function UploadButton({ busy, onUpload, className, label }: { busy: boolean; onU
   );
 }
 
-function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord, onLibrary, onAlmanac, onClaims, onExchange, acorns, streak, onOutbox, onCheckout, onSwap, onTerms }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean; onLibrary: () => void; onAlmanac: () => void; onClaims: () => void; onExchange: () => void; acorns: number; streak: number; onOutbox: () => void; onCheckout: () => void; onSwap: () => void; onTerms: () => void }) {
+function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord, onLibrary, onAlmanac, onClaims, onExchange, acorns, streak, onOutbox, onCheckout, onSwap, onTerms, onAutopilot, onVoice }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean; onLibrary: () => void; onAlmanac: () => void; onClaims: () => void; onExchange: () => void; acorns: number; streak: number; onOutbox: () => void; onCheckout: () => void; onSwap: () => void; onTerms: () => void; onAutopilot: () => void; onVoice: () => void }) {
   const waiting = (state?.packets ?? []).filter((p) => p.status !== "submitted");
   const next = state?.tiles.filter((t) => !state.done.includes(t.id) && t.atStake > 0).sort((a, b) => a.daysLeft - b.daysLeft)[0];
   const clock = useClock();
@@ -711,6 +726,8 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
         {others.map((p) => <div key={p.identity.toHexString()} className="who"><i style={{ background: p.color }} />{p.name}</div>)}
         <button className="ev-link strong" onClick={onClaims}>My claims (list) · L</button>
         <button className="ev-link strong" onClick={onOutbox}>Ruth's outbox{waiting.length ? ` (${waiting.filter((p) => p.status === "ready").length} ready, ${waiting.length - waiting.filter((p) => p.status === "ready").length} need you)` : ""}</button>
+        <button className="ev-link strong" onClick={onAutopilot}>Ruth's Autopilot {state?.autopilot?.mandate.on ? `(on, ${state.autopilot.mandate.hour % 12 || 12}${state.autopilot.mandate.hour < 12 ? "am" : "pm"})` : "(off)"}</button>
+        <button className="ev-link" onClick={onVoice}>Talk to Ruth (voice check-in)</button>
         <button className="ev-link" onClick={onCheckout}>Before you buy (which card?)</button>
         <button className="ev-link" onClick={onSwap}>Swap Market (trade leftovers)</button>
         <button className="ev-link" onClick={onTerms}>Burrow Gazette (fine-print news)</button>
@@ -751,6 +768,29 @@ function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }
         <button className="ev-btn ghost" onClick={() => setHow((h) => !h)}>{how ? "Got it" : "How to play"}</button>
       </div>
       <div className="ev-credit">Cal Hacks 13.0 · multiplayer on SpacetimeDB · reviewed by Claude</div>
+    </div>
+  );
+}
+
+// Payday at Burrow Bank: look for a new paycheck in Nessie (or, for the demo, deposit one).
+function PaydayButtons({ pid, onState }: { pid: string; onState: (s: AppState, tileId?: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
+  async function go(action: "check" | "simulate") {
+    setBusy(true); setNote("");
+    try {
+      const res = await fetch("/api/payday", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pid, action }) });
+      const json = (await res.json()) as { state?: AppState; found?: boolean; tileId?: string; error?: string };
+      if (!res.ok || !json.state) throw new Error(json.error ?? "Couldn't check");
+      if (!json.found) setNote("No new paycheck since the last one.");
+      onState(json.state, json.found ? json.tileId : undefined);
+    } catch (e) { setNote((e as Error).message); } finally { setBusy(false); }
+  }
+  return (
+    <div className="ev-pick">
+      <button className="ev-btn" disabled={busy} onClick={() => void go("check")}>{busy ? "Checking Nessie…" : "Payday check"}</button>
+      <button className="ev-btn ghost" disabled={busy} onClick={() => void go("simulate")}>Demo: deposit a paycheck (Nessie sandbox)</button>
+      {note && <span className="ev-sub">{note}</span>}
     </div>
   );
 }

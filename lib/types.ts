@@ -133,4 +133,16 @@ export type AppState = {
   audit: AuditEvent[];
   profile?: Profile; // what Ruth needs to fill forms; you enter it once
   packets?: Packet[]; // Ruth's outbox: prepared, never submitted without you
+  autopilot?: Autopilot;
+  lastPayday?: string; // when Ruth last saw a paycheck land (ISO)
 };
+
+// Ruth's Autopilot: what you let her do on a night shift. She may rescan, buy data within a
+// budget, and prepare claims. She may never submit, sign, pay or send anything.
+export type Mandate = { on: boolean; hour: number; tzOffset: number; prepare: "all" | "health" | "money-back"; dataBudget: number; signedAt: string };
+export type ShiftReport = {
+  at: string; why: "schedule" | "now";
+  prepared: { packetId: string; form: string; amount: number; status: Packet["status"] }[];
+  newClaims: string[]; urgent: string[]; value: number; minutesSaved: number; dataSpent: number; notes: string[];
+};
+export type Autopilot = { mandate: Mandate; spent: { month: string; usd: number }; reports: ShiftReport[]; seen?: string };

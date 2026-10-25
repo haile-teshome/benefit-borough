@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { claudeEnabled } from "@/lib/engine/claude";
 import { apifyEnabled } from "@/lib/integrations/apify";
 import { x402Enabled } from "@/lib/integrations/x402";
+import { termsWatchEnabled } from "@/lib/integrations/terms-watch";
 import { convexEnabled, hydrate, load } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export async function GET(req: Request) {
       convex: convexEnabled(),
       apify: apifyEnabled(),
       x402: x402Enabled(),
+      termsActor: termsWatchEnabled(),
     },
   });
 }

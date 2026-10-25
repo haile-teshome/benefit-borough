@@ -51,6 +51,11 @@ export function draftFor(tile: Tile, s: AppState): Draft {
   const base = { tileId: tile.id, amount, attachments: [] as Attachment[] };
   const to = String(tile.action.payload.to ?? "the provider");
 
+  // Payday: moving rescued money into your own savings.
+  if (tile.action.payload.rail === "nessie-savings") return { ...base, amount: Number(tile.action.payload.amount), form: "Move rescued money to savings", provider: "Capital One Nessie", method: "transfer", submitTo: "Capital One Nessie: Chase Total Checking → Burrow Savings",
+      fields: [P("fullName", "Account holder", p), D("from", "From", "Chase Total Checking"), D("to", "To", "Burrow Savings"), D("amount", "Amount", usd(Number(tile.action.payload.amount)), cite), D("why", "Why", "Money Ruth rescued since your last paycheck")],
+      attachments: [{ name: "The paycheck that triggered this", kind: "statement", lines: tile.sources.map((x) => x.text) }], minutes: { you: 1, without: 5 } };
+
   switch (tile.category) {
     case "fitness": {
       const doc = s.docs.find((d) => d.meta?.plan === "health-fitness");
@@ -110,7 +115,7 @@ export function draftFor(tile: Tile, s: AppState): Draft {
       attachments: [], minutes: { you: 1, without: 10 } };
     case "dining": return { ...base, form: "Flex dollars transfer", provider: "Cal Dining", method: "transfer", submitTo: "Cal Dining peer transfer",
       fields: [P("fullName", "From", p), D("amount", "Amount", usd(Number(tile.action.payload.amount ?? amount)), cite), { key: "to", label: "To (a friend's name or student ID; or pick a farmer next)", value: "", source: "you" }], attachments: [], minutes: { you: 1, without: 10 } };
-    default: return { ...base, form: String(tile.action.payload.title ?? tile.action.summary), provider: to, method: tile.action.kind === "book_call" ? "phone" : "portal", submitTo: to,
+    default: return { ...base, form: tile.action.payload.title ? String(tile.action.payload.title) : tile.action.kind === "book_call" ? `Booking call to ${to}` : tile.action.summary.slice(0, 60), provider: to, method: tile.action.kind === "book_call" ? "phone" : "portal", submitTo: to,
       fields: [P("fullName", "Your name", p), P("phone", "Callback number", p, false), D("what", "What Ruth will ask for", tile.action.summary, cite), D("amount", "Worth", usd(amount), cite)],
       attachments: [], minutes: { you: 1, without: 15 }, message: String(tile.action.payload.steps ?? "").split("|").join("\n") };
   }

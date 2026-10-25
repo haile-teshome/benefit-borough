@@ -9,4 +9,7 @@ export default defineSchema({
   }).index("by_pid", ["pid", "entryId"]),
   // Ruth's record of work: every extraction, review, dispatch and ledger move, per farmer.
   audit: defineTable({ pid: v.string(), at: v.string(), type: v.string(), detail: v.string() }).index("by_pid", ["pid", "at"]),
+  // Ruth's Autopilot mandates. A Convex cron marks a farmer "due" once a night at their chosen
+  // local hour; the app server picks it up, runs the shift, and reports back.
+  mandates: defineTable({ pid: v.string(), on: v.boolean(), hour: v.number(), tzOffset: v.number(), due: v.boolean(), lastRun: v.string(), lastReport: v.optional(v.string()) }).index("by_pid", ["pid"]).index("by_due", ["due"]),
 });

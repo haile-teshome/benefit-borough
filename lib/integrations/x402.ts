@@ -14,27 +14,36 @@ export const txUrl = (tx: string) => `https://sepolia.basescan.org/tx/${tx}`;
 
 export type Payment = { transaction: string; payer?: string; network: string; price: string };
 
-export async function paidPrices(urls: string[]): Promise<{ prices: Record<string, number | null>; payment?: Payment; error?: string }> {
+// What each shop sells Ruth, and for how much.
+export const MARKET = {
+  prices: { shop: "The Deal Desk", path: "/api/x402/prices", price: "$0.01", what: "Live store price for a price-match check" },
+  eligibility: { shop: "Pharmacy & Optical", path: "/api/x402/fsa-eligible", price: "$0.005", what: "FSA/HSA eligibility check for a purchase" },
+  terms: { shop: "The Card House", path: "/api/x402/card-terms", price: "$0.01", what: "Whether a card's credit terms are still current" },
+} as const;
+
+// Buy one answer from a shop. Returns the data and the on-chain receipt, or why it didn't go through.
+export async function buy<T>(path: string): Promise<{ data?: T; payment?: Payment; error?: string }> {
   const account = privateKeyToAccount(process.env.X402_PAYER_KEY as `0x${string}`);
   const pay = wrapFetchWithPaymentFromConfig(fetch, { schemes: [{ network: X402_NETWORK, client: new ExactEvmScheme(account) }] });
   const base = process.env.X402_BASE_URL ?? `http://localhost:${process.env.PORT ?? 3000}`;
-  const qs = urls.map((u) => `u=${encodeURIComponent(u)}`).join("&");
   try {
-    const res = await pay(`${base}/api/x402/prices?${qs}`, { signal: AbortSignal.timeout(240_000) });
-    const json = (await res.json().catch(() => ({}))) as { prices?: Record<string, number | null>; error?: string };
+    const res = await pay(`${base}${path}`, { signal: AbortSignal.timeout(240_000) });
+    const json = (await res.json().catch(() => ({}))) as T & { error?: string };
     if (res.status === 402) {
-      // The facilitator refused the payment; its reason rides back in the PAYMENT-REQUIRED header.
       const why = (() => { try { return JSON.parse(Buffer.from(res.headers.get("PAYMENT-REQUIRED") ?? "", "base64").toString()).error; } catch { return undefined; } })();
-      return { prices: {}, error: `payment refused${why ? `: ${why}` : ""}` };
+      return { error: `payment refused${why ? `: ${why}` : ""}` };
     }
-    if (!res.ok) return { prices: {}, error: json.error ?? `price desk HTTP ${res.status}` };
+    if (!res.ok) return { error: json.error ?? `HTTP ${res.status}` };
     const header = res.headers.get("PAYMENT-RESPONSE") ?? res.headers.get("X-PAYMENT-RESPONSE");
     const settled = header ? decodePaymentResponseHeader(header) : undefined;
-    return {
-      prices: json.prices ?? {},
-      payment: settled?.transaction ? { transaction: settled.transaction, payer: settled.payer ?? account.address, network: String(settled.network ?? X402_NETWORK), price: X402_PRICE } : undefined,
-    };
+    const price = Object.values(MARKET).find((m) => path.startsWith(m.path))?.price ?? X402_PRICE;
+    return { data: json, payment: settled?.transaction ? { transaction: settled.transaction, payer: settled.payer ?? account.address, network: String(settled.network ?? X402_NETWORK), price } : undefined };
   } catch (err) {
-    return { prices: {}, error: (err as Error).message };
+    return { error: (err as Error).message };
   }
+}
+
+export async function paidPrices(urls: string[]): Promise<{ prices: Record<string, number | null>; payment?: Payment; error?: string }> {
+  const r = await buy<{ prices?: Record<string, number | null> }>(`${MARKET.prices.path}?${urls.map((u) => `u=${encodeURIComponent(u)}`).join("&")}`);
+  return { prices: r.data?.prices ?? {}, payment: r.payment, error: r.error };
 }

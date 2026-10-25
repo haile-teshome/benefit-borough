@@ -1,23 +1,9 @@
 import { NextResponse } from "next/server";
-import { buildDoc, type Answers } from "@/lib/library/build";
-import { scan } from "@/lib/pipeline";
-import { hydrate, load, save } from "@/lib/store";
-import { fresh, record } from "@/lib/rewards";
+import type { Answers } from "@/lib/library/build";
+import { applyCheckin } from "@/lib/checkin";
 
-// The weekly check-in: update answers for the library plans you planted (credits used, balances),
-// then rescan so the farm matches your week. Harvests already confirmed stay confirmed.
+// The weekly check-in form: update the answers behind your planted plans, then rescan.
 export async function POST(req: Request) {
   const { pid, updates } = (await req.json()) as { pid?: string; updates: Record<string, Answers> };
-  await hydrate(pid);
-  const s = load(pid);
-  const docs = s.docs.map((d) => {
-    const plan = d.meta?.plan;
-    if (!plan || !updates?.[plan]) return d;
-    return buildDoc({ plan, answers: { ...(d.meta!.answers as Answers), ...updates[plan] } }) ?? d;
-  });
-  const state = await scan(docs, pid);
-  state.checkedInAt = new Date().toISOString();
-  const gained = record((state.rewards ??= fresh()), { kind: "checkin" });
-  save(state, pid);
-  return NextResponse.json({ state, gained });
+  return NextResponse.json(await applyCheckin(pid, updates));
 }
