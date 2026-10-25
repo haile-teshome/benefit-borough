@@ -158,6 +158,7 @@ test("education: credits, tuition assistance, 529, recertification, FAFSA", asyn
     buildDoc({ plan: "edu-529", answers: { cap: 5000, contributed: 1000, rate: 6, deadline: "2026-12-31" } })!,
     buildDoc({ plan: "edu-idr", answers: { due: "2026-12-15", now: 180, standard: 420 } })!,
     buildDoc({ plan: "edu-fafsa", answers: { grant: 3000, deadline: "2027-03-02", filed: "No" } })!,
+    buildDoc({ plan: "edu-student-perks", answers: { grad: "2027-05-15", perks: ["Amazon Prime Student", "Microsoft 365 through school"], want: ["Google AI Pro for students", "Figma Education plan"] } })!,
   ];
   const ex = await extract(docs);
   assert.equal(ex.dropped.length, 0);
@@ -168,6 +169,10 @@ test("education: credits, tuition assistance, 529, recertification, FAFSA", asyn
   assert.equal(t("edu529").atStake, 240); // $4,000 of room x 6%
   assert.equal(t("eduidr").atStake, 720); // $240/month jump x 3 months
   assert.equal(t("edufafsa").atStake, 3000);
+  const perks = tiles.filter((x) => x.id.startsWith("tile_lib_edustudentperks_"));
+  assert.match(perks.find((x) => x.id.endsWith("_edu"))!.headline, /Amazon Prime Student: becomes regular Prime/);
+  assert.equal(perks.find((x) => x.id.endsWith("_claimgemini"))!.atStake, 239.88); // a free year of Google AI Pro, claim by Dec 31
+  assert.match(perks.find((x) => x.id.endsWith("_claimlater"))!.title, /1 student offer to claim/); // Figma
   for (const x of tiles) assert.equal(ruleCheck({ kind: "tile", tile: x }, ex, docs.map((d) => d.text).join("\n")).verdict, "approve");
 });
 

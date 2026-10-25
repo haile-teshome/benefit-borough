@@ -12,6 +12,27 @@ const num = (v: unknown, d = 0) => { const n = typeof v === "number" ? v : parse
 const fmtDate = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
+
+// Popular student offers: what you get, what happens after, and how they verify. Prices are as
+// reported in 2026 and change often; where sources disagreed we say "check" instead of a number.
+export type Perk = { key: string; name: string; deal: string; after: string; claimBy?: string; value?: number };
+export const STUDENT_PERKS: Perk[] = [
+  { key: "prime", name: "Amazon Prime Student", deal: "6 months free, then $7.49/month or $69/year (half of Prime)", after: "Becomes regular Prime ($14.99/month) after 4 years or when you're no longer a student" },
+  { key: "spotify", name: "Spotify Premium Student", deal: "About half price, with Hulu (with ads) included in the US", after: "Re-verify every 12 months, up to 4 years; then regular Premium" },
+  { key: "applemusic", name: "Apple Music Student", deal: "Student price with Apple TV+ included (check the current price)", after: "Re-verify yearly through UNiDAYS, up to 4 years; then the Individual plan ($11.99/month from August 2026)" },
+  { key: "youtube", name: "YouTube Premium Student", deal: "Discounted Premium for verified students", after: "Re-verify yearly, up to 4 years; then regular Premium" },
+  { key: "appleedu", name: "Apple education pricing", deal: "Discounts on Mac and iPad (plus back-to-school promotions in summer)", after: "Only while you're a student; buy the laptop you need before you graduate" },
+  { key: "m365", name: "Microsoft 365 through school", deal: "Word, Excel, PowerPoint, OneDrive and Teams free with your school account", after: "Ends when your school account closes: download your files first" },
+  { key: "storage", name: "School Google Drive or OneDrive storage", deal: "Storage on your school account", after: "Deleted some months after graduation: move your files to a personal account" },
+  { key: "adobe", name: "Adobe Creative Cloud student plan", deal: "First year about 71% off ($19.99/month for Creative Cloud Pro)", after: "Renews at a higher price after the first year; full price after you graduate" },
+  { key: "github", name: "GitHub Student Developer Pack", deal: "Free GitHub Pro, Copilot and dozens of partner offers", after: "Verification lasts 2 years; one-time partner offers can't be redeemed again" },
+  { key: "figma", name: "Figma Education plan", deal: "Figma and FigJam free for verified students", after: "Ends when you can't verify as a student" },
+  { key: "gemini", name: "Google AI Pro for students", deal: "Free for 1 year for US college students", after: "Then $19.99/month unless you cancel", claimBy: "2026-12-31", value: 239.88 },
+  { key: "perplexity", name: "Perplexity Education Pro", deal: "50% off Pro ($10/month)", after: "Ends when you can't verify as a student" },
+  { key: "uberone", name: "Uber One for Students", deal: "4 weeks free, then $4.99/month (half price)", after: "Regular Uber One price after you graduate" },
+  { key: "school", name: "Free subscriptions through your school", deal: "Often LinkedIn Learning, The New York Times or WSJ, and software through the library or IT", after: "End with your school login" },
+];
+
 export const EDU_PLANS: Plan[] = [
   {
     id: "edu-tuition-127", title: "Employer tuition assistance (Section 127, up to $5,250 tax-free)", issuer: "Your employer's education benefit", category: "Education",
@@ -119,17 +140,23 @@ export const EDU_PLANS: Plan[] = [
     ],
   },
   {
-    id: "edu-student-perks", title: "Student perks that end when you graduate", issuer: "Software and subscription companies", category: "Education",
-    community: "College students", year: "2026", tags: ["github student pack", "microsoft 365", "prime student", "spotify student", "apple education", "adobe", "student discount", "graduation"],
-    sources: [{ label: "GitHub Student Developer Pack terms (revalidate every 2 years)", url: "https://docs.github.com/en/education/about-github-education/github-education-for-students/github-terms-and-conditions-for-the-student-developer-pack" }],
-    checked: "Student offers need proof of enrollment and end (or reprice) when you graduate. Prices and terms change often; we list what to plan for, not dollar values.",
+    id: "edu-student-perks", title: "Student perks that end when you graduate", issuer: "Streaming, shopping, software and AI companies", category: "Education",
+    community: "College and grad students", year: "2026", tags: ["student discount", "prime student", "spotify student", "apple music student", "youtube premium student", "microsoft 365", "adobe", "github student pack", "figma", "google ai pro", "gemini", "perplexity", "uber one", "graduation"],
+    sources: [
+      { label: "GitHub Student Developer Pack terms", url: "https://docs.github.com/en/education/about-github-education/github-education-for-students/github-terms-and-conditions-for-the-student-developer-pack" },
+      { label: "The Penny Hoarder: Amazon Prime Student 2026", url: "https://www.thepennyhoarder.com/save-money/amazon-prime-student-more-affordable/" },
+      { label: "Layer3 Labs: AI student discounts in 2026", url: "https://www.layer3labs.io/guides/ai-student-discounts" },
+      { label: "BGR: How much is Apple Music in 2026", url: "https://www.bgr.com/2265143/how-much-is-apple-music-2026/" },
+    ],
+    checked: "Offers as reported in 2026 by the companies and deal sites; they change often, so check the offer page before you sign up. Most verify through your school email, SheerID or UNiDAYS.",
     terms: [
-      "Student software and subscription discounts require verified enrollment and end, or switch to full price, after graduation.",
-      "Before graduating: export your files from school accounts, claim one-time student offers you'd use, and set reminders for subscriptions that will reprice.",
+      "Student discounts require verified enrollment and end, or switch to full price, when you graduate or can't re-verify.",
+      ...STUDENT_PERKS.map((p) => `${p.name}: ${p.deal}. After: ${p.after}.`),
     ],
     questions: [
       { key: "grad", ask: "Your graduation date:", kind: "date", default: "2027-05-15" },
-      { key: "perks", ask: "Which do you use?", kind: "used", items: ["GitHub Student Developer Pack", "Microsoft 365 through school", "Amazon Prime Student", "Spotify Premium Student", "Apple education pricing", "Adobe Creative Cloud student plan", "School Google or OneDrive storage"] },
+      { key: "perks", ask: "Which do you use now?", kind: "used", items: STUDENT_PERKS.map((p) => p.name) },
+      { key: "want", ask: "Any you'd use but haven't claimed yet?", kind: "used", items: STUDENT_PERKS.map((p) => p.name) },
     ],
   },
 ];
@@ -144,7 +171,7 @@ export function eduLines(plan: Plan, a: Answers): string[] {
     case "edu-idr": return [`My income-driven repayment recertification is due ${fmtDate(String(a.due || "2026-12-15"))}.`, `My payment now: ${usd(num(a.now, 180))} a month; the standard 10-year payment: ${usd(num(a.standard, 420))}.`];
     case "edu-fafsa": return [`State and campus grant I get: ${usd(num(a.grant, 3000))}.`, `My state's priority deadline: ${fmtDate(String(a.deadline || "2027-03-02"))}. Filed the 2027-28 FAFSA: ${a.filed === "Yes" ? "yes" : "no"}.`];
     case "edu-drop-refund": return [`Thinking about dropping a class: ${String(a.dropping || "No").toLowerCase()}.`, `That class's tuition: ${usd(num(a.tuition, 1200))}; full refund until ${fmtDate(String(a.deadline || "2026-11-07"))}.`];
-    case "edu-student-perks": return [`I graduate on ${fmtDate(String(a.grad || "2027-05-15"))}.`, `Student perks I use: ${((a.perks as string[]) ?? []).join(", ") || "none listed"}.`];
+    case "edu-student-perks": return [`I graduate on ${fmtDate(String(a.grad || "2027-05-15"))}.`, `Student perks I use: ${((a.perks as string[]) ?? []).join(", ") || "none listed"}.`, `Student perks I'd use but haven't claimed: ${((a.want as string[]) ?? []).join(", ") || "none listed"}.`];
     default: return [];
   }
 }
@@ -183,8 +210,16 @@ export function eduFindings(plan: Plan, a: Answers, line: (re: RegExp) => string
   if (plan.id === "edu-drop-refund" && a.dropping && a.dropping !== "No" && String(a.deadline || "2026-11-07") >= today) {
     add({ label: "Full tuition refund for a dropped class", amount: num(a.tuition, 1200), deadline: String(a.deadline || "2026-11-07"), span: line(/^That class's tuition/), rule: plan.terms[0] });
   }
-  if (plan.id === "edu-student-perks" && ((a.perks as string[]) ?? []).length) {
-    add({ label: "Student perks that end at graduation", amount: 0, deadline: String(a.grad || "2027-05-15"), span: line(/^Student perks I use/), rule: plan.terms[0], facts: { count: ((a.perks as string[]) ?? []).length } });
+  if (plan.id === "edu-student-perks") {
+    const grad = String(a.grad || "2027-05-15");
+    const using = ((a.perks as string[]) ?? []).filter((n) => STUDENT_PERKS.some((p) => p.name === n));
+    if (using.length) out.push({ id: id("edu"), category: "education", label: "Student perks that end at graduation", amount: 0, deadline: grad, span: line(/^Student perks I use/), rule: plan.terms[0], facts: { count: using.length } });
+    // Offers you'd use but haven't claimed: one crop each when the offer itself has a deadline,
+    // otherwise one "claim before you graduate" crop.
+    const want = STUDENT_PERKS.filter((p) => ((a.want as string[]) ?? []).includes(p.name) && !using.includes(p.name));
+    for (const p of want.filter((x) => x.claimBy && x.claimBy >= today)) out.push({ id: id(`claim${p.key}`), category: "education", label: `${p.name} (claim by ${fmtDate(p.claimBy!)})`, amount: p.value ?? 0, deadline: p.claimBy!, span: line(new RegExp(`^${p.name}:`)), rule: `${p.deal}. After: ${p.after}.` });
+    const later = want.filter((x) => !x.claimBy);
+    if (later.length) out.push({ id: id("claimlater"), category: "education", label: `Student offers to claim before you graduate`, amount: 0, deadline: grad, span: line(/^Student perks I'd use but haven't claimed/), rule: plan.terms[0], facts: { count: later.length } });
   }
   return out;
 }
@@ -194,7 +229,7 @@ const NONE: Tile["action"] = { kind: "none", summary: "Informational", savings: 
 
 // The crop for an education finding.
 export function eduTile(b: Balance, base: Omit<Tile, "id" | "category" | "title" | "live" | "atStake" | "doNothingCost" | "candidates" | "headline" | "tradeoff" | "doNothing" | "action">, fact: (k: string) => number, by: string, req: Req): Tile {
-  const plan = b.id.replace(/^lib_/, "").replace(/_edu$/, "");
+  const [, plan, kind] = b.id.split("_");
   const t = (title: string, headline: string, tradeoff: string, doNothing: string, action: Tile["action"], extra: Partial<Tile> = {}): Tile => ({
     ...base, id: `tile_${b.id}`, category: "education", title, live: action.kind !== "none", atStake: b.amount, doNothingCost: b.amount,
     candidates: [{ id: "act", label: action.summary, costToUser: 0, detail: b.ruleText }], headline, tradeoff, doNothing, action, ...extra,
@@ -209,7 +244,20 @@ export function eduTile(b: Balance, base: Omit<Tile, "id" | "category" | "title"
     case "eduidr": return t(`Recertify your student loan payment before ${by}`, `Miss your recertification and your payment can jump from ${usd(fact("now"))} to ${usd(fact("standard"))} a month: about ${usd(b.amount)} more over three months until it's fixed.`, "Takes about 10 minutes on studentaid.gov; income can come straight from the IRS.", `Payment may jump to ${usd(fact("standard"))} after ${by}.`, req("Recertify income-driven repayment", "studentaid.gov", ["Opening studentaid.gov → Income-driven repayment", "Linking your IRS income data", "Recertification submitted"]));
     case "edufafsa": return t(`File the 2027-28 FAFSA before ${by} to keep ${usd(b.amount)} of grants`, `Your state awards grants by priority deadline. Filing the FAFSA by ${by} keeps you in line for about ${usd(b.amount)} like last year.`, "Free to file; takes about 30 minutes with the IRS data transfer.", `Grant money can run out after ${by}.`, req("File the FAFSA", "studentaid.gov", ["Opening studentaid.gov → FAFSA 2027-28", "Pulling tax info with the IRS data exchange", "FAFSA submitted"]));
     case "edudroprefund": return t(`Drop the class by ${by} for a full ${usd(b.amount)} refund`, `If you're going to drop it, doing it by ${by} refunds the full ${usd(b.amount)}; after that the refund shrinks.`, "Only if you've decided; check with your advisor about financial aid and enrollment status.", `The full refund ends ${by}.`, req("Drop the class", "your student portal", ["Opening your student portal → Enrollment", "Dropping the class", "Refund requested"]), { ask: "Have you decided to drop it?" });
-    case "edustudentperks": return t(`${fact("count")} student perk${fact("count") === 1 ? "" : "s"} end when you graduate (${by})`, `When you graduate on ${by}, ${fact("count")} student offer${fact("count") === 1 ? "" : "s"} you use will end or switch to full price. Export school files and plan for the price changes.`, "No dollar values: prices change often.", "Surprise renewals at full price and lost school storage.", NONE, { atStake: 0, doNothingCost: 0 });
+    case "edustudentperks": {
+      const names = b.source.text.replace(/^[^:]+:\s*/, "").replace(/\.$/, "").split(", ").filter(Boolean);
+      const after = STUDENT_PERKS.filter((p) => names.includes(p.name)).map((p) => `${p.name}: ${p.after.charAt(0).toLowerCase()}${p.after.slice(1)}`).join("; ");
+      if (kind.startsWith("claim") && kind !== "claimlater") {
+        const p = STUDENT_PERKS.find((x) => `claim${x.key}` === kind)!;
+        return t(`Claim ${p.name} by ${by}`, `${p.deal}, but only if you claim it by ${by}. ${p.after}, so Ruth sets a reminder to cancel before it bills.`, "Only if you'd really use it. Set the cancel reminder the day you sign up.", `The offer ends ${by}.`,
+          req(`Claim ${p.name}`, `${p.name} offer page`, ["Opening the student offer page", "Verifying with your school email", "Reminder set to cancel before the first bill"]), { ask: `Would you actually use ${p.name}?` });
+      }
+      if (kind === "claimlater") {
+        const later = names.filter((n) => !STUDENT_PERKS.find((p) => p.name === n)?.claimBy);
+        return t(`${later.length} student offer${later.length === 1 ? "" : "s"} to claim before you graduate (${by})`, `You said you'd use ${later.join(", ")}. Each needs proof you're a student, so claim ${later.length === 1 ? "it" : "them"} before ${by}.`, "Only offers you'd use; check each offer page for current terms.", `You can't verify as a student after ${by}.`, NONE, { atStake: 0, doNothingCost: 0 });
+      }
+      return t(`${names.length} student perk${names.length === 1 ? "" : "s"} end when you graduate (${by})`, `When you graduate on ${by}: ${after}.`, "Prices change often, so we show what happens, not dollar amounts.", "Surprise full-price renewals and lost school files.", NONE, { atStake: 0, doNothingCost: 0 });
+    }
     default: return t(b.label, b.ruleText, "", "", NONE);
   }
 }

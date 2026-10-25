@@ -26,9 +26,9 @@ export function Field({ q, plan, value, onChange }: { q: Question; plan: Plan; v
     return (
       <div className="ev-lib-q"><span>{q.ask}</span>
         <div className="ev-lib-credits">
-          {(plan.credits ?? []).map((c) => (
+          {(plan.credits?.length ? plan.credits.map((c) => ({ key: c.key, name: c.name, note: `$${c.amount} ${c.cadence}` })) : q.items.map((name) => ({ key: name, name, note: "" }))).map((c) => (
             <label key={c.key}><input type="checkbox" checked={set.has(c.key)} onChange={(e) => { const n = new Set(set); if (e.target.checked) n.add(c.key); else n.delete(c.key); onChange([...n]); }} />
-              {c.name} <em>${c.amount} {c.cadence}</em></label>
+              {c.name} {c.note && <em>{c.note}</em>}</label>
           ))}
         </div>
       </div>
