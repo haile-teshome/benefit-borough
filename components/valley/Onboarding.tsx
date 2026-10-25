@@ -55,6 +55,7 @@ export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile
   const [looking, setLooking] = useState<"idle" | "busy" | "done" | "failed">("idle");
   const [keep, setKeep] = useState<Set<FactKey>>(new Set());
   const [file, setFile] = useState<File | null>(null);
+  const [extra, setExtra] = useState(""); // benefits typed in your own words
   const [planting, setPlanting] = useState(false);
   const [beat, setBeat] = useState(0); // planting progress messages
   const [error, setError] = useState("");
@@ -137,6 +138,15 @@ export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile
         const res = await fetch("/api/upload", { method: "POST", body: form });
         const json = (await res.json()) as { state?: AppState; error?: string };
         if (!res.ok || !json.state) throw new Error(json.error ?? "Couldn't read your document");
+        state = json.state; count = json.state.tiles.length;
+      }
+      // Anything typed in your own words goes the same way, as a note Ruth reads.
+      if (extra.trim()) {
+        const form = new FormData(); form.append("pid", pid);
+        form.append("file", new File([extra.trim()], "my-benefits.txt", { type: "text/plain" }));
+        const res = await fetch("/api/upload", { method: "POST", body: form });
+        const json = (await res.json()) as { state?: AppState; error?: string };
+        if (!res.ok || !json.state) throw new Error(json.error ?? "Couldn't read your notes");
         state = json.state; count = json.state.tiles.length;
       }
       if (!state) throw new Error("Tell Ruth a little about your benefits first, or add a document.");
@@ -240,6 +250,9 @@ export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile
               </div>
               <label className="ev-lib-q ev-onb-file"><span>Have a benefits guide, offer letter or statement? Add it and Ruth reads it too (PDF, CSV, text or a photo).</span>
                 <input type="file" accept=".csv,.pdf,.txt,.png,.jpg,.jpeg,.webp,text/csv,text/plain,application/pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label>
+              <label className="ev-lib-q ev-onb-file"><span>Anything else you want to track? Describe it in your own words, one per line.</span>
+                <textarea className="ev-onb-extra" rows={4} value={extra} onChange={(e) => setExtra(e.target.value)} onKeyDown={(e) => e.stopPropagation()}
+                  placeholder={"$300 gym reimbursement, receipts due Dec 31\nSouthwest companion pass, expires Feb 28\n$150 Costco cash-back reward, use by Mar 1"} /></label>
               <p className="ev-sub">Not sure about a number? Leave it; the weekly check-in fixes it later. Every number cites where it came from.</p>
             </>
           )}
@@ -250,7 +263,7 @@ export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile
           {step === "you" && <button className="ev-btn ghost" disabled={busy} onClick={() => onDemo(name, color, me?.avatar ?? "")}>{busy ? "Planting…" : "Just show me a demo"}</button>}
           {step !== "you" && <button className="ev-btn ghost" onClick={back}>Back</button>}
           {step !== "review" ? <button className="ev-btn" onClick={next}>Next</button>
-            : <button className="ev-btn" disabled={planting || (!chosen.length && !file)} onClick={() => void plant()}>{planting ? "Planting your farm…" : "Plant my farm"}</button>}
+            : <button className="ev-btn" disabled={planting || (!chosen.length && !file && !extra.trim())} onClick={() => void plant()}>{planting ? "Planting your farm…" : "Plant my farm"}</button>}
         </div>
       </div>
     </div>

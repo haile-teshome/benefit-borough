@@ -10,7 +10,9 @@ export type Category =
   // health plan extras
   | "fitness"
   // school, learning and student loans
-  | "education";
+  | "education"
+  // anything a person tells us to track that fits nothing above
+  | "other";
 
 export type Span = { doc: string; start: number; end: number; text: string };
 
@@ -22,6 +24,8 @@ export type Balance = {
   deadline: string; // ISO date
   source: Span;
   ruleText: string;
+  // A guide that only states the plan's limit (e.g. a $2,000 dental maximum), not this person's balance.
+  basis?: "plan_limit";
 };
 
 export type CareItem = {

@@ -12,7 +12,7 @@ import { structured } from "./llm";
 const CATEGORIES = [
   "fsa", "dental", "deductible", "dining", "card_credit", "tax_window",
   "bank_bonus", "bank_fee", "idle_cash", "annual_fee", "credit_move", "dispute", "rotating",
-  "price_adjust", "fsa_claim", "promo_apr", "subscription", "points", "insurance", "vision", "hsa", "retirement", "pto", "stipend", "dcfsa", "espp", "fitness", "education",
+  "price_adjust", "fsa_claim", "promo_apr", "subscription", "points", "insurance", "vision", "hsa", "retirement", "pto", "stipend", "dcfsa", "espp", "fitness", "education", "other",
 ] as const;
 
 export const FACT_KEYS = [
@@ -41,6 +41,7 @@ export const ExtractionSchema = z.object({
       source_doc: z.string(),
       source_span: z.string().describe("Verbatim quote from the document that states the amount"),
       rule_text: z.string().describe("The expiry, carryover or reset rule, quoted or closely paraphrased"),
+      basis: z.enum(["your_balance", "plan_limit"]).describe("your_balance: this person's own remaining amount; plan_limit: the plan's stated limit or allowance"),
     }),
   ),
   care_items: z.array(
@@ -65,13 +66,17 @@ export const ExtractionSchema = z.object({
 export const SYSTEM = `You extract expiring money from a person's benefits, insurance, dining and card documents.
 Return every balance that expires, resets or forfeits by a deadline, every pending or planned care item with its fee, spending rates, and the plan parameters listed in the schema.
 Rules:
-- source_span must be copied verbatim from the document, character for character, and must contain the number you report. Spans that are not verbatim are discarded.
+- source_span must be copied verbatim from the document, character for character, and must contain the number you report (when the amount is 0, quote the line itself). Spans that are not verbatim are discarded.
 - Report only what the documents state. Never estimate a balance that is not written down.
-- Dates are ISO (YYYY-MM-DD). source_doc is the document id given in its header.
+- Dates are ISO (YYYY-MM-DD). source_doc is the document id given in its header. Today is ${DEMO_TODAY}: a date written without a year means its next occurrence on or after today. Report a window (enrollment, election) only when the document gives its dates.
+- label: a short name of at most six words ("Health FSA", "Delta Dental annual maximum"); put dates, carryover amounts and conditions in rule_text, not the label.
+- basis: your_balance when the document states this person's own remaining amount. Benefits guides and plan summaries usually state only the plan's limits: still report every benefit that expires, resets or is forfeited (annual maximums, allowances, stipends, use-it-or-lose-it accounts, tuition help, enrollment windows) with basis plan_limit, amount = the stated limit (0 for a window with no dollar figure), deadline = when it resets or is forfeited (the end of the current plan year if that's all the guide gives). Skip premiums, copays and coverage percentages.
+- A person's own notes (a file like my-benefits.txt) list benefits in their own words: report every line as a balance with basis your_balance, the best category (other if none fits), amount = the dollar value stated or 0, and label = their wording, shortened.
 - Categories: fsa, dental (unused annual maximum), deductible (met deductible / out-of-pocket window that resets), dining, card_credit, tax_window (an enrollment or election window).
 - Facts: checking_apy_pct = the checking account's interest rate in percent; credit_overlap_monthly = the monthly price of a subscription billed to the wrong card (not the credit amount); price_now = an item's current lower price; promo_balance = the deferred-interest promo balance to pay off.
 - From bank and card statements: bank_bonus (account bonus with a deadline), bank_fee (refundable fee), idle_cash (cash earning near-zero interest; amount = balance), annual_fee (fee refundable within a window), credit_move (a recurring charge on the wrong card while another card's monthly credit goes unused; amount = monthly credit), dispute (duplicate or wrong charge; amount = refund), rotating (bonus category not activated; amount = monthly spend in it), price_adjust (purchase now cheaper within a price-match window; amount = price paid), fsa_claim (eligible expense paid out of pocket; one balance per receipt), promo_apr (deferred interest that hits if the promo balance is not paid; amount = interest), subscription (trial or renewal about to bill; one balance per charge), points (miles or points about to expire; amount = points), insurance (policy renewal worth re-shopping; amount = premium).
-- From workplace benefits guides and plan summaries: stipend (lifestyle, wellness, learning or home-office stipend; amount = the unused balance in dollars), pto (paid time off that would be forfeited at a deadline: only the days over the rollover limit; amount = those days, label "PTO days over the rollover", or dollars if a salary or day rate is stated), dcfsa (dependent care FSA balance), hsa, retirement (unvested or unclaimed employer money), espp (enrollment window), education (tuition or learning benefit not yet claimed; amount = what's left), fitness (gym reimbursement), vision (glasses or contacts allowance). Use the person's own balance when the document states one, not the plan maximum.`;
+- From workplace benefits guides and plan summaries: stipend (lifestyle, wellness, learning or home-office stipend; amount = the unused balance in dollars), pto (paid time off that would be forfeited at a deadline: only the days over the rollover limit; amount = those days, label "PTO days over the rollover", or dollars if a salary or day rate is stated), dcfsa (dependent care FSA balance), hsa, retirement (unvested or unclaimed employer money), espp (enrollment window), education (tuition or learning benefit not yet claimed; amount = what's left), fitness (gym reimbursement), vision (glasses or contacts allowance). Prefer the person's own balance when the document states one; otherwise report the plan limit with basis plan_limit.
+- other: anything with a value and a deadline that fits none of the above (a companion pass, a store reward, a certificate).`;
 
 // An upload is a statement if it reads as a list of transactions; anything else (a benefits guide,
 // a plan summary, an offer letter) is read by Claude like the other documents.
@@ -82,9 +87,12 @@ export async function extract(docs: SourceDoc[]): Promise<Extraction> {
   const found = uploads.flatMap((d) => statementFindings(d));
   // Library plans are already structured, so their findings are computed, not extracted.
   const libs = docs.filter((d) => d.id.startsWith("lib_")).flatMap((d) => libraryFindings(d, DEMO_TODAY).map((f) => ({ f, d })));
-  const libRaw = libs.map(({ f, d }) => ({ balance_id: f.id, category: f.category, label: f.label, amount: f.amount, deadline: f.deadline, source_doc: d.id, source_span: f.span, rule_text: f.rule }));
+  const libRaw = libs.map(({ f, d }) => ({ balance_id: f.id, category: f.category, label: f.label, amount: f.amount, deadline: f.deadline, source_doc: d.id, source_span: f.span, rule_text: f.rule, basis: "your_balance" as const }));
   const rest = docs.filter((d) => (!d.id.startsWith("upload_") || !uploads.includes(d)) && !d.id.startsWith("lib_"));
   const ex = rest.length ? await extractDocs(rest, docs) : { balances: [], careItems: [], patterns: [], facts: {}, dropped: [], engine: "mock" as const };
+  // Whatever Claude read from an upload is tagged with that upload, so the sample person's
+  // scenario builders never pick it up and the upload's own crops can be counted.
+  ex.balances = ex.balances.map((b) => (b.source.doc.startsWith("upload_") && !b.id.startsWith("up_") ? { ...b, id: `up_${b.source.doc.replace(/\W/g, "")}_${b.id}` } : b));
   const extra = ground(docs, { balances: [...found, ...libRaw], care_items: [], spend_patterns: [], facts: [] }, ex.engine);
   for (const { f } of libs) for (const [k, v] of Object.entries(f.facts ?? {})) ex.facts[`${f.id}:${k}`] = v;
   return { ...ex, balances: [...ex.balances, ...extra.balances], dropped: [...ex.dropped, ...extra.dropped] };
@@ -96,7 +104,7 @@ function statementFindings(d: SourceDoc) {
   const csv = parseCsv(d.text, year);
   const txns = csv.length ? csv : parseLines(d.text, year);
   return detect(txns, d.id, DEMO_TODAY).map((f) => ({
-    balance_id: f.id, category: f.category, label: f.label, amount: f.amount, deadline: f.deadline, source_doc: d.id, source_span: f.span, rule_text: f.rule,
+    balance_id: f.id, category: f.category, label: f.label, amount: f.amount, deadline: f.deadline, source_doc: d.id, source_span: f.span, rule_text: f.rule, basis: "your_balance" as const,
   }));
 }
 
@@ -120,7 +128,7 @@ export function ground(docs: SourceDoc[], raw: z.infer<typeof ExtractionSchema>,
   for (const b of raw.balances) {
     const span = findSpan(docs, b.source_doc, b.source_span);
     if (!span) { dropped.push(`${b.label} (${b.source_span})`); continue; }
-    balances.push({ id: b.balance_id, category: b.category, label: b.label, amount: b.amount, deadline: b.deadline, source: span, ruleText: b.rule_text });
+    balances.push({ id: b.balance_id, category: b.category, label: b.label, amount: b.amount, deadline: b.deadline, source: span, ruleText: b.rule_text, ...(b.basis === "plan_limit" ? { basis: "plan_limit" as const } : {}) });
   }
   const careItems: CareItem[] = [];
   for (const c of raw.care_items) {
@@ -141,7 +149,7 @@ export function ground(docs: SourceDoc[], raw: z.infer<typeof ExtractionSchema>,
 // Deterministic extraction of the sample documents, used when no API key is configured.
 export function mockExtraction(): z.infer<typeof ExtractionSchema> {
   const b = (balance_id: string, category: (typeof CATEGORIES)[number], label: string, amount: number, deadline: string, source_doc: string, source_span: string, rule_text: string) =>
-    ({ balance_id, category, label, amount, deadline, source_doc, source_span, rule_text });
+    ({ balance_id, category, label, amount, deadline, source_doc, source_span, rule_text, basis: "your_balance" as const });
   const fact = (key: (typeof FACT_KEYS)[number], value: number, source_doc: string, source_span: string) => ({ key, value, source_doc, source_span });
   return {
     balances: [

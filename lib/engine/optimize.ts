@@ -201,21 +201,40 @@ const DOC_KINDS: Partial<Record<Balance["category"], { verb: string; to: string;
   fitness: { verb: "Claim", to: "your health plan", steps: ["Filling the fitness reimbursement form", "Attaching proof of payment", "Claim submitted"] },
   vision: { verb: "Use", to: "your vision plan", steps: ["Booking an in-network exam", "Ordering glasses or contacts", "Allowance applied"] },
   retirement: { verb: "Claim", to: "your HR or benefits team", steps: ["Checking the rule in your plan", "Making the change before the deadline", "Confirmed"] },
+  // Uploaded guides and typed-in notes: the same crop, in neutral words, for everything else.
+  fsa: { verb: "Use", to: "your FSA administrator", steps: ["Listing care or supplies you already need", "Paying with the FSA card or filing a claim", "Claim approved"] },
+  dental: { verb: "Use", to: "your dentist", steps: ["Booking care your dentist already recommends", "Scheduling it before the reset", "Visit booked"] },
+  dining: { verb: "Use", to: "your campus dining account", steps: ["Checking your balance", "Using it on meals you'd buy anyway, or transferring it if allowed", "Done"] },
+  card_credit: { verb: "Use", to: "your card's app", steps: ["Checking what the credit covers", "Using it on something you'd buy anyway", "Credit applied"] },
+  points: { verb: "Use", to: "the rewards program", steps: ["Checking the expiry rule", "Redeeming, or earning anything to reset the clock", "Done"] },
+  espp: { verb: "Decide on", to: "your stock plan portal", steps: ["Reading the plan terms", "Enrolling or changing your contribution in the window", "Confirmed"] },
+  tax_window: { verb: "Decide on", to: "your benefits portal", steps: ["Reviewing your options", "Making your election in the window", "Confirmed"] },
+  other: { verb: "Use", to: "the program's site or app", steps: ["Checking the program's rules", "Using it before the deadline", "Done"] },
 };
 function documentTiles(ex: Extraction, covered: Set<string>): Tile[] {
-  return ex.balances.filter((b) => !covered.has(b.id) && b.amount > 0 && DOC_KINDS[b.category] && daysBetween(DEMO_TODAY, b.deadline) >= 0).map((b): Tile => {
+  // Uploads and typed-in notes may name a benefit with no dollar figure (a companion pass, a window).
+  const yours = (b: Balance) => b.id.startsWith("up_");
+  return ex.balances.filter((b) => !covered.has(b.id) && (b.amount > 0 || yours(b)) && DOC_KINDS[b.category] && daysBetween(DEMO_TODAY, b.deadline) >= 0).map((b): Tile => {
     const k = DOC_KINDS[b.category]!;
     const by = new Date(`${b.deadline}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
     const days = b.category === "pto" && /\bdays?\b/i.test(b.label);
-    const what = days ? `${b.amount} PTO day${b.amount === 1 ? "" : "s"}` : `${usd(b.amount)} ${b.label}`;
+    const limit = b.basis === "plan_limit";
+    // A plan limit is what the plan allows, not what you have left, so it's worded "up to".
+    // Typed-in labels often carry their own amount ("$300 gym reimbursement"); don't say it twice.
+    const named = b.label.includes(usd(b.amount)) ? b.label : `${usd(b.amount)} ${b.label}`;
+    const what = days ? `${b.amount} PTO day${b.amount === 1 ? "" : "s"}` : !b.amount ? b.label : limit ? `${b.label} (up to ${usd(b.amount)})` : named;
     const money = days ? 0 : b.amount;
     // The same gating question the library plans ask, so nobody is nudged to spend just to use it up.
-    const ask = days ? `Do you want to take ${b.amount} day${b.amount === 1 ? "" : "s"} off before ${by}?` : b.category === "retirement" ? undefined : "Is there something you'd buy or do anyway that it covers?";
+    const ask = days ? `Do you want to take ${b.amount} day${b.amount === 1 ? "" : "s"} off before ${by}?` : b.category === "retirement" || k.verb === "Decide on" ? undefined : "Is there something you'd buy or do anyway that it covers?";
+    // A guide's PTO rule isn't your balance: say the rule, not a number of days you'd lose.
+    const title = days && limit ? `PTO: days over the rollover are forfeited ${by}` : days ? `${what} will be forfeited ${by}` : limit && !["espp", "tax_window"].includes(b.category) ? `${b.label}: ${b.amount ? `up to ${usd(b.amount)}, ` : ""}resets ${by}` : `${k.verb} your ${what} before ${by}`;
     return {
       balanceIds: [b.id], deadline: b.deadline, daysLeft: daysBetween(DEMO_TODAY, b.deadline), sources: [b.source], engine: "mock",
-      id: `tile_${b.id}`, category: b.category, title: days ? `${what} will be forfeited ${by}` : `${k.verb} your ${what} before ${by}`, live: true, atStake: money, doNothingCost: money, ask,
+      id: `tile_${b.id}`, category: b.category, title, live: true, atStake: money, doNothingCost: money, ask,
       candidates: [{ id: "act", label: `${k.verb} it before ${by}`, costToUser: 0, detail: b.ruleText }], recommendation: "act",
-      headline: `Your documents say: ${b.ruleText}`, tradeoff: days ? "Rest is the point; plan around work so it's actually time off." : "Only for things you'd do or buy anyway.", doNothing: days ? `${b.amount} day${b.amount === 1 ? "" : "s"} forfeited after ${by}.` : `Lost after ${by}.`,
+      headline: limit ? `Your plan allows ${b.amount ? `up to ${usd(b.amount)}` : "it"}; ${b.ruleText}` : `Your documents say: ${b.ruleText}`,
+      tradeoff: days ? "Rest is the point; plan around work so it's actually time off." : limit ? "That's the plan's limit; what's left for you depends on what you've used this year." : "Only for things you'd do or buy anyway.",
+      doNothing: days ? `${b.amount} day${b.amount === 1 ? "" : "s"} forfeited after ${by}.` : limit ? `Whatever's unused is lost after ${by}.` : `Lost after ${by}.`,
       action: request(`${k.verb} your ${b.label.toLowerCase()}`, money, { title: `${k.verb} your ${b.label.toLowerCase()}`, to: k.to, steps: k.steps, confirmation: `DOC-${b.id.slice(-6).toUpperCase()}` }),
     };
   });
