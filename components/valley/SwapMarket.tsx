@@ -6,6 +6,7 @@ import { DbConnection, tables } from "@/lib/valley_bindings";
 import type { Offer, Player } from "@/lib/valley_bindings/types";
 import s from "./SwapMarket.module.css";
 import { PixelIcon } from "./PixelIcon";
+import { hex } from "@/lib/valley/ids";
 
 type Kind = "dining" | "points" | "pass" | "other";
 
@@ -18,7 +19,6 @@ const KINDS: Record<Kind, { label: string; icon: string; unit: string; rule: str
   other: { label: "Other", icon: "groceries", unit: "USD", rule: "Only post what the program lets you transfer. Benefits tied to you (FSA/DCFSA funds, insurance, meal swipes) can't be traded." },
 };
 
-const hex = (id: { toHexString(): string } | undefined | null) => id?.toHexString() ?? "";
 
 function fmt(o: Offer) {
   if (o.unit === "USD") return `$${o.amount.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
@@ -35,7 +35,7 @@ export function SwapMarket({ conn, me, players, onClose }: { conn: DbConnection;
   const [unit, setUnit] = useState(KINDS.dining.unit);
   const [want, setWant] = useState("");
 
-  const who = (id: { toHexString(): string } | undefined) => players.find((p) => hex(p.identity) === hex(id));
+  const who = (id: Parameters<typeof hex>[0]) => players.find((p) => hex(p.identity) === hex(id));
   const sorted = [...offers].sort((a, b) => Number(b.id - a.id));
   const market = sorted.filter((o) => hex(o.owner) !== me && (o.status === "open" || (o.status === "pending" && hex(o.taker) === me)));
   const mine = sorted.filter((o) => hex(o.owner) === me && o.status !== "cancelled");

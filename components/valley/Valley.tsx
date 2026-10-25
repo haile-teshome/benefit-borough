@@ -40,6 +40,7 @@ import { shoppable } from "@/lib/market/shoppable";
 import { fresh as freshRewards, type Rewards } from "@/lib/rewards";
 import World2D, { type Burst, type Emote, type Mood, type Near, type WorldApi } from "./World2D";
 import { heartsFor, KEEPERS, RUTH_VOICE } from "@/lib/valley/people";
+import { hex } from "@/lib/valley/ids";
 
 const DB = "expire-valley";
 // Convex holds saved state and the ledger; its live queries drive the valley leaderboard.
@@ -125,7 +126,6 @@ type Modal =
   | { kind: "exchange" }
   | null;
 
-const hex = (id: { toHexString(): string } | undefined | null) => id?.toHexString() ?? "";
 const shortTitle = (title: string) => {
   const rest = title.replace(/^[^:]{1,30}:\s*/, "");
   return rest.charAt(0).toUpperCase() + rest.slice(1);
@@ -754,10 +754,11 @@ function Labels({ plots, players, myHex, bubbles, bursts, nearElder, tiles, done
     for (const d of DISTRICTS) setAnchor(`district:${d.id}`, d.x, 1.15, d.z);
     for (const n of NPCS) setAnchor(`npc:${n.id}`, n.x, 1.7, n.z); }, []);
   const online = players.filter((p) => p.online || hex(p.identity) === myHex);
+  const byId = new Map(players.map((p) => [hex(p.identity), p]));
   return (
     <div className="ev-labels">
       {plots.map((pl) => {
-        const owner = players.find((p) => hex(p.identity) === hex(pl.owner));
+        const owner = byId.get(hex(pl.owner));
         if (!owner) return null;
         const mine = hex(pl.owner) === myHex;
         if (!mine && !pl.harvested) return null;

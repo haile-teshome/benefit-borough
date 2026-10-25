@@ -15,6 +15,7 @@ import { bakeRoom, furniture, pedestal, poster, rugSprite } from "@/lib/valley/p
 import { blockedInside, doorSpot, INTERIORS, type Interior } from "@/lib/valley/interiors";
 import { CHATTER, KEEPERS } from "@/lib/valley/people";
 import type { Tile } from "@/lib/types";
+import { hex } from "@/lib/valley/ids";
 import {
   BOUNDS, BUILDINGS, blocked, DECOR, doorOf, FARM_MEADOW, farmLayout, farmRects, type Rect, FOUNTAIN, GLOWS, NPCS, SOLID_DECOR, STRINGS, BUNTING, TREE_KINDS, type Place,
 } from "@/lib/valley/world";
@@ -48,7 +49,6 @@ type Props = {
   tiles: Tile[]; done: string[]; api: WorldApi; onScene: (buildingId: string | null) => void;
 };
 
-const hex = (id: { toHexString(): string }) => id.toHexString();
 
 const STYLES: Record<string, P.BuildingStyle> = {
   pharmacy: { wall: "mint", roof: "#3FA67A", door: "#2F7A58", icon: "pill", iconBg: "#2F7A58", awning: ["#3FA67A", "#FFFFFF"] },
