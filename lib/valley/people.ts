@@ -134,3 +134,36 @@ export const KEEPERS: Record<string, Keeper> = {
 // Ruth keeps the voice she already has.
 export const RUTH_VOICE = "a2364c9d-1fe3-4553-9eff-100c4fe5ffc8";
 export const ALL_VOICES = new Set([RUTH_VOICE, ...NPCS.map((n) => n.persona.voice), ...Object.values(KEEPERS).map((x) => x.persona.voice)]);
+
+// Friendship. Every few chats with someone earns a heart (up to 5). At 1 and 3 hearts each
+// character has a story beat they share once, in their own words (Hades-style unlocks: shown once,
+// then remembered), so regulars learn who people are.
+export const TALKS_PER_HEART = 3;
+export const heartsFor = (talks: number) => Math.min(5, Math.floor(talks / TALKS_PER_HEART));
+export const STORY: Record<string, [string, string]> = {
+  okafor: ["He wanted to be a stand-up comedian; dental school was his parents' idea, and the puns are his revenge.", "He keeps a jar of every baby tooth his patients' kids have mailed him, labeled with names, and he's never told anyone."],
+  nurse: ["She once color-coded the entire hospital supply closet overnight, and nobody has found the tongue depressors since.", "She drinks four coffees because she works the night shift at the animal shelter on weekends, and she'd rather you didn't tell Dr. Okafor."],
+  teller: ["Mo counts coins to fall asleep and has a favorite penny, from the year the bank opened.", "Mo's first job was sweeping the bank floor; the old manager left Mo the brass nameplate that still sits on the counter."],
+  clerk: ["Juno has memorized the annual fee of every card in the Card House and recites them when nervous.", "Juno cut up her own store card years ago after a deferred-interest surprise, and that's why she warns everyone about promo dates."],
+  chef: ["Chef Bun's secret soup is mostly carrots and stubbornness; the recipe came from a grandmother who never wrote anything down.", "Bun once fed the whole town for a week during a snowstorm, using nothing but leftover meal-plan swipes students donated."],
+  diner: ["Moss eats lunch at the same table every day because it has the best view of the pond's lilies.", "Moss is secretly writing a cookbook of dining-hall hacks and wants to dedicate it to Chef Bun."],
+  bertie: ["Bertie has sat on the same bench for thirty years and claims he's watched every fountain coin land.", "Bertie lost a whole year of vacation days once because he forgot to use them, and he's been telling young folks about it ever since."],
+  mayor: ["Mayor Maple was elected on a single promise: more benches. There are now forty-one.", "Maple keeps the town's first ledger, a hand-sewn notebook, locked in the Benefits Office, and plans to give it to whoever rescues the most."],
+  postman: ["Pete knows every mailbox in the valley by the sound its lid makes.", "Pete once delivered a forgotten rebate check that turned out to be exactly enough for a farmer's new tractor wheel, and still beams about it."],
+  granny: ["Granny Fern has knitted a scarf for every villager, including Ruth, who wears hers only on audit days.", "Fern taught Ruth to read fine print with a magnifying glass when Ruth was a tiny cria; she's very proud of her."],
+  pharmacy: ["Hazel has a label on her own forehead in her daydreams that says 'off duty' and has never once used it.", "Hazel alphabetized her spice rack, then her bookshelf, then her friends; you're filed under the letter of your first name and she's pleased about it."],
+  clinic: ["Dr. Patel naps in the MRI waiting room because it's the quietest place in the valley.", "Patel became a doctor after a stranger walked her through a confusing hospital bill, and now she tries to be that stranger for others."],
+  dental: ["Gus has a tiny toothbrush collection, one from every town he's visited.", "Gus failed his first hygiene exam because he was too gentle, and now gentleness is the thing patients love most about him."],
+  bank: ["Ivy keeps a jar of bank-bonus cookies on her desk and bakes a new batch whenever someone switches accounts the smart way.", "Ivy grew up somewhere with no bank at all, which is why she explains every fee twice."],
+  store: ["Rosa can spot a rotating 5% category from across the room by the look on a customer's face.", "Rosa keeps a spreadsheet of every card perk she's ever forgotten to use and calls it her wall of shame."],
+  market: ["Fen haggles for fun, even at yard sales where everything is free.", "Fen once talked a subscription company out of a renewal over the phone in eleven seconds; there's a framed receipt by the register."],
+  commons: ["Cook Dot names every pot in the kitchen; the big soup pot is Gerald.", "Dot started as a dishwasher and still washes the first dish of every shift, for luck."],
+  hall: ["Otto has read the entire benefits handbook cover to cover four times, for fun.", "Otto keeps a calendar of every open enrollment since he started, with a gold star on each year nobody in town missed theirs."],
+  library: ["Wren reads with one ear folded down to mark her place.", "Wren paid off her own student loans by reading the fine print on a forgiveness program nobody else noticed, and now that's her mission for everyone."],
+  bakery: ["Rye wakes at 3 a.m. and talks to the dough so it rises happy.", "Rye opened the bakery with the first paycheck he didn't spend on fees, and the oven still has that date scratched inside."],
+  florist: ["Lila can tell what month it is by which flowers are sulking.", "Lila plants a marigold for every farmer who rescues their first benefit; the bed behind the shop is getting crowded."],
+  cottage1: ["Rosie bakes cinnamon rolls on Sundays and leaves one on Ruth's desk, anonymously.", "Rosie is saving for a bigger oven and tracks every perk she earns on a chalkboard in her kitchen."],
+  cottage2: ["Willow hangs a wind chime for every friend who moves away, so the porch is never quiet.", "Willow howls along with the evening church bell and has never once been on key, proudly."],
+  cottage3: ["Maple's cat is also named Maple, which causes confusion at the vet.", "Maple reads the Burrow Gazette's fine print aloud to the cat every morning, and the cat seems to prefer the credit card section."],
+  inn: ["Sol has never charged a resort fee and gets visibly upset when anyone mentions them.", "Sol named the inn after the ledger his grandfather kept, the one that recorded every guest who ever couldn't pay, and every one who came back later to settle up."],
+};

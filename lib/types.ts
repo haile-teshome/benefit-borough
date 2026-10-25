@@ -144,6 +144,7 @@ export type AppState = {
   autopilot?: Autopilot;
   lastPayday?: string; // when Ruth last saw a paycheck land (ISO)
   quests?: Quest[]; // shopping quests in the Benefit Bazaar
+  friends?: Record<string, Friendship>; // chats with each villager or shopkeeper
 };
 
 // The Benefit Bazaar: you name a need and an unspent benefit; shopkeeper agents compete with live
@@ -169,3 +170,7 @@ export type ShiftReport = {
   newClaims: string[]; urgent: string[]; value: number; minutesSaved: number; dataSpent: number; notes: string[];
 };
 export type Autopilot = { mandate: Mandate; spent: { month: string; usd: number }; reports: ShiftReport[]; seen?: string };
+
+// How well you know a villager: chats so far, when you last talked, story beats they've shared,
+// and their own recent lines (so they don't repeat themselves).
+export type Friendship = { talks: number; last?: string; told: number[]; said: string[] };

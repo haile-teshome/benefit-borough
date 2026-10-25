@@ -35,7 +35,7 @@ import { SHELVES, payerFor } from "@/lib/market/shelves";
 import { shoppable } from "@/lib/market/shoppable";
 import { fresh as freshRewards, type Rewards } from "@/lib/rewards";
 import World2D, { type Burst, type Emote, type Mood, type Near, type WorldApi } from "./World2D";
-import { KEEPERS, RUTH_VOICE } from "@/lib/valley/people";
+import { heartsFor, KEEPERS, RUTH_VOICE } from "@/lib/valley/people";
 
 const DB = "expire-valley";
 // Convex holds saved state and the ledger; its live queries drive the valley leaderboard.
@@ -574,7 +574,7 @@ function Valley() {
             actions={n.talk.length > 1 ? <button className="ev-btn ghost" onClick={() => { const i = (modal.line + 1) % n.talk.length; setModal({ ...modal, line: i }); void speak(n.talk[i], n.persona.voice); }}>Tell me more</button> : null}>
             <p className="ev-lead">{n.talk[modal.line]}</p>
             <p className="ev-sub ev-quirk">{n.persona.quirk}</p>
-            <TalkBox key={n.id} pid={pid} who={n.id} name={n.name} voice={n.persona.voice} onSaid={() => void acornEvent({ kind: "chat" })} />
+            <TalkBox key={n.id} pid={pid} who={n.id} name={n.name} voice={n.persona.voice} hearts={heartsFor(state?.friends?.[n.id]?.talks ?? 0)} onSaid={() => void acornEvent({ kind: "chat" })} />
           </Dialogue>
         );
       })()}
@@ -622,7 +622,7 @@ function Valley() {
               </div>
             )}
             {(modal.id === "market" || modal.id === "commons") && <button className="ev-btn" onClick={() => setModal({ kind: "swap" })}>Open the Swap Market</button>}
-            <TalkBox key={modal.id} pid={pid} who={modal.id} name={k.name} voice={k.persona.voice} onSaid={() => void acornEvent({ kind: "chat" })} />
+            <TalkBox key={modal.id} pid={pid} who={modal.id} name={k.name} voice={k.persona.voice} hearts={heartsFor(state?.friends?.[modal.id]?.talks ?? 0)} onSaid={() => void acornEvent({ kind: "chat" })} />
           </Dialogue>
         );
       })()}
@@ -799,6 +799,8 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
   const waiting = (state?.packets ?? []).filter((p) => p.status !== "submitted");
   const next = state?.tiles.filter((t) => !state.done.includes(t.id) && t.atStake > 0).sort((a, b) => a.daysLeft - b.daysLeft)[0];
   const clock = useClock();
+  const [more, setMore] = useState(false);
+  useEffect(() => { try { setMore(localStorage.getItem("ev-menu") === "1"); } catch {} }, []);
   return (
     <>
       <div className="ev-panel ev-date">
@@ -823,6 +825,8 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
         <button className="ev-link strong" onClick={onClaims}>My claims (list) · L</button>
         <button className="ev-link strong" onClick={onOutbox}>Ruth's outbox{waiting.length ? ` (${waiting.filter((p) => p.status === "ready").length} ready, ${waiting.length - waiting.filter((p) => p.status === "ready").length} need you)` : ""}</button>
         <button className="ev-link strong" onClick={onAutopilot}>Ruth's Autopilot {state?.autopilot?.mandate.on ? `(on, ${state.autopilot.mandate.hour % 12 || 12}${state.autopilot.mandate.hour < 12 ? "am" : "pm"})` : "(off)"}</button>
+        <button className="ev-link ev-more" aria-expanded={more} onClick={() => setMore((m) => { try { localStorage.setItem("ev-menu", m ? "0" : "1"); } catch {} return !m; })}>{more ? "Less ▴" : "More ▾"}</button>
+        {more && <>
         <button className="ev-link" onClick={onVoice}>Talk to Ruth (voice check-in)</button>
         <button className="ev-link strong" onClick={onBazaar}>Benefit Bazaar (agents shop for you)</button>
         <button className="ev-link" onClick={onCheckout}>Before you buy (which card?)</button>
@@ -837,6 +841,7 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
         <button className="ev-link" disabled={busy} onClick={onReplant}>{busy ? "Replanting…" : "Replant (reset demo)"}</button>
         <button className="ev-link" onClick={onAvatar}>Change avatar</button>
         <button className="ev-link" onClick={onMute}>{muted ? "Sound off · M" : "Sound on · M"}</button>
+        </>}
       </div>
     </>
   );

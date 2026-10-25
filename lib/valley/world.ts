@@ -62,7 +62,8 @@ export const ZONES: Zone[] = [
   { kind: "health", rect: [-31, -3.6, -6, 3.4] },
   { kind: "credit", rect: [6, -3.6, 31, 3.4] },
   { kind: "deck", rect: [10, -16, 24.5, -10] },
-  { kind: "slab", rect: [-7, -10.5, 7, -5] },
+  { kind: "slab", rect: [-7.5, -10.5, 7.5, -5] },
+  { kind: "slab", rect: [-7.5, -5, 7.5, 3.4] }, // joins the square to both district streets, no grass slivers
   { kind: "plaza", circle: [0, 0, 7.5] },
 ];
 
@@ -115,10 +116,16 @@ function segDist(px: number, pz: number, a: [number, number], b: [number, number
   return Math.hypot(px - (a[0] + t * dx), pz - (a[1] + t * dz));
 }
 
+// Roads all run along the grid, so each is a rectangle with square ends (like laid stone, not a
+// rounded pill). Signed distance: < 0 inside a road.
 export function roadAt(x: number, z: number) {
   let best = Infinity;
-  for (const r of ROADS) best = Math.min(best, segDist(x, z, r.a, r.b) - r.w / 2);
-  return best; // < 0 inside a road
+  for (const r of ROADS) {
+    const cx = (r.a[0] + r.b[0]) / 2, cz = (r.a[1] + r.b[1]) / 2;
+    const hx = Math.abs(r.b[0] - r.a[0]) / 2 + (r.a[1] === r.b[1] ? 0 : r.w / 2), hz = Math.abs(r.b[1] - r.a[1]) / 2 + (r.a[0] === r.b[0] ? 0 : r.w / 2);
+    best = Math.min(best, r.a[0] === r.b[0] || r.a[1] === r.b[1] ? Math.max(Math.abs(x - cx) - hx, Math.abs(z - cz) - hz) : segDist(x, z, r.a, r.b) - r.w / 2);
+  }
+  return best;
 }
 
 export function zoneAt(x: number, z: number): Zone["kind"] | null {

@@ -39,7 +39,10 @@ body { margin: 0; overflow: hidden; background: #8fc4e8; }
 .ev-gold { position: absolute; top: 16px; right: 16px; display: flex; gap: 12px; align-items: center; }
 .ev-gold .ev-title { font: 700 26px var(--read); color: var(--ink); }
 .ev-gold .coin { width: 28px; height: 28px; background: var(--gold); box-shadow: inset -4px -4px 0 #b9821e, inset 4px 4px 0 #ffe58a, 0 0 0 3px var(--wood-dark); }
-.ev-who { position: absolute; top: 100px; right: 16px; min-width: 200px; display: grid; gap: 4px; }
+.ev-who { position: absolute; top: 100px; right: 16px; min-width: 200px; max-width: 260px; display: grid; gap: 4px; }
+.ev-who .ev-more { font-weight: 700; text-decoration: none; opacity: 0.8; }
+.ev-anchor.away { opacity: 0; transition: opacity 0.25s; }
+.ev-anchor { transition: opacity 0.25s; }
 .ev-who .who { display: flex; gap: 8px; align-items: center; font-weight: 700; }
 .ev-who i { width: 12px; height: 12px; display: inline-block; box-shadow: 0 0 0 2px var(--wood-dark); }
 .ev-link { background: none; border: 0; padding: 2px 0 0; color: var(--wood); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font: 500 14px var(--read); text-align: left; }
@@ -167,7 +170,7 @@ body { margin: 0; overflow: hidden; background: #8fc4e8; }
 .ev-upload { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
 
 /* Convex live ledger */
-.ev-live { position: absolute; left: 16px; bottom: 44px; width: 270px; font-size: 13px; display: grid; gap: 6px; }
+.ev-live { position: absolute; left: 16px; bottom: 44px; width: 230px; font-size: 13px; display: grid; gap: 4px; padding: 8px 10px; }
 .ev-live-head { font: 700 15px var(--read); display: flex; align-items: center; gap: 6px; }
 .ev-live-head small { font: 500 11px var(--read); color: var(--ink-2); margin-left: auto; }
 .ev-live-head .dot { width: 8px; height: 8px; background: #e2574c; box-shadow: 0 0 0 2px #7a1f16; animation: ev-blink 1.2s steps(2) infinite; }
@@ -226,6 +229,9 @@ body { margin: 0; overflow: hidden; background: #8fc4e8; }
 /* talking with villagers */
 .ev-quirk { font-style: italic; margin-top: -2px; }
 .ev-talk { margin-top: 10px; display: grid; gap: 6px; }
+.ev-hearts { display: flex; align-items: center; gap: 2px; font-size: 16px; line-height: 1; color: #d9c7a4; }
+.ev-hearts span.on { color: #e2574c; text-shadow: 0 1px 0 #8a2f28; }
+.ev-hearts em { margin-left: 8px; font: italic 600 13px var(--read); color: #8a4f22; animation: ev-pop 0.4s ease-out; }
 .ev-talk form { display: flex; gap: 8px; }
 .ev-talk input { flex: 1; font: 500 15px var(--read); padding: 6px 8px; border: 3px solid var(--wood-dark); background: #fff8e2; color: var(--ink); }
 .ev-talk-log { display: grid; gap: 4px; max-height: 180px; overflow: auto; }

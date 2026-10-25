@@ -7,8 +7,10 @@ import { speak } from "@/lib/valley/audio";
 // their personality sheet) and in their own Cartesia voice.
 type Turn = { from: "you" | "them"; text: string };
 
-export function TalkBox({ pid, who, name, voice, onSaid }: { pid: string; who: string; name: string; voice: string; onSaid?: () => void }) {
+export function TalkBox({ pid, who, name, voice, hearts: startHearts = 0, onSaid }: { pid: string; who: string; name: string; voice: string; hearts?: number; onSaid?: () => void }) {
   const [history, setHistory] = useState<Turn[]>([]);
+  const [hearts, setHearts] = useState(startHearts);
+  const [news, setNews] = useState("");
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   async function send() {
@@ -19,7 +21,9 @@ export function TalkBox({ pid, who, name, voice, onSaid }: { pid: string; who: s
     setHistory(next);
     try {
       const res = await fetch("/api/npc-chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pid, who, message: msg, history }) });
-      const json = (await res.json()) as { reply?: string; error?: string };
+      const json = (await res.json()) as { reply?: string; error?: string; hearts?: number; heartUp?: boolean; told?: boolean };
+      if (typeof json.hearts === "number") setHearts(json.hearts);
+      setNews(json.heartUp ? `You and ${name} are closer now` : json.told ? `${name} told you something new` : "");
       const reply = json.reply ?? json.error ?? "…";
       setHistory([...next, { from: "them", text: reply }]);
       onSaid?.();
@@ -32,6 +36,10 @@ export function TalkBox({ pid, who, name, voice, onSaid }: { pid: string; who: s
   }
   return (
     <div className="ev-talk">
+      <div className="ev-hearts" title={`Friendship with ${name}: ${hearts} of 5 hearts. Chat more to hear their stories.`}>
+        {Array.from({ length: 5 }, (_, i) => <span key={i} className={i < hearts ? "on" : ""}>♥</span>)}
+        {news && <em key={news}>{news}</em>}
+      </div>
       {history.length > 0 && (
         <div className="ev-talk-log">
           {history.slice(-6).map((h, i) => <p key={i} className={h.from}><b>{h.from === "you" ? "You" : name}:</b> {h.text}</p>)}

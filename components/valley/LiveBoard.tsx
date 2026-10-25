@@ -30,8 +30,9 @@ export function LiveBoard({ players, myPid }: { players: readonly Player[]; myPi
           <li key={t.pid} className={t.pid === myPid ? "me" : ""}><b>{i + 1}</b><span>{nameOf(t.pid)}</span><em>{usd(t.total)}</em></li>
         ))}
       </ol>
+      {/* The newest rescue pops in for a moment when it lands, then the board stays compact. */}
       <ul className="ev-feed">
-        {recent.map((r) => (
+        {recent.filter((r) => flash === `${r.pid}${r.at}`).map((r) => (
           <li key={`${r.pid}${r.at}`} className={flash === `${r.pid}${r.at}` ? "new" : ""}>
             <em>+{usd(r.amount)}</em> {nameOf(r.pid)}: {r.description.replace(/^(Call|Submit|Request|File|Cancel|Schedule|Change|Link|Activate|Transfer)\s/i, (m) => m.toLowerCase())}
           </li>

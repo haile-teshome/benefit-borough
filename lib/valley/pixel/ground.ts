@@ -35,14 +35,9 @@ function grass(px: number, py: number) {
   return GRASS[i];
 }
 
-// Light stone with dark accents: pale setts laid in straight rows with soft grey joints, crisp dark
-// curbs along every road, and dark slate details in the town square. Districts get only a faint tint.
+// Light stone with dark accents: one kind of pale sett everywhere (roads, district streets, the
+// square), laid in straight rows with soft grey joints, and one dark curb wherever stone meets grass.
 const LIGHT = ["#E6E1D6", "#DCD6CA", "#EDE9DF", "#D5CFC2", "#E2DDD1"];
-const tint = (pal: string[], to: string, t: number) => pal.map((c) => mix(c, to, t));
-const ROAD = LIGHT;
-const HEALTH = tint(LIGHT, "#BFD8C9", 0.25);
-const FINANCE = tint(LIGHT, "#E2C4B4", 0.25);
-const CIVIC = tint(LIGHT, "#C9C8DA", 0.25);
 const JOINT: [string, string] = ["#9A9288", "#B3ACA1"];
 const DARK = ["#58524C", "#625B54", "#4F4943"];
 
@@ -69,32 +64,27 @@ function curb(px: number, py: number) {
   return py % 3 === 0 ? shade(c, 0.12) : c;
 }
 
-// The town square is a garden plaza: a pale stone circle around the fountain ringed in dark stone,
-// four lawns with flower borders split by stone paths to the four roads, and an outer stone
-// promenade with a dark frame (where the festival stalls and bunting are).
+// The town square is a garden plaza laid in the same setts as the roads: a fan of stone around the
+// fountain inside a dark ring, and four lawns with flower borders, each edged with the same dark curb
+// as the roads. Paths between the lawns line up with the four streets.
 const BLOOMS = ["#F48FB1", "#FFD45A", "#FFFFFF", "#C8A8F0", "#FF8A65"];
 function plaza(x: number, z: number, px: number, py: number) {
-  const r = Math.hypot(x, z), R = 7.5, path = 1.5; // paths as wide as the main road
+  const r = Math.hypot(x, z), path = 1.5; // paths as wide as the main road
   let th = Math.atan2(z, x); if (th < 0) th += Math.PI * 2;
-  const fan = (W: number, pal: string[]) => {
-    const ring = Math.floor(r / W), fr = r / W - ring;
+  if (r < 2.75) { // fan of stones around the fountain
+    const W = 0.5, ring = Math.floor(r / W), fr = r / W - ring;
     const segs = Math.max(8, Math.round((Math.PI * 2 * (ring + 0.5) * W) / 0.62));
-    const s = (th / (Math.PI * 2)) * segs + (ring & 1) * 0.5, fs = s - Math.floor(s);
+    const sg = (th / (Math.PI * 2)) * segs + (ring & 1) * 0.5, fs = sg - Math.floor(sg);
     if (fr < 0.13 || fs * ((Math.PI * 2 * r) / segs) < 0.06) return JOINT[0];
-    const c = pal[Math.floor(hash(ring, Math.floor(s)) * pal.length) % pal.length];
+    const c = LIGHT[Math.floor(hash(ring, Math.floor(sg)) * LIGHT.length) % LIGHT.length];
     return fr > 0.82 ? shade(c, 0.08) : fr < 0.28 ? shade(c, -0.06) : c;
-  };
-  if (r < 2.75) return fan(0.5, LIGHT); // fountain circle
-  if (r < 3.0) return curb(px, py); // dark ring around it
-  if (r >= R - 0.55) return curb(px, py); // dark frame
-  if (r >= 6.35) return fan(0.5, LIGHT); // promenade
-  if (r >= 6.1) return curb(px, py); // dark ring inside the promenade
-  // Cross paths to the four roads, edged in dark stone; lawns in between.
+  }
+  if (r < 3.0) return curb(px, py);
   const ax = Math.abs(x), az = Math.abs(z);
-  if (ax < path || az < path) return Math.min(ax, az) > path - 0.16 ? "#4F4943" : pavers(px, py, LIGHT);
-  // Lawn with a flower border along every edge.
-  const edge = Math.min(ax - path, az - path, r - 3.0, 6.1 - r);
-  if (edge < 0.45) {
+  const lawn = Math.min(ax - path, az - path, r - 3.0, 6.1 - r); // > 0 inside a lawn
+  if (lawn <= 0) return pavers(px, py, LIGHT);
+  if (lawn < 0.2) return curb(px, py);
+  if (lawn < 0.6) {
     const h = hash(Math.floor(px / 2), Math.floor(py / 2));
     if (h > 0.55) return BLOOMS[Math.floor(h * 97) % BLOOMS.length];
     return h > 0.25 ? "#4E8F3A" : "#3F7A30";
@@ -165,9 +155,9 @@ export function bakeGround(): Ground {
       const zk = zoneAt(x, z);
       const paved = pavedDepth(x, z);
       if (zk === "deck") c = paving(zk, px, py);
+      else if (paved >= 0.04 && paved < 0.24) c = curb(px, py);
       else if (zk === "plaza") c = paving(zk, px, py, x, z);
-      else if (paved >= 0.24) c = pavers(px, py, zk === "health" ? HEALTH : zk === "credit" ? FINANCE : zk === "slab" ? CIVIC : ROAD, zk === "slab" ? 10 : 7, zk === "slab" ? 6 : 5);
-      else if (paved >= 0.04) c = curb(px, py);
+      else if (paved >= 0.24) c = pavers(px, py, LIGHT);
       else if (paved > -0.12) c = shade(c, -0.15);
       // The pond sits on the valley floor; up on the bluff, a stream runs down to the falls.
       const stream = t > 0 && x > WATERFALL.x0 + 0.15 + Math.sin(z * 0.9) * 0.15 && x < WATERFALL.x1 - 0.15 + Math.sin(z * 0.9) * 0.15;

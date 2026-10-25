@@ -245,6 +245,8 @@ export default function World2D(props: Props) {
         el.style.transform = `translate(${Math.round(sx)}px, ${Math.round(sy)}px) translate(-50%, ${id.startsWith("crop:") ? "0" : "-100%"})`;
         if (id.startsWith("crop:")) el.classList.toggle("far", Math.hypot(a.x - focus.x, a.z - focus.z) > 1.6);
         if (id.startsWith("claim:") && pos) el.classList.toggle("far", Math.hypot(a.x - pos.x, a.z - pos.z) > 1.4);
+        // Name tags only for people close by, so the town square isn't a pile of labels.
+        if ((id.startsWith("npc:") || id === "elder") && pos) el.classList.toggle("away", Math.hypot(a.x - pos.x, a.z - pos.z) > 3.5);
       }
 
     };
