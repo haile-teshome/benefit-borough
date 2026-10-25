@@ -9,7 +9,7 @@ type Integrations = { claude: boolean; cartesia: boolean; nessie: boolean };
 const CATEGORY: Record<Tile["category"], string> = {
   dental: "Dental", deductible: "Medical", dining: "Dining dollars", fsa: "FSA", card_credit: "Card credit", tax_window: "Open enrollment",
   bank_bonus: "Bank bonus", bank_fee: "Bank fees", idle_cash: "Idle cash", annual_fee: "Annual fee", credit_move: "Card credit", dispute: "Dispute",
-  rotating: "Cash back", price_adjust: "Price drop", fsa_claim: "FSA claim", promo_apr: "Deferred interest", subscription: "Subscriptions", points: "Miles", insurance: "Insurance", vision: "Vision", hsa: "HSA", retirement: "401(k)", pto: "PTO", stipend: "Stipend", dcfsa: "Dependent care", espp: "ESPP",
+  rotating: "Cash back", price_adjust: "Price drop", fsa_claim: "FSA claim", promo_apr: "Deferred interest", subscription: "Subscriptions", points: "Miles", insurance: "Insurance", vision: "Vision", hsa: "HSA", retirement: "401(k)", pto: "PTO", stipend: "Stipend", dcfsa: "Dependent care", espp: "ESPP", fitness: "Gym reimbursement",
 };
 
 async function api<T>(path: string, body?: unknown): Promise<T> {

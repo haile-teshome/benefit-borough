@@ -12,7 +12,7 @@ import { type Answers, Field } from "./Library";
 
 type Preset = { id: string; label: string; blurb: string; plans: string[]; extras?: string[] };
 const PRESETS: Preset[] = [
-  { id: "pro", label: "Working professional", blurb: "401(k) match, PTO, FSA, stipends", plans: ["work-401k-match", "work-pto", "irs-fsa-2026", "work-stipend"], extras: ["irs-hsa-2026", "work-espp", "work-vesting"] },
+  { id: "pro", label: "Working professional", blurb: "401(k) match, PTO, FSA, stipends", plans: ["work-401k-match", "work-pto", "irs-fsa-2026", "work-stipend"], extras: ["health-fitness", "irs-hsa-2026", "work-espp", "work-vesting"] },
   { id: "parent", label: "Working parent", blurb: "Dependent care FSA, up to $7,500", plans: ["work-dcfsa"] },
   { id: "cards", label: "I have premium cards", blurb: "Every statement credit, before it resets", plans: [], extras: ["amex-platinum-2026", "amex-gold-2026", "chase-sapphire-reserve-2026", "venture-x-2026", "citi-strata-elite-2026"] },
   { id: "travel", label: "Frequent traveler", blurb: "Miles and points before they expire", plans: [], extras: ["points-aadvantage", "points-marriott", "points-hilton", "points-ihg"] },
@@ -21,7 +21,7 @@ const PRESETS: Preset[] = [
 // The one to three questions per plan that change the answer most. Salary is asked once.
 const KEY: Record<string, string[]> = {
   "work-401k-match": ["pct", "rate", "cap"], "work-pto": ["days", "rollover"], "irs-fsa-2026": ["balance"], "work-stipend": ["type", "left"],
-  "work-dcfsa": ["balance", "receipts"], "irs-hsa-2026": ["contributed"], "work-espp": ["enrolled", "window"], "work-vesting": ["unvested", "leaving"],
+  "work-dcfsa": ["balance", "receipts"], "health-fitness": ["insurer", "max", "monthly", "months"], "irs-hsa-2026": ["contributed"], "work-espp": ["enrolled", "window"], "work-vesting": ["unvested", "leaving"],
   "ucb-ship-2026": ["deductible_met", "ordered_care"], "cal-dining-2026": ["balance"], "venture-x-2026": ["used_amount"],
   "points-aadvantage": ["balance", "last_activity"], "points-marriott": ["balance", "last_activity"], "points-hilton": ["balance", "last_activity"], "points-ihg": ["balance", "last_activity"],
 };

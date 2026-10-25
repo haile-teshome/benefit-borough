@@ -1,0 +1,34 @@
+{
+  "$schema": "https://apify.com/schemas/v1/actor.ide.json",
+  "actorSpecification": 1,
+  "name": "benefit-terms-watcher",
+  "title": "Benefit Terms Watcher",
+  "description": "Watches public credit card benefit pages, IRS limit pages and plan pages, and reports which credits and dollar limits changed or disappeared versus what you expect.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "inputSchema": "./input_schema.json",
+  "dockerfile": "../Dockerfile",
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "views": {
+        "overview": {
+          "title": "Pages",
+          "transformation": { "fields": ["planId", "url", "ok", "title", "findings", "error", "fetchedAt"] },
+          "display": {
+            "component": "table",
+            "properties": {
+              "planId": { "label": "Plan", "format": "text" },
+              "url": { "label": "Page", "format": "link" },
+              "ok": { "label": "Fetched", "format": "boolean" },
+              "title": { "label": "Title", "format": "text" },
+              "findings": { "label": "Findings", "format": "object" },
+              "error": { "label": "Error", "format": "text" },
+              "fetchedAt": { "label": "Fetched at", "format": "date" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

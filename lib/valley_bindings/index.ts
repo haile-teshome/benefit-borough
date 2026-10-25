@@ -34,20 +34,25 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import CancelOfferReducer from "./cancel_offer_reducer";
+import ConfirmSwapReducer from "./confirm_swap_reducer";
 import HarvestReducer from "./harvest_reducer";
 import JoinReducer from "./join_reducer";
 import MoveReducer from "./move_reducer";
 import OpenGiftReducer from "./open_gift_reducer";
 import PlantFarmReducer from "./plant_farm_reducer";
+import PostOfferReducer from "./post_offer_reducer";
 import SayReducer from "./say_reducer";
 import SendGiftReducer from "./send_gift_reducer";
 import SetProfileReducer from "./set_profile_reducer";
+import TakeOfferReducer from "./take_offer_reducer";
 
 // Import all procedure arg schemas
 
 // Import all table schema definitions
 import ChatRow from "./chat_table";
 import GiftRow from "./gift_table";
+import OfferRow from "./offer_table";
 import PlayerRow from "./player_table";
 import PlotRow from "./plot_table";
 
@@ -80,6 +85,20 @@ const tablesSchema = __schema({
       { name: 'gift_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, GiftRow),
+  offer: __table({
+    name: 'offer',
+    indexes: [
+      { accessor: 'id', name: 'offer_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+      { accessor: 'owner', name: 'offer_owner_idx_btree', algorithm: 'btree', columns: [
+        'owner',
+      ] },
+    ],
+    constraints: [
+      { name: 'offer_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, OfferRow),
   player: __table({
     name: 'player',
     indexes: [
@@ -109,14 +128,18 @@ const tablesSchema = __schema({
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("cancel_offer", CancelOfferReducer),
+  __reducerSchema("confirm_swap", ConfirmSwapReducer),
   __reducerSchema("harvest", HarvestReducer),
   __reducerSchema("join", JoinReducer),
   __reducerSchema("move", MoveReducer),
   __reducerSchema("open_gift", OpenGiftReducer),
   __reducerSchema("plant_farm", PlantFarmReducer),
+  __reducerSchema("post_offer", PostOfferReducer),
   __reducerSchema("say", SayReducer),
   __reducerSchema("send_gift", SendGiftReducer),
   __reducerSchema("set_profile", SetProfileReducer),
+  __reducerSchema("take_offer", TakeOfferReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */

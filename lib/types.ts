@@ -6,7 +6,9 @@ export type Category =
   // from the plan library
   | "vision" | "hsa"
   // workplace benefits
-  | "retirement" | "pto" | "stipend" | "dcfsa" | "espp";
+  | "retirement" | "pto" | "stipend" | "dcfsa" | "espp"
+  // health plan extras
+  | "fitness";
 
 export type Span = { doc: string; start: number; end: number; text: string };
 
@@ -98,6 +100,26 @@ export type DispatchResult = {
 
 export type AuditEvent = { at: string; type: string; detail: string };
 
+// ---------- claim packets: Ruth fills it in, you check it and press Submit ----------
+export type FieldSource = "profile" | "document" | "computed" | "ruth" | "you";
+export type PacketField = { key: string; label: string; value: string; source: FieldSource; cite?: string; required?: boolean; long?: boolean; profileKey?: keyof Profile };
+export type Attachment = { name: string; kind: "receipt" | "statement" | "letter" | "evidence"; lines: string[]; cite?: string; todo?: string };
+export type Packet = {
+  id: string; tileId: string; form: string; provider: string;
+  method: "portal" | "email" | "mail" | "phone" | "chat" | "app" | "transfer";
+  submitTo: string; // where it goes when you press Submit
+  fields: PacketField[]; attachments: Attachment[];
+  message?: string; // the cover note, chat message or call script Ruth drafted
+  amount: number; // what the packet asks for
+  minutes: { you: number; without: number }; // your time with Ruth vs doing it yourself
+  check: { ok: boolean; passed: string[]; issues: string[] };
+  status: "needs you" | "ready" | "submitted" | "rejected";
+  hash: string; // fingerprint of exactly what you approve
+  preparedAt: string; preparedBy: "ruth" | "autopilot"; engine: "claude" | "rules";
+  submittedAt?: string; confirmation?: string;
+};
+export type Profile = { fullName?: string; email?: string; phone?: string; address?: string; birthDate?: string; memberId?: string; employeeId?: string; employer?: string };
+
 export type AppState = {
   docs: { id: string; name: string; text: string; meta?: { plan: string; answers: Record<string, unknown> } }[];
   extraction: Extraction | null;
@@ -109,4 +131,6 @@ export type AppState = {
   checkedInAt?: string; // last weekly check-in
   rewards?: import("./rewards").Rewards; // acorns, streaks, quests, redemptions
   audit: AuditEvent[];
+  profile?: Profile; // what Ruth needs to fill forms; you enter it once
+  packets?: Packet[]; // Ruth's outbox: prepared, never submitted without you
 };

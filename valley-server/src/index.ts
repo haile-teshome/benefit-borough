@@ -60,7 +60,25 @@ const chat = table(
   }
 );
 
-const spacetimedb = schema({ player, plot, gift, chat });
+// The Swap Market: surplus benefits that are actually transferable (Flex dollars, pooled hotel
+// points, a companion seat, gym guest passes) posted by one farmer and taken by another.
+const offer = table(
+  { name: 'offer', public: true },
+  {
+    id: t.u64().primaryKey().autoInc(),
+    owner: t.identity().index('btree'),
+    kind: t.string(), // "dining" | "points" | "pass" | "other"
+    title: t.string(),
+    amount: t.f64(), // in `unit`
+    unit: t.string(), // "USD", "points", "pass", ...
+    want: t.string(), // what they'd like back, or "free"
+    status: t.string(), // "open" | "pending" | "done" | "cancelled"
+    taker: t.identity().optional(),
+    createdAt: t.timestamp(),
+  }
+);
+
+const spacetimedb = schema({ player, plot, gift, chat, offer });
 export default spacetimedb;
 
 type Ctx = ReducerCtx<InferSchema<typeof spacetimedb>>;
@@ -186,4 +204,66 @@ export const say = spacetimedb.reducer({ text: t.string() }, (ctx, { text }) => 
   // Keep the log short; this is a speech-bubble feed, not an archive.
   const all = [...ctx.db.chat.iter()].sort((a, b) => Number(a.id - b.id));
   for (const old of all.slice(0, Math.max(0, all.length - 50))) ctx.db.chat.id.delete(old.id);
+});
+
+const OFFER_KINDS = ['dining', 'points', 'pass', 'other'];
+const MAX_OPEN_OFFERS = 5;
+
+export const postOffer = spacetimedb.reducer(
+  { kind: t.string(), title: t.string(), amount: t.f64(), unit: t.string(), want: t.string() },
+  (ctx, { kind, title, amount, unit, want }) => {
+    me(ctx);
+    if (!OFFER_KINDS.includes(kind)) throw new SenderError('unknown kind');
+    const cleanTitle = title.trim().slice(0, 60);
+    if (!cleanTitle) throw new SenderError('give your offer a title');
+    if (!(Number.isFinite(amount) && amount > 0 && amount <= 1_000_000)) throw new SenderError('amount must be positive');
+    const cleanUnit = unit.trim().slice(0, 16);
+    if (!cleanUnit) throw new SenderError('unit required');
+    const cleanWant = want.trim().slice(0, 80) || 'free';
+    const open = [...ctx.db.offer.owner.filter(ctx.sender)].filter((o) => o.status === 'open' || o.status === 'pending').length;
+    if (open >= MAX_OPEN_OFFERS) throw new SenderError(`at most ${MAX_OPEN_OFFERS} open stalls per farmer`);
+    ctx.db.offer.insert({
+      id: 0n, owner: ctx.sender, kind, title: cleanTitle, amount, unit: cleanUnit, want: cleanWant,
+      status: 'open', taker: undefined, createdAt: ctx.timestamp,
+    });
+  }
+);
+
+export const takeOffer = spacetimedb.reducer({ id: t.u64() }, (ctx, { id }) => {
+  me(ctx);
+  const o = ctx.db.offer.id.find(id);
+  if (!o) throw new SenderError('no such offer');
+  if (o.owner.equals(ctx.sender)) throw new SenderError('cannot take your own offer');
+  if (o.status !== 'open') throw new SenderError('offer is not open');
+  ctx.db.offer.id.update({ ...o, status: 'pending', taker: ctx.sender });
+});
+
+export const confirmSwap = spacetimedb.reducer({ id: t.u64() }, (ctx, { id }) => {
+  me(ctx);
+  const o = ctx.db.offer.id.find(id);
+  if (!o) throw new SenderError('no such offer');
+  if (!o.owner.equals(ctx.sender)) throw new SenderError('only the owner can confirm');
+  if (o.status !== 'pending' || !o.taker) throw new SenderError('nothing to confirm');
+  ctx.db.offer.id.update({ ...o, status: 'done' });
+  if (o.unit === 'USD') {
+    ctx.db.gift.insert({
+      id: 0n, from: o.owner, to: o.taker, amount: o.amount,
+      note: `Swap Market: ${o.title}`.slice(0, 80), opened: false, at: ctx.timestamp,
+    });
+  }
+});
+
+// The owner withdraws an offer; a taker can release a pending take back to the market.
+export const cancelOffer = spacetimedb.reducer({ id: t.u64() }, (ctx, { id }) => {
+  me(ctx);
+  const o = ctx.db.offer.id.find(id);
+  if (!o) throw new SenderError('no such offer');
+  if (o.status === 'done' || o.status === 'cancelled') throw new SenderError('offer is closed');
+  if (o.owner.equals(ctx.sender)) {
+    ctx.db.offer.id.update({ ...o, status: 'cancelled' });
+  } else if (o.status === 'pending' && o.taker && o.taker.equals(ctx.sender)) {
+    ctx.db.offer.id.update({ ...o, status: 'open', taker: undefined });
+  } else {
+    throw new SenderError('not your offer');
+  }
 });

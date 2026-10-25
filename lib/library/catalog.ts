@@ -81,6 +81,28 @@ export const LIBRARY: Plan[] = [
     ],
   },
   {
+    id: "health-fitness", title: "Health plan gym reimbursement", issuer: "Your health insurer", category: "Health plan",
+    community: "Anyone with health insurance", year: "2026", tags: ["gym", "fitness", "reimbursement", "wellness", "insurance", "blue cross", "tufts", "health plan"],
+    sources: [
+      { label: "Blue Cross Blue Shield of Massachusetts fitness reimbursement form", url: "https://www.bu.edu/hr/documents/BCBS_Fitness_Reimbursement_Form.pdf" },
+      { label: "Tufts Health Plan fitness rebate form", url: "https://salve.edu/document/tufts-fitness-rebate-form" },
+    ],
+    checked: "Amounts and rules differ by plan: check your plan's fitness or wellness reimbursement page. Some plans count it as taxable income.",
+    terms: [
+      "Many health plans pay back part of your gym fees each year if you send a claim form with proof of payment.",
+      "Proof of payment is an itemized receipt, a card or bank statement showing the charges, or a letter from the gym.",
+      "Claims must be submitted by the plan's deadline (for example, March 31 of the next year); unclaimed reimbursement is lost.",
+    ],
+    questions: [
+      { key: "insurer", ask: "Your health insurer:", kind: "choice", options: ["Blue Cross Blue Shield", "Tufts Health Plan", "Aetna", "Cigna", "UnitedHealthcare", "Anthem", "Other"], default: "Blue Cross Blue Shield" },
+      { key: "max", ask: "Your plan pays back up to (per year):", kind: "money", default: 150 },
+      { key: "monthly", ask: "Your gym membership costs (per month):", kind: "money", default: 49.99 },
+      { key: "months", ask: "Months you've paid this year:", kind: "number", default: 10 },
+      { key: "gym", ask: "Your gym:", kind: "choice", options: ["24 Hour Fitness", "Planet Fitness", "Equinox", "YMCA", "LA Fitness", "A local gym"], default: "24 Hour Fitness" },
+      { key: "deadline", ask: "Claim deadline:", kind: "date", default: "2027-03-31" },
+    ],
+  },
+  {
     id: "work-vesting", title: "401(k) vesting: don't leave money behind", issuer: "Your employer's retirement plan", category: "Workplace benefit",
     community: "Working professionals", year: "2026", tags: ["vesting", "cliff", "401k", "job change", "leaving", "employer"],
     sources: [{ label: "Vanguard via NAPA: forfeitures in 30% of job separations", url: "https://www.napa-net.org/news/2025/2/do-401k-vesting-schedules-help-with-worker-retention/" }],

@@ -11,7 +11,7 @@ import { findSpan } from "./spans";
 const CATEGORIES = [
   "fsa", "dental", "deductible", "dining", "card_credit", "tax_window",
   "bank_bonus", "bank_fee", "idle_cash", "annual_fee", "credit_move", "dispute", "rotating",
-  "price_adjust", "fsa_claim", "promo_apr", "subscription", "points", "insurance", "vision", "hsa", "retirement", "pto", "stipend", "dcfsa", "espp",
+  "price_adjust", "fsa_claim", "promo_apr", "subscription", "points", "insurance", "vision", "hsa", "retirement", "pto", "stipend", "dcfsa", "espp", "fitness",
 ] as const;
 
 export const FACT_KEYS = [

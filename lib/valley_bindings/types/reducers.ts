@@ -6,21 +6,29 @@
 import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
+import CancelOfferReducer from "../cancel_offer_reducer";
+import ConfirmSwapReducer from "../confirm_swap_reducer";
 import HarvestReducer from "../harvest_reducer";
 import JoinReducer from "../join_reducer";
 import MoveReducer from "../move_reducer";
 import OpenGiftReducer from "../open_gift_reducer";
 import PlantFarmReducer from "../plant_farm_reducer";
+import PostOfferReducer from "../post_offer_reducer";
 import SayReducer from "../say_reducer";
 import SendGiftReducer from "../send_gift_reducer";
 import SetProfileReducer from "../set_profile_reducer";
+import TakeOfferReducer from "../take_offer_reducer";
 
+export type CancelOfferParams = __Infer<typeof CancelOfferReducer>;
+export type ConfirmSwapParams = __Infer<typeof ConfirmSwapReducer>;
 export type HarvestParams = __Infer<typeof HarvestReducer>;
 export type JoinParams = __Infer<typeof JoinReducer>;
 export type MoveParams = __Infer<typeof MoveReducer>;
 export type OpenGiftParams = __Infer<typeof OpenGiftReducer>;
 export type PlantFarmParams = __Infer<typeof PlantFarmReducer>;
+export type PostOfferParams = __Infer<typeof PostOfferReducer>;
 export type SayParams = __Infer<typeof SayReducer>;
 export type SendGiftParams = __Infer<typeof SendGiftReducer>;
 export type SetProfileParams = __Infer<typeof SetProfileReducer>;
+export type TakeOfferParams = __Infer<typeof TakeOfferReducer>;
 

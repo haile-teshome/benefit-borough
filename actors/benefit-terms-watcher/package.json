@@ -1,0 +1,18 @@
+{
+  "name": "benefit-terms-watcher",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Apify Actor that watches public benefit and terms pages for changed credits and limits.",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@crawlee/cheerio": "^3.18.2",
+    "apify": "^3.7.2"
+  },
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "license": "ISC",
+  "private": true
+}

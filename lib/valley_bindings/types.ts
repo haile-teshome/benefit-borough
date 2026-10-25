@@ -29,6 +29,20 @@ export const Gift = __t.object("Gift", {
 });
 export type Gift = __Infer<typeof Gift>;
 
+export const Offer = __t.object("Offer", {
+  id: __t.u64(),
+  owner: __t.identity(),
+  kind: __t.string(),
+  title: __t.string(),
+  amount: __t.f64(),
+  unit: __t.string(),
+  want: __t.string(),
+  status: __t.string(),
+  taker: __t.option(__t.identity()),
+  createdAt: __t.timestamp(),
+});
+export type Offer = __Infer<typeof Offer>;
+
 export const Player = __t.object("Player", {
   identity: __t.identity(),
   name: __t.string(),

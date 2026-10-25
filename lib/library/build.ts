@@ -43,6 +43,7 @@ function personalLines(plan: Plan, a: Answers): string[] {
     case "work-pto": return [`PTO days I have left: ${num(a.days)}.`, `Days my policy rolls over: ${num(a.rollover, 5)}.`, `My salary: ${usd(num(a.salary))} a year.`, `My PTO year ends: ${fmtDate(String(a.year_end || "2026-12-31"))}.`];
     case "work-dcfsa": return [`My dependent care FSA balance: ${usd(num(a.balance))}.`, `Childcare paid but not submitted: ${usd(num(a.receipts))}.`, `My plan year ends: ${fmtDate(String(a.year_end || "2026-12-31"))}.`];
     case "work-stipend": return [`My ${String(a.type || "wellness").toLowerCase()} stipend left: ${usd(num(a.left))}.`, `It resets on ${fmtDate(String(a.resets || "2026-12-31"))}.`];
+    case "health-fitness": return [`My health insurer: ${a.insurer || "Blue Cross Blue Shield"}; it pays back up to ${usd(num(a.max, 150))} of gym fees a year.`, `My gym: ${a.gym || "24 Hour Fitness"}, ${usd(num(a.monthly, 49.99))} a month, paid ${num(a.months, 10)} months this year.`, `Gym reimbursement claimed so far: none. Claim deadline: ${fmtDate(String(a.deadline || "2027-03-31"))}.`];
     case "work-vesting": return [`Employer money not vested yet: ${usd(num(a.unvested))}.`, `It vests on ${fmtDate(String(a.vests || "2027-03-01"))}.`, `Thinking about leaving before then: ${String(a.leaving || "No").toLowerCase()}.`];
     case "work-espp": return [`Enrolled in the ESPP: ${a.enrolled === "Yes" ? "yes" : "no"}.`, `Next enrollment window opens: ${fmtDate(String(a.window || "2026-11-15"))}.`, `My salary: ${usd(num(a.salary))}; I'd contribute ${num(a.pct, 5)}% at a ${num(a.discount, 15)}% discount.`];
     case "venture-x-2026": return [`My account anniversary: ${fmtDate(String(a.anniversary || "2027-02-15"))}.`, `Travel credit used this cardmember year: ${usd(num(a.used_amount))} of $300.`];
@@ -105,6 +106,10 @@ export function libraryFindings(doc: SourceDoc, today: string): LibFinding[] {
   }
   if (plan.id === "work-stipend" && num(a.left) > 0) {
     out.push({ id: id("stipend"), category: "stipend", label: `${a.type || "Wellness"} stipend`, amount: num(a.left), deadline: String(a.resets || "2026-12-31"), span: line(/stipend left/), rule: plan.terms[0] });
+  }
+  if (plan.id === "health-fitness") {
+    const paid = round2(num(a.monthly, 49.99) * num(a.months, 10)), back = Math.min(num(a.max, 150), paid);
+    if (back > 0) out.push({ id: id("fitness"), category: "fitness", label: `Gym reimbursement from ${a.insurer || "your health plan"}`, amount: back, deadline: String(a.deadline || "2027-03-31"), span: line(/^My gym:/), rule: plan.terms[2], facts: { paid, max: num(a.max, 150), monthly: num(a.monthly, 49.99), months: num(a.months, 10) } });
   }
   if (plan.id === "work-vesting" && num(a.unvested) > 0 && a.leaving !== "No" && String(a.vests) >= today) {
     out.push({ id: id("vesting"), category: "retirement", label: "Unvested 401(k) money", amount: num(a.unvested), deadline: String(a.vests || "2027-03-01"), span: line(/not vested yet/), rule: plan.terms[0] });

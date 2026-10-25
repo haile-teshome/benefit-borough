@@ -1,0 +1,38 @@
+{
+  "title": "Benefit Terms Watcher input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "pages": {
+      "title": "Pages to watch",
+      "type": "array",
+      "description": "Each page: { planId, url, expect: [{ key, name, amount }] }. The watcher looks for sentences mentioning each name and compares the dollar amounts it finds to amount.",
+      "editor": "json",
+      "prefill": [
+        {
+          "planId": "amex-platinum-2026",
+          "url": "https://www.fool.com/money/credit-cards/articles/how-the-american-express-platinum-card-can-pay-for-its-annual-fee-3-times-over-in-2026",
+          "expect": [
+            { "key": "airline", "name": "Airline incidental fee credit", "amount": 200 },
+            { "key": "clear", "name": "CLEAR+ credit", "amount": 209 }
+          ]
+        }
+      ]
+    },
+    "useProxy": {
+      "title": "Use Apify Proxy",
+      "type": "boolean",
+      "description": "Route requests through Apify Proxy when running on the platform (ignored locally).",
+      "default": true
+    },
+    "maxRetries": {
+      "title": "Max retries per page",
+      "type": "integer",
+      "description": "How many times to retry a blocked or failed page before reporting it as an error.",
+      "default": 2,
+      "minimum": 0,
+      "maximum": 5
+    }
+  },
+  "required": ["pages"]
+}

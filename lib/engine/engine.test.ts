@@ -98,16 +98,32 @@ test("an uploaded CSV statement yields grounded findings", async () => {
   for (const t of tiles.filter((t) => t.id.startsWith("tile_up_"))) assert.equal(ruleCheck({ kind: "tile", tile: t }, ex, csv).verdict, "approve");
 });
 
-test("Ruth waits for the user's answer before acting, and stands down on 'keep'", async () => {
-  const { scan, dispatch, answer } = await import("../pipeline");
+test("Ruth prepares, you submit: she waits for answers and never sends on her own", async () => {
+  const { scan, dispatch, answer, prepare, submitPacket, editPacketFields } = await import("../pipeline");
   const pid = "test_ask";
+  (await import("node:fs")).rmSync(`.data/state-${pid}.json`, { force: true });
   const s = await scan(SAMPLE_DOCS, pid);
   assert.ok(s.tiles.find((t) => t.id === "tile_subs")?.ask);
-  await assert.rejects(dispatch("tile_subs", pid), /waiting for your answer/);
+  // No packet, no submission: even with an approved tile, dispatch refuses.
+  await assert.rejects(dispatch("tile_subs", pid), /never sends a claim on her own/);
+  let { packet } = await prepare("tile_subs", pid);
+  assert.equal(packet.status, "needs you");
+  assert.ok(packet.check.issues.some((i) => /waiting for your answer/.test(i)));
+  await assert.rejects(submitPacket(packet.id, packet.hash, pid), /Not ready/);
   await answer("tile_subs", "go", pid);
-  assert.equal((await dispatch("tile_subs", pid)).result.status, "confirmed");
+  ({ packet } = await prepare("tile_subs", pid));
+  assert.equal(packet.fields.find((f) => f.key === "fullName")?.value, "Jordan Lee"); // prefilled from the statement
+  assert.equal(packet.status, "ready");
+  // The fingerprint you approved must match what's sent.
+  await assert.rejects(submitPacket(packet.id, "0000", pid), /changed since you reviewed/);
+  assert.equal((await submitPacket(packet.id, packet.hash, pid)).result.status, "confirmed");
+  // Editing a packet changes its fingerprint, so an old approval no longer works.
+  const fsa = await prepare("tile_fsa_claim", pid);
+  const edited = await editPacketFields(fsa.packet.id, { employeeId: "E-4417" }, pid);
+  assert.notEqual(edited.packet.hash, fsa.packet.hash);
   await answer("tile_annual_fee", "keep", pid);
-  await assert.rejects(dispatch("tile_annual_fee", pid), /Reviewer has not approved/);
+  const fee = await prepare("tile_annual_fee", pid);
+  await assert.rejects(submitPacket(fee.packet.id, fee.packet.hash, pid), /Not ready/);
   (await import("node:fs")).rmSync(`.data/state-${pid}.json`, { force: true });
 });
 

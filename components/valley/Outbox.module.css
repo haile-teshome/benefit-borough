@@ -1,0 +1,28 @@
+.panel.panel { max-width: 760px; max-height: calc(100vh - 80px); display: flex; flex-direction: column; }
+.body { flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; padding-right: 4px; }
+.summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+.summary div { background: var(--parchment-2); padding: 8px 10px; display: grid; }
+.summary b { font: 700 22px/1.1 var(--read); }
+.summary span { font-size: 13px; color: var(--ink-2); }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 10px 0; }
+.field { display: flex; flex-direction: column; gap: 3px; font: 700 13px var(--read); color: var(--ink-2); min-width: 0; }
+.field span { display: flex; justify-content: space-between; gap: 6px; }
+.field em { font: 400 12px var(--read); font-style: normal; color: var(--ink-2); opacity: 0.8; }
+.field input, .field textarea, .block textarea { font: 15px var(--read); color: var(--ink); background: #fffaf0; border: 3px solid var(--wood); padding: 5px 8px; min-width: 0; resize: vertical; }
+.field input:focus, .field textarea:focus, .block textarea:focus { outline: 3px solid var(--gold); outline-offset: 0; }
+.needs input, .needs textarea { border-color: var(--stamp); background: #fff1e8; }
+.needs em { color: var(--stamp); opacity: 1; font-weight: 700; }
+.cite { font: 400 12px var(--read); color: var(--ink-2); background: #fff3b8; padding: 1px 4px; overflow-wrap: anywhere; }
+.block { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; }
+.block code { font: 12px ui-monospace, Menlo, monospace; background: #fffaf0; padding: 3px 6px; overflow-wrap: anywhere; }
+.check { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 14px; }
+.ok { color: var(--ok); }
+.ready { color: var(--ok); font-weight: 700; }
+.issue { color: var(--stamp); font-weight: 700; }
+.list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.list button { width: 100%; display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; text-align: left; font: 15px var(--read); color: var(--ink); background: #fffaf0; border: 3px solid var(--parchment-2); padding: 8px 10px; cursor: pointer; }
+.list button:hover { border-color: var(--wood); }
+.list span { display: grid; }
+.list em { font-style: normal; font-size: 13px; color: var(--ink-2); }
+.list i { font-style: normal; font-size: 13px; }
+@media (max-width: 640px) { .fields { grid-template-columns: 1fr; } .summary { grid-template-columns: 1fr; } }

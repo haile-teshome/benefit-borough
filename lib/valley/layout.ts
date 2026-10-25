@@ -40,6 +40,7 @@ export const CROP_LOOK: Record<string, { name: string; band: string }> = {
   stipend: { name: "Perk Pumpkin", band: "#E07BB0" },
   dcfsa: { name: "Daycare Daisy", band: "#4E8FCB" },
   espp: { name: "Stock Sprout", band: "#5E3A99" },
+  fitness: { name: "Treadmill Tulip", band: "#E2574C" },
 };
 
 export const usd = (n: number) => "$" + Math.round(n).toLocaleString("en-US");
