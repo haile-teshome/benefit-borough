@@ -183,10 +183,42 @@ export async function optimize(ex: Extraction): Promise<Tile[]> {
   }
 
   tiles.push(...statementTiles(ex), ...uploadTiles(ex), ...libraryTiles(ex));
+  tiles.push(...documentTiles(ex, new Set(tiles.flatMap((t) => t.balanceIds))));
 
   const score = (t: Tile) => t.atStake / Math.sqrt(Math.max(t.daysLeft, 1));
   tiles.sort((a, b) => score(b) - score(a));
   return claudeEnabled() ? narrate(tiles) : tiles;
+}
+
+// ---------- anything else found in your documents ----------
+// Workplace benefits read from an uploaded guide or plan summary (stipends, PTO, tuition help…)
+// that no specific builder covers: one crop each, with the document's own rule and deadline.
+const DOC_KINDS: Partial<Record<Balance["category"], { verb: string; to: string; steps: string[] }>> = {
+  stipend: { verb: "Use", to: "your stipend or LSA portal", steps: ["Opening your stipend portal (Forma, Compt, Benepass…)", "Submitting a purchase you already planned", "Reimbursement approved"] },
+  pto: { verb: "Take", to: "your HR system", steps: ["Opening your HR system → Time off", "Requesting the days before the deadline", "Time off approved"] },
+  education: { verb: "Claim", to: "your HR or benefits team", steps: ["Gathering your receipt and proof of completion", "Submitting the reimbursement request", "Reimbursement approved"] },
+  dcfsa: { verb: "Claim", to: "your FSA administrator", steps: ["Filling the dependent care claim", "Attaching the provider's receipt", "Claim submitted"] },
+  fitness: { verb: "Claim", to: "your health plan", steps: ["Filling the fitness reimbursement form", "Attaching proof of payment", "Claim submitted"] },
+  vision: { verb: "Use", to: "your vision plan", steps: ["Booking an in-network exam", "Ordering glasses or contacts", "Allowance applied"] },
+  retirement: { verb: "Claim", to: "your HR or benefits team", steps: ["Checking the rule in your plan", "Making the change before the deadline", "Confirmed"] },
+};
+function documentTiles(ex: Extraction, covered: Set<string>): Tile[] {
+  return ex.balances.filter((b) => !covered.has(b.id) && b.amount > 0 && DOC_KINDS[b.category] && daysBetween(DEMO_TODAY, b.deadline) >= 0).map((b): Tile => {
+    const k = DOC_KINDS[b.category]!;
+    const by = new Date(`${b.deadline}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+    const days = b.category === "pto" && /\bdays?\b/i.test(b.label);
+    const what = days ? `${b.amount} PTO day${b.amount === 1 ? "" : "s"}` : `${usd(b.amount)} ${b.label}`;
+    const money = days ? 0 : b.amount;
+    // The same gating question the library plans ask, so nobody is nudged to spend just to use it up.
+    const ask = days ? `Do you want to take ${b.amount} day${b.amount === 1 ? "" : "s"} off before ${by}?` : b.category === "retirement" ? undefined : "Is there something you'd buy or do anyway that it covers?";
+    return {
+      balanceIds: [b.id], deadline: b.deadline, daysLeft: daysBetween(DEMO_TODAY, b.deadline), sources: [b.source], engine: "mock",
+      id: `tile_${b.id}`, category: b.category, title: days ? `${what} will be forfeited ${by}` : `${k.verb} your ${what} before ${by}`, live: true, atStake: money, doNothingCost: money, ask,
+      candidates: [{ id: "act", label: `${k.verb} it before ${by}`, costToUser: 0, detail: b.ruleText }], recommendation: "act",
+      headline: `Your documents say: ${b.ruleText}`, tradeoff: days ? "Rest is the point; plan around work so it's actually time off." : "Only for things you'd do or buy anyway.", doNothing: days ? `${b.amount} day${b.amount === 1 ? "" : "s"} forfeited after ${by}.` : `Lost after ${by}.`,
+      action: request(`${k.verb} your ${b.label.toLowerCase()}`, money, { title: `${k.verb} your ${b.label.toLowerCase()}`, to: k.to, steps: k.steps, confirmation: `DOC-${b.id.slice(-6).toUpperCase()}` }),
+    };
+  });
 }
 
 // ---------- bank and card statements ----------

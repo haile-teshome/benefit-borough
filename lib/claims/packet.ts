@@ -33,7 +33,21 @@ export function checkPacket(p: Omit<Packet, "check" | "status" | "hash">, tile: 
 
 const fmt = (n: number) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+// "[member name]", "[your name]", "[member ID]": once you've filled the matching field, the
+// message uses your answer instead of the placeholder.
+const norm = (x: string) => x.toLowerCase().replace(/\(.*?\)/g, "").replace(/\b(your|the)\b/g, "").replace(/\s+/g, " ").trim();
+export function fillPlaceholders(message: string | undefined, fields: Packet["fields"], profile: Profile = {}) {
+  if (!message) return message;
+  return message.replace(/\[([^\]]{2,40})\]/g, (all, name: string) => {
+    const n = norm(name);
+    const f = fields.find((x) => x.value && (norm(x.label) === n || norm(x.label).includes(n) || n.includes(norm(x.label)) || (n.endsWith("name") && x.key === "fullName")));
+    const fromProfile = n.endsWith("name") ? profile.fullName : undefined;
+    return f?.value || fromProfile || all;
+  });
+}
+
 function finish(d: Omit<Packet, "check" | "status" | "hash">, tile: Tile, s: AppState): Packet {
+  d = { ...d, message: fillPlaceholders(d.message, d.fields, s.profile) };
   const check = checkPacket(d, tile, s);
   return { ...d, check, status: check.ok ? "ready" : "needs you", hash: fingerprint(d) };
 }

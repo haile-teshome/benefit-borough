@@ -160,7 +160,7 @@ export function Outbox({ state, onOpen, onPaid, onClose }: { state: AppState; on
 // After Submit: the real place this claim goes, with everything Ruth prepared ready to paste.
 export function HandoffPanel({ pid, packet, handoff, onClose }: { pid: string; packet: Packet; handoff: Handoff; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
-  const open = (url: string) => { const w = window.open(url, "_blank", "popup,width=1180,height=860"); if (w) w.opener = null; else window.open(url, "_blank", "noopener,noreferrer"); };
+  const open = (url: string) => { if (url.startsWith("mailto:")) { window.location.href = url; return; } const w = window.open(url, "_blank", "popup,width=1180,height=860"); if (w) w.opener = null; else window.open(url, "_blank", "noopener,noreferrer"); };
   async function copy() { try { await navigator.clipboard.writeText(handoff.script ?? packet.message ?? packet.fields.map((f) => `${f.label}: ${f.value}`).join("\n")); setCopied(true); } catch { /* clipboard blocked */ } }
   return (
     <div className="ev-dialogue-wrap">
@@ -175,7 +175,7 @@ export function HandoffPanel({ pid, packet, handoff, onClose }: { pid: string; p
           <p className="ev-sub">When {packet.provider} comes through, tap “Money arrived” in Ruth's outbox. That's when it counts as rescued.</p>
         </div>
         <div className="ev-actions">
-          {handoff.url && <button className="ev-btn" onClick={() => open(handoff.url!)}>Open {handoff.label}</button>}
+          {handoff.url && <button className="ev-btn" onClick={() => open(handoff.url!)}>{handoff.kind === "email" ? "Write the email" : `Open ${handoff.label}`}</button>}
           {(packet.message || handoff.script) && <button className="ev-btn ghost" onClick={() => void copy()}>{copied ? "Copied" : "Copy the message"}</button>}
           <button className="ev-btn ghost" onClick={() => open(`/api/packets/pdf?pid=${pid}&id=${packet.id}`)}>Get the PDF</button>
           <button className="ev-btn ghost" onClick={onClose}>Done</button>

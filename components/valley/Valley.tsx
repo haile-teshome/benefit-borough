@@ -794,7 +794,7 @@ function UploadButton({ busy, onUpload, className, label }: { busy: boolean; onU
   return (
     <>
       <button className={className} disabled={busy} onClick={() => input.current?.click()}>{busy ? "Reading…" : label}</button>
-      <input ref={input} type="file" accept=".csv,.pdf,text/csv,application/pdf" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = ""; }} />
+      <input ref={input} type="file" accept=".csv,.pdf,.txt,.png,.jpg,.jpeg,.webp,text/csv,text/plain,application/pdf,image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = ""; }} />
     </>
   );
 }
@@ -860,7 +860,7 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
           <section>
             <h4>Your benefits</h4>
             <button className="ev-link" onClick={onLibrary}>Find my plans (plan library)</button>
-            <UploadButton busy={busy} onUpload={onUpload} className="ev-link" label="Plant a bank statement (CSV/PDF)" />
+            <UploadButton busy={busy} onUpload={onUpload} className="ev-link" label="Upload a document (statement, benefits guide, photo)" />
             {onHousehold && <button className="ev-link" onClick={onHousehold}>Household (share with family)</button>}
             <button className="ev-link" onClick={onTerms}>Burrow Gazette (fine-print news)</button>
           </section>

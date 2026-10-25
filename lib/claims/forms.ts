@@ -118,7 +118,13 @@ export function draftFor(tile: Tile, s: AppState): Draft {
       fields: [P("fullName", "Account holder", p), D("what", "Account", cite ?? tile.title, cite), D("amount", "Saved", usd(amount), cite)], attachments: [],
       minutes: { you: 2, without: 25 },
       message: tile.category === "annual_fee" ? `I'd like to downgrade my card to the no-annual-fee version and have the ${usd(amount)} annual fee refunded; it posted within the last 30 days. Please don't close the account (it keeps my credit history).` : `I'd like to cancel before the next renewal so I'm not charged. Please confirm the cancellation by email.` };
-    case "retirement": return { ...base, form: "401(k) contribution change", provider: "your 401(k) recordkeeper", method: "portal", submitTo: "Your recordkeeper portal (Fidelity, Vanguard, Empower…) → Contributions",
+    case "retirement":
+      // Unvested employer money: the move is timing your last day, so Ruth drafts a note to HR.
+      if (tile.id.includes("vesting")) return { ...base, form: "Confirm your vesting date with HR", provider: "your HR or benefits team", method: "email", submitTo: "Your HR or benefits team (email)",
+        fields: [P("fullName", "Employee", p), P("employer", "Employer", p), D("unvested", "Employer money not vested yet", usd(amount), cite), D("vests", "Vests on", tile.action.payload.deadline ? String(tile.action.payload.deadline) : (b?.deadline ?? "")), YOU("lastDay", "Last day you're considering")],
+        attachments: [], minutes: { you: 1, without: 15 },
+        message: `Hi, I'd like to confirm my 401(k) vesting schedule. My records show ${usd(amount)} of employer contributions vesting on ${b?.deadline ?? "my next vesting date"}. Could you confirm that date, and whether I need to be employed through that day (or through the end of that pay period) for it to vest? Thank you, ${p.fullName ?? "[your name]"}.` };
+      return { ...base, form: "401(k) contribution change", provider: "your 401(k) recordkeeper", method: "portal", submitTo: "Your recordkeeper portal (Fidelity, Vanguard, Empower…) → Contributions",
       fields: [P("fullName", "Participant", p), P("employer", "Employer", p), D("from", "Current contribution", `${fact("pct") ?? "?"}% of pay`, cite), D("to", "New contribution", `${fact("cap") ?? "?"}% of pay`), D("effective", "Effective", "Next payroll")],
       attachments: [], minutes: { you: 1, without: 10 } };
     case "pto": return { ...base, form: "Time-off request", provider: "your HR system", method: "portal", submitTo: "Your HR system (Workday, Rippling, BambooHR…) → Time off",

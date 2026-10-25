@@ -27,6 +27,11 @@ const DESTS: Dest[] = [
   { re: /8863/i, kind: "web", label: "IRS Form 8863", url: "https://www.irs.gov/forms-pubs/about-form-8863", steps: ["Add Form 8863 in your tax software (Ruth's PDF has the numbers)", "Use your Form 1098-T"] },
   { re: /1098-e|loan interest/i, kind: "web", label: "IRS Form 1098-E", url: "https://www.irs.gov/forms-pubs/about-form-1098-e", steps: ["Download Form 1098-E from your servicer", "Enter the interest in your tax software"] },
   { re: /529/i, kind: "web", label: "Find your state's 529 plan", url: "https://www.savingforcollege.com/compare_529_plans", steps: ["Open your state's plan and schedule the contribution before the deadline"] },
+  { re: /marriott|bonvoy/i, kind: "web", label: "Marriott Bonvoy", url: "https://www.marriott.com/loyalty.mi", steps: ["Sign in → book a stay, buy points or use a Bonvoy partner", "Any earning or redeeming activity resets the 24-month clock"] },
+  { re: /hilton/i, kind: "web", label: "Hilton Honors", url: "https://www.hilton.com/en/hilton-honors/", steps: ["Sign in → earn or redeem points (a stay, a partner purchase or Points Explorer)", "Any activity resets the 24-month clock"] },
+  { re: /\bihg\b/i, kind: "web", label: "IHG One Rewards", url: "https://www.ihg.com/rewardsclub/us/en/home", steps: ["Sign in → earn or redeem points", "Any activity resets the 12-month clock"] },
+  { re: /venture x|capital one travel/i, kind: "web", label: "Capital One Travel", url: "https://travel.capitalone.com/", steps: ["Sign in with your Venture X card", "Book a flight, hotel or car; the $300 credit applies to Capital One Travel bookings"] },
+  { re: /citi travel|strata elite|splurge|blacklane/i, kind: "web", label: "Citi Strata Elite benefits", url: "https://www.citi.com/credit-cards/citi-strata-elite-credit-card", steps: ["Check which purchases earn each credit", "Book hotels through Citi Travel (cititravel.com) for the hotel credit"] },
   { re: /ship|university health services/i, kind: "web", label: "UC Berkeley SHIP", url: "https://uhs.berkeley.edu/insurance-ship", steps: ["Book through University Health Services"] },
 ];
 
@@ -38,6 +43,12 @@ export function handoffFor(tile: Tile, p: Packet, s: AppState): Handoff {
   const d = DESTS.find((x) => x.re.test(text));
   const phone = d?.phone ?? (typeof tile.action.payload.phone === "string" && /\d{3}.*\d{4}/.test(tile.action.payload.phone) ? tile.action.payload.phone : undefined);
   const script = p.message ?? (tile.action.kind === "book_call" ? `Hi, I'm calling to ${tile.action.summary.replace(/^Call [^ ]+ ?[^ ]* to /i, "").toLowerCase()}.` : undefined);
+  // Workplace claims with no public page (HR, payroll, your FSA administrator): Ruth's message
+  // goes out as an email you address and send.
+  if (!d && !phone && (p.method === "email" || /\bHR\b|employer|payroll|benefits (team|portal)|administrator|recordkeeper|stipend|student portal|registrar/i.test(`${p.provider} ${p.submitTo}`))) {
+    const body = p.message ?? [`Hi, I'd like to submit: ${p.form}.`, ...p.fields.filter((f) => f.value).map((f) => `${f.label}: ${f.value}`), "", "Thank you."].join("\n");
+    return { kind: "email", label: p.submitTo, url: `mailto:?subject=${encodeURIComponent(p.form)}&body=${encodeURIComponent(body)}`, steps: [`Open the email Ruth wrote and add ${p.provider}'s address (it's in your HR portal or benefits guide)`, p.attachments.length ? "Attach Ruth's PDF and receipts" : "Check the details", "Send it, then mark it filed here"], script: body, sample };
+  }
   return {
     kind: d?.kind ?? (phone ? "phone" : GENERIC[p.method]),
     label: d?.label ?? p.submitTo,

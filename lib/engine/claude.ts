@@ -76,3 +76,19 @@ export async function searchStructured<S extends z.ZodType>(opts: {
   }
   return { data: null, searches };
 }
+
+// Read a photo or a scanned PDF: Claude transcribes every line of text (one table row per line,
+// amounts and dates exactly as printed) so the normal pipeline can work from it.
+export async function transcribe(data: ArrayBuffer, mediaType: string): Promise<string> {
+  client ??= new Anthropic();
+  const b64 = Buffer.from(data).toString("base64");
+  const source = mediaType === "application/pdf"
+    ? ({ type: "document", source: { type: "base64", media_type: "application/pdf", data: b64 } } as const)
+    : ({ type: "image", source: { type: "base64", media_type: mediaType as "image/png" | "image/jpeg" | "image/webp" | "image/gif", data: b64 } } as const);
+  const res = await client.messages.create({
+    model: "claude-sonnet-5-5",
+    max_tokens: 8000,
+    messages: [{ role: "user", content: [source, { type: "text", text: "Transcribe all the text in this document exactly as printed. Keep one line of text per line, put each table row on a single line, and copy every amount, date, plan name and rule word for word. Output only the transcription." }] }],
+  });
+  return res.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("\n").trim();
+}

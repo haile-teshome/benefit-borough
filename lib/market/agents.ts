@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { searchStructured } from "../engine/claude";
+import { feedEnabled, marketFeed, pickFrom } from "../integrations/shopping";
 
 // The burrow's seller agents. Each shopkeeper searches the live web its own way and sells its
 // quote to buyers (Ruth) over x402. Same request, different strategies: that's the market.
@@ -27,6 +28,12 @@ export type QuoteRequest = { agent: AgentId; need: string; benefit: string; cons
 
 export async function quote(q: QuoteRequest, attempt = 1): Promise<{ offers: RawOffer[]; searches: number }> {
   const a = AGENTS[q.agent];
+  // With a multi-store price feed connected, the bargain and quality agents shop real listings
+  // from many retailers; the coverage specialist still searches the web for eligibility.
+  if (q.agent !== "specialist" && feedEnabled() && attempt === 1) {
+    const picked = pickFrom(await marketFeed(q.need, q.maxPrice).catch(() => []), q.agent);
+    if (picked.length) return { offers: picked.map(({ source: _s, ...o }) => o), searches: 0 };
+  }
   const r = await searchStructured({
     system: `${a.prompt} Search the web for real products for sale right now. Use real product page URLs from major US retailers. Never invent a product, price or URL. Return up to 3 offers.`,
     user: `Need: ${q.need}\nPaying with: ${q.benefit}\nCoverage rule: ${q.constraint}\nBudget: up to $${q.maxPrice.toFixed(2)}`,
