@@ -141,6 +141,7 @@ export type AppState = {
   done: string[]; // tile ids whose action confirmed
   answers?: Record<string, "go" | "keep">; // the user's replies to Ruth's questions
   checkedInAt?: string; // last weekly check-in
+  myBalances?: Record<string, number>; // what you told the check-in is left of a plan limit, by balance id
   rewards?: import("./rewards").Rewards; // acorns, streaks, quests, redemptions
   audit: AuditEvent[];
   profile?: Profile; // what Ruth needs to fill forms; you enter it once

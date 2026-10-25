@@ -12,7 +12,8 @@ const MAX_PAGES = 12;
 
 export type Expect = { key: string; name: string; amount: number };
 export type WatchPage = { planId: string; url: string; expect: Expect[] };
-export type Finding = { key: string; name: string; expected: number; seen: number | null; snippet: string; status: "same" | "changed" | "missing" };
+// offpage: this page never mentions the item (it's on another page). unchecked: no watched page does.
+export type Finding = { key: string; name: string; expected: number; seen: number | null; snippet: string; status: "same" | "changed" | "missing" | "offpage" | "unchecked" };
 export type PageReport = { planId: string; url: string; fetchedAt: string; ok: boolean; title: string; findings: Finding[]; error?: string };
 export type TermsReport = { ranAt: string | null; engine: "apify" | "local" | null; pages: PageReport[]; note?: string };
 
@@ -32,9 +33,25 @@ export async function runTermsWatch(plans: Plan[], { force = false } = {}): Prom
     catch (err) { console.warn("[terms-watch] actor run failed, checking locally:", (err as Error).message); }
   }
   report ??= { ranAt: new Date().toISOString(), engine: "local", pages: await watchLocally(pages) };
+  report.pages = settle(report.pages);
   fs.mkdirSync(path.dirname(CACHE), { recursive: true });
   fs.writeFileSync(CACHE, JSON.stringify(report, null, 2));
   return report;
+}
+
+// A plan's items are spread over its pages: keep each item only where it's discussed, and list an
+// item no watched page mentions once, as unchecked, instead of "missing" on every page.
+export function settle(pages: PageReport[]): PageReport[] {
+  const seen = new Set<string>();
+  for (const p of pages) for (const f of p.findings) if (f.status !== "offpage") seen.add(`${p.planId}|${f.key}`);
+  const listed = new Set<string>();
+  return pages.map((p) => ({ ...p, findings: p.findings.flatMap((f): Finding[] => {
+    if (f.status !== "offpage") return [f];
+    const id = `${p.planId}|${f.key}`;
+    if (seen.has(id) || listed.has(id)) return [];
+    listed.add(id);
+    return [{ ...f, status: "unchecked" }];
+  }) }));
 }
 
 // Which pages to watch and what we expect each to say: credits first, then dollar amounts in terms.
@@ -48,16 +65,23 @@ export function watchList(plans: Plan[]): WatchPage[] {
   return [...firsts, ...extras].slice(0, MAX_PAGES);
 }
 
+// What a term is about: the text before its colon, or before its verb ("The Lifetime Learning
+// credit is 20% of…" → "Lifetime Learning credit"); the plan's title if that's too thin.
+function subjectOf(term: string, plan: Plan) {
+  const head = term.includes(":") ? term.split(":")[0] : term.split(/\s(?:is|are|can|gives|pays|covers|offers|gets?|earns?|includes?)\s/i)[0];
+  const clean = head.replace(MONEY, " ").replace(/\b20\d\d\b/g, " ").replace(/^\s*(the|a|an)\s+/i, "").replace(/\s+/g, " ").trim();
+  return words(clean).length >= 2 && clean.split(" ").length <= 9 ? clean : plan.title;
+}
+
 function expectations(plan: Plan): Expect[] {
   const out: Expect[] = (plan.credits ?? []).map((c) => ({ key: c.key, name: c.name, amount: c.amount }));
   plan.terms.forEach((term, i) => {
-    [...term.matchAll(MONEY)].forEach((m, j) => {
-      const before = term.slice(0, m.index);
-      const prefix = before.includes(":") ? before.split(":")[0] : "";
-      const local = before.slice(prefix.length).replace(MONEY, " ").replace(/[():;,]/g, " ").trim().split(/\s+/).slice(prefix ? -4 : -6).join(" ");
-      const label = `${prefix} ${local}`;
-      const after = term.slice(m.index! + m[0].length).split(/[,;.)(]/)[0].trim().split(/\s+/).slice(0, 3).join(" ");
-      const name = `${label} ${after}`.replace(/\b20\d\d\b/g, "").replace(/\s+/g, " ").trim();
+    const subject = subjectOf(term, plan);
+    const all = [...term.matchAll(MONEY)];
+    all.forEach((m, j) => {
+      // Several amounts in one term: tell them apart by the words right after each one.
+      const after = term.slice(m.index! + m[0].length).split(/[,;.)(]/)[0].trim().split(/\s+/).filter((w) => w.length > 2 && !STOP.has(w.toLowerCase()) && !/[$\d/]/.test(w)).slice(0, 3).join(" ");
+      const name = all.length > 1 && after ? `${subject} (${after})` : subject;
       const amount = toNum(m);
       if (amount >= 1 && !out.some((e) => e.name === name && e.amount === amount)) out.push({ key: `t${i}-${j}`, name, amount });
     });
@@ -134,7 +158,7 @@ function check(sents: string[], { key, name, amount }: Expect): Finding {
     .map((s) => {
       const lw = [...new Set(words(s))];
       const got = kws.filter((k) => lw.some((w) => w === k || w.startsWith(k) || (k.startsWith(w) && w.length >= 4)));
-      return { s, score: got.length, ok: !specific.length || got.some((k) => !GENERIC.has(k)), nums: amounts(s) };
+      return { s, score: got.length, ok: !specific.length || got.some((k) => !GENERIC.has(k)), all: specific.every((k) => got.includes(k)), nums: amounts(s) };
     })
     .filter((h) => kws.length && h.ok && h.score >= need)
     .sort((a, b) => b.score - a.score);
@@ -142,10 +166,13 @@ function check(sents: string[], { key, name, amount }: Expect): Finding {
   const eq = (n: number, m: number) => Math.abs(n - amount * m) < 0.005 * m;
   const same = hits.find((h) => h.nums.some((n) => eq(n, 1))) ?? hits.find((h) => h.nums.some((n) => [2, 4, 12].some((m) => eq(n, m))));
   if (same) return { ...base, seen: amount, snippet: clip(same.s), status: "same" };
-  const other = hits.find((h) => h.nums.length);
+  // "changed" needs every specific word of the item in the sentence: one shared word ("hotel") in a
+  // sidebar about another card is not the same credit.
+  const other = hits.find((h) => h.nums.length && h.all);
   if (other) {
     const seen = other.nums.reduce((best, n) => (Math.abs(n - amount) < Math.abs(best - amount) ? n : best), other.nums[0]);
     return { ...base, seen, snippet: clip(other.s), status: "changed" };
   }
-  return { ...base, seen: null, snippet: hits[0] ? clip(hits[0].s) : "", status: "missing" };
+  if (!hits.length) return { ...base, seen: null, snippet: "", status: "offpage" };
+  return { ...base, seen: null, snippet: clip(hits[0].s), status: "missing" };
 }

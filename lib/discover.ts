@@ -33,7 +33,7 @@ export async function discover(w: Who): Promise<{ found: Found | null; searches:
   const r = await searchStructured({
     system: `You research the employee and member benefits that come with a person's employer, health plan and school, for a benefits app. Prefer official pages (the employer's careers or benefits page, the carrier's member pages, the school's site); reputable reporting is acceptable when no official page exists. Report only facts you found on a page, each with its URL and an exact quote; leave out anything you can't source. Never estimate. Facts you can report:\n${Object.entries(FACTS).map(([k, v]) => `- ${k}: ${v}`).join("\n")}`,
     user: `Find the publicly documented benefits for this person.\n${parts.join("\n")}`,
-    schema: FoundSchema, maxSearches: 6, effort: "medium",
+    schema: FoundSchema, maxSearches: 8, effort: "medium",
   });
   if (!r.data) return { found: null, searches: r.searches };
   const facts: Found["facts"] = {};

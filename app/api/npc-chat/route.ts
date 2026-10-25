@@ -1,3 +1,4 @@
+import { DEMO_TODAY } from "@/lib/documents";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { claudeEnabled } from "@/lib/engine/claude";
@@ -22,7 +23,12 @@ const sinceLast = (last?: string) => {
   const days = Math.floor((Date.now() - Date.parse(last)) / 86_400_000);
   return days < 1 ? "You already talked earlier today." : days === 1 ? "You last talked yesterday." : `You haven't seen them in ${days} days.`;
 };
-const today = () => new Date().toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+// The borough's date (the one every countdown uses) at your real time of day.
+const today = () => {
+  const d = new Date(`${DEMO_TODAY}T12:00:00`), t = new Date();
+  d.setHours(t.getHours(), t.getMinutes());
+  return d.toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+};
 
 export async function POST(req: Request) {
   const { pid, who, message, history = [] } = (await req.json()) as { pid?: string; who: string; message: string; history?: Turn[] };
@@ -48,7 +54,7 @@ export async function POST(req: Request) {
   const now = new Date();
   const lastHarvest = [...s.ledger].sort((a, b) => b.at.localeCompare(a.at))[0];
   const context = [
-    `It's ${partOfDay(now.getHours())} in ${SEASONS[now.getMonth()]}.`,
+    `It's ${partOfDay(now.getHours())} in ${SEASONS[new Date(`${DEMO_TODAY}T12:00:00`).getMonth()]}.`,
     sinceLast(f.last),
     `Friendship: ${hearts} of 5 hearts (${f.talks} chats). ${hearts === 0 ? "You're polite but still getting to know them." : hearts < 3 ? "You're friendly and use their name." : "You're close friends: warm, teasing, a little more personal."}`,
     lastHarvest ? `Their latest harvest: ${lastHarvest.description} (${usd(lastHarvest.amount)}).` : "",

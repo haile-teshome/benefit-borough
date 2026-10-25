@@ -34,7 +34,8 @@ export const amounts = (s) => [...s.matchAll(MONEY)].map((m) => parseFloat(m[1].
 const words = (s) => s.toLowerCase().replace(/[’']/g, '').split(/[^a-z0-9+-]+/).filter((w) => w.length >= 3 && !STOP.has(w));
 
 // One finding per expectation: "same" if a sentence about it still says the expected amount,
-// "changed" if sentences about it quote other amounts, "missing" if the page no longer mentions it.
+// "changed" if a sentence naming it quotes another amount, "missing" if it's discussed without the
+// amount, "offpage" if the page never mentions it.
 export function check(sents, { key, name, amount }) {
     const kws = [...new Set(words(name))];
     const need = Math.max(1, Math.ceil(kws.length * 0.5));
@@ -43,7 +44,7 @@ export function check(sents, { key, name, amount }) {
         .map((s) => {
             const lw = [...new Set(words(s))];
             const got = kws.filter((k) => lw.some((w) => w === k || w.startsWith(k) || (k.startsWith(w) && w.length >= 4)));
-            return { s, score: got.length, ok: !specific.length || got.some((k) => !GENERIC.has(k)), nums: amounts(s) };
+            return { s, score: got.length, ok: !specific.length || got.some((k) => !GENERIC.has(k)), all: specific.every((k) => got.includes(k)), nums: amounts(s) };
         })
         .filter((h) => kws.length && h.ok && h.score >= need)
         .sort((a, b) => b.score - a.score);
@@ -54,12 +55,16 @@ export function check(sents, { key, name, amount }) {
     // "$25 a month" is often written as "$300 a year": an annualized total still counts as unchanged.
     const annual = hits.find((h) => h.nums.some((n) => [2, 4, 12].some((m) => eq(n, m))));
     if (annual) return { ...base, seen: amount, snippet: clip(annual.s), status: 'same' };
-    const other = hits.find((h) => h.nums.length);
+    // "changed" needs every specific word of the item in the sentence: one shared word ("hotel") in a
+    // sidebar about another card is not the same credit.
+    const other = hits.find((h) => h.nums.length && h.all);
     if (other) {
         const seen = other.nums.reduce((best, n) => (Math.abs(n - amount) < Math.abs(best - amount) ? n : best), other.nums[0]);
         return { ...base, seen, snippet: clip(other.s), status: 'changed' };
     }
-    return { ...base, seen: null, snippet: hits[0] ? clip(hits[0].s) : '', status: 'missing' };
+    // offpage: this page never mentions the item; the app lists it once as unchecked if no page does.
+    if (!hits.length) return { ...base, seen: null, snippet: '', status: 'offpage' };
+    return { ...base, seen: null, snippet: clip(hits[0].s), status: 'missing' };
 }
 
 const clip = (s) => (s.length > 240 ? `${s.slice(0, 237)}...` : s);

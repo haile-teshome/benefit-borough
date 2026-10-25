@@ -11,3 +11,6 @@
 .missing, .missing em { color: #b07a10; }
 .same, .same em { color: var(--ink-2, #6b4a2a); opacity: 0.75; font-weight: 500; }
 @media (max-width: 520px) { .rows li { grid-template-columns: 1fr; } .rows li em { text-align: left; } }
+
+/* An item none of the watched pages talks about: not a warning, just not checked. */
+.unchecked { opacity: 0.7; }

@@ -7,14 +7,14 @@ import { openOutside } from "@/lib/valley/popup";
 
 // The Borough Gazette: what each plan's source page says today about the credits and limits the
 // library relies on (from the Benefit Terms Watcher actor on Apify, or the local fallback).
-type Finding = { key: string; name: string; expected: number; seen: number | null; snippet: string; status: "same" | "changed" | "missing" };
+type Finding = { key: string; name: string; expected: number; seen: number | null; snippet: string; status: "same" | "changed" | "missing" | "offpage" | "unchecked" };
 type Page = { planId: string; url: string; fetchedAt: string; ok: boolean; title: string; findings: Finding[]; error?: string };
 type Report = { ranAt: string | null; engine: "apify" | "local" | null; pages: Page[] };
 
 const money = (n: number | null) => (n == null ? "not found" : `$${n.toLocaleString("en-US", { maximumFractionDigits: 2 })}`);
 const planTitle = (id: string) => LIBRARY.find((p) => p.id === id)?.title ?? id;
 const host = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return u; } };
-const ORDER = { changed: 0, missing: 1, same: 2 } as const;
+const ORDER = { changed: 0, missing: 1, same: 2, unchecked: 3, offpage: 4 } as const;
 
 export function TermsNews({ onClose }: { onClose: () => void }) {
   const [report, setReport] = useState<Report | null>(null);
@@ -31,7 +31,7 @@ export function TermsNews({ onClose }: { onClose: () => void }) {
   }
 
   const pages = report?.pages ?? [];
-  const flagged = pages.flatMap((p) => p.findings).filter((f) => f.status !== "same").length;
+  const flagged = pages.flatMap((p) => p.findings).filter((f) => f.status === "changed" || f.status === "missing").length;
 
   return (
     <div className="ev-dialogue-wrap">
@@ -60,8 +60,9 @@ export function TermsNews({ onClose }: { onClose: () => void }) {
                       {f.status === "same" && `still ${money(f.expected)}`}
                       {f.status === "changed" && `we have ${money(f.expected)}, page says ${money(f.seen)}`}
                       {f.status === "missing" && `${money(f.expected)} not mentioned`}
+                      {f.status === "unchecked" && `${money(f.expected)}: not on the pages we watch`}
                     </em>
-                    {f.status !== "same" && f.snippet && <q>{f.snippet}</q>}
+                    {(f.status === "changed" || f.status === "missing") && f.snippet && <q>{f.snippet}</q>}
                   </li>
                 ))}
               </ul>

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LIBRARY, type Plan, type Question } from "@/lib/library/catalog";
-import { impliedPlans, prefillFor, reported, showFact, siteOf, LABEL, type Found, type FactKey } from "@/lib/findings";
+import { impliedPlans, prefillFor, reported, showFact, siteOf, LABEL, type Found, type FactKey, offeredBy } from "@/lib/findings";
 import { AVATARS, portrait } from "@/lib/valley/pixel/animals";
 import { openOutside } from "@/lib/valley/popup";
 import type { AppState, Profile } from "@/lib/types";
@@ -93,6 +93,7 @@ export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile
 
   // Only the findings you kept count.
   const kept = Object.fromEntries(Object.entries(found?.facts ?? {}).filter(([k]) => keep.has(k as FactKey))) as Found["facts"];
+  const offered = offeredBy(kept);
   // Which plans to plant, from who you are and what Ruth confirmed.
   const chosen = useMemo(() => {
     const ids = new Set<string>();
@@ -193,7 +194,7 @@ export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile
                 <label className="ev-lib-q"><span>Annual salary (for your 401(k) match and what a PTO day is worth)</span><input type="number" value={salary} onChange={(e) => setSalary(e.target.value === "" ? "" : Number(e.target.value))} /></label>
                 <div className="ev-field">Do you have any of these at work? (Not sure? Skip it; Ruth checks.)</div>
                 <div className="ev-pick ev-onb-chips">
-                  {[["match", "401(k) employer match"], ["pto", "PTO that expires"], ["fsa", "Health FSA"], ["hsa", "HSA"], ["dcfsa", "Dependent care FSA (kids)"], ["stipend", "Wellness or learning stipend"], ["espp", "Employee stock plan"], ["tuition", "Tuition assistance"], ["vesting", "401(k) not fully vested"]].map(([id, l]) => <button key={id} className={has.has(id) ? "on" : ""} onClick={() => tick(setHas, id)}>{has.has(id) ? "✓ " : ""}{l}</button>)}
+                  {[["match", "401(k) employer match"], ["pto", "PTO that expires"], ["fsa", "Health FSA"], ["hsa", "HSA"], ["dcfsa", "Dependent care FSA (kids)"], ["stipend", "Wellness or learning stipend"], ["espp", "Employee stock plan"], ["tuition", "Tuition assistance"], ["vesting", "401(k) not fully vested"]].map(([id, l]) => <button key={id} className={has.has(id) ? "on" : ""} onClick={() => tick(setHas, id)}>{has.has(id) ? "✓ " : ""}{l}{offered.has(id) && <em className="ev-offered"> · Ruth: offered</em>}</button>)}
                 </div>
               </>
             ) : <p className="ev-lead">No employer benefits to look up. On to your health plan.</p>

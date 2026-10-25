@@ -3,7 +3,9 @@
 // (Nessie) or the sourced plan library. Every number on the board traces back to a line.
 export type SourceDoc = { id: string; name: string; text: string; meta?: { plan: string; answers: Record<string, unknown> } };
 
-export const DEMO_TODAY = process.env.DEMO_TODAY ?? "2026-10-24";
+// The borough's "today": every countdown, the header clock's date and the villagers use it.
+// NEXT_PUBLIC_DEMO_TODAY reaches the browser too, so set that one to move the whole game.
+export const DEMO_TODAY = process.env.NEXT_PUBLIC_DEMO_TODAY || process.env.DEMO_TODAY || "2026-10-24";
 
 export const SAMPLE_DOCS: SourceDoc[] = [
   {

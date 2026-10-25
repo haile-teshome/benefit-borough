@@ -41,18 +41,31 @@ export const siteOf = (u: string) => { try { return new URL(u).hostname.replace(
 export const reported = (u: string) => /glassdoor|levels\.fyi|indeed|reddit|blind|perkup/i.test(u);
 
 type Facts = Found["facts"];
-// Plans a finding tells us you have (so they're planted even if you didn't tick them).
+// Plans a finding tells us you have (so they're planted even if you didn't tick them). Only a
+// specific amount counts: "an FSA is offered" or "PTO rolls over" doesn't say you're enrolled or
+// what you have, so those only mark the matching box as offered (see offeredBy) for you to tick.
 export function impliedPlans(f: Facts, opts: { insured?: boolean } = {}): string[] {
   const ids: string[] = [];
-  if (yes(f.offers_fsa?.value)) ids.push("irs-fsa-2026");
-  if (f.match_rate_pct) ids.push("work-401k-match");
-  if (f.pto_rollover_days) ids.push("work-pto");
   if (f.stipend_amount) ids.push("work-stipend");
   if (f.espp_discount_pct) ids.push("work-espp");
   if (f.tuition_limit) ids.push("edu-tuition-127");
   if (f.student_loan_monthly) ids.push("edu-loan-repay");
   if (opts.insured && f.fitness_max) ids.push("health-fitness");
   return ids;
+}
+
+// Which of onboarding's tick boxes a finding says your employer offers.
+export function offeredBy(f: Facts): Set<string> {
+  const on = new Set<string>();
+  if (f.match_rate_pct) on.add("match");
+  if (f.pto_days || f.pto_rollover_days) on.add("pto");
+  if (yes(f.offers_fsa?.value)) on.add("fsa");
+  if (yes(f.offers_hsa?.value)) on.add("hsa");
+  if (yes(f.offers_dcfsa?.value)) on.add("dcfsa");
+  if (f.espp_discount_pct) on.add("espp");
+  if (f.tuition_limit) on.add("tuition");
+  if (f.stipend_amount) on.add("stipend");
+  return on;
 }
 
 // The plan answers a finding fills in (only questions the plan actually asks).

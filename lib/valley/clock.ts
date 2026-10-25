@@ -1,5 +1,8 @@
-// The game clock follows real local time: when it's evening where you are, it's evening in the
-// borough. A dev offset (window.__setHour) can shift it for testing.
+import { DEMO_TODAY } from "../documents";
+
+// The game clock follows real local time of day: when it's evening where you are, it's evening in
+// the borough. The date is the borough's today (DEMO_TODAY), the same day every countdown uses.
+// A dev offset (window.__setHour) can shift it for testing.
 let offsetMs = 0;
 
 const now = () => new Date(Date.now() + offsetMs);
@@ -30,5 +33,10 @@ export function clockLabel(d = now()) {
 }
 
 export function dateLabel(d = now()) {
-  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  // Days the dev clock has been pushed past midnight carry over onto the borough's date.
+  const midnight = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const ahead = Math.round((midnight(d) - midnight(new Date())) / 86_400_000);
+  const day = new Date(`${DEMO_TODAY}T12:00:00`);
+  day.setDate(day.getDate() + ahead);
+  return day.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }

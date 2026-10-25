@@ -29,6 +29,12 @@ export function addSpend(s: AppState, price: string) {
 }
 
 const docsText = (s: AppState) => s.docs.map((d) => `[${d.name}]\n${d.text}`).join("\n\n");
+// What you asked the Bazaar for (and the offers Ruth approved for it) are stated needs too, so a
+// cart of things you asked for isn't rejected as unasked-for (rule 2).
+const statedNeeds = (s: AppState) => {
+  const lines = (s.quests ?? []).map((q) => `- ${q.need}${q.offers.filter((o) => o.verdict.ok).map((o) => `; ${o.title}`).join("")}`);
+  return lines.length ? `\n\n[Stated needs in the Benefit Bazaar]\n${lines.join("\n")}` : "";
+};
 
 // Extract → Optimize → Reviewer, for every tile. The board only offers a tap on approved tiles.
 export async function scan(docs: SourceDoc[], pid?: string | null, opts: { payForData?: boolean } = {}): Promise<AppState> {
@@ -62,6 +68,8 @@ export async function scan(docs: SourceDoc[], pid?: string | null, opts: { payFo
       log(s, "price", `${b.label}: paid $${b.amount}, live price ${p != null ? `$${p}` : "unavailable"} (Apify${bought ? ", bought over x402" : ""})`);
     }
   }
+  // Balances you gave the check-in turn a guide's plan limit into what you actually have left.
+  for (const [id, v] of Object.entries(s.myBalances ?? {})) ex.facts[`${id}:balance`] = v;
   s.extraction = ex;
   log(s, "extract", `${ex.balances.length} balances, ${ex.careItems.length} care items (${ex.engine})${ex.dropped.length ? `; dropped ${ex.dropped.length} ungrounded` : ""}`);
   s.tiles = await optimize(ex);
@@ -83,9 +91,12 @@ export async function scan(docs: SourceDoc[], pid?: string | null, opts: { payFo
 export async function reviewCart(balanceId: string, items: string[], pid?: string | null) {
   await hydrate(pid);
   const s = load(pid);
-  const balance = s.extraction?.balances.find((b) => b.id === balanceId);
-  if (!s.extraction || !balance) throw new Error("Scan documents first");
-  const v = await review({ kind: "cart", balance, items }, s.extraction, docsText(s));
+  const found = s.extraction?.balances.find((b) => b.id === balanceId);
+  if (!s.extraction || !found) throw new Error("Scan documents first");
+  // A guide's plan limit isn't what you have: review the cart against what you told the check-in.
+  const left = s.myBalances?.[balanceId];
+  const balance = found.basis === "plan_limit" && left != null ? { ...found, amount: left, basis: undefined, ruleText: `You said ${usd(left)} is left. ${found.ruleText}` } : found;
+  const v = await review({ kind: "cart", balance, items }, s.extraction, docsText(s) + statedNeeds(s));
   s.reviews[`cart:${balanceId}`] = v;
   log(s, "review", `cart on ${balanceId} [${items.join(", ")}]: ${v.verdict}${v.rule_cited ? ` (rule ${v.rule_cited})` : ""}`);
   save(s, pid);

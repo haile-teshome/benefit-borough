@@ -199,7 +199,7 @@ const DOC_KINDS: Partial<Record<Balance["category"], { verb: string; to: string;
   education: { verb: "Claim", to: "your HR or benefits team", steps: ["Gathering your receipt and proof of completion", "Submitting the reimbursement request", "Reimbursement approved"] },
   dcfsa: { verb: "Claim", to: "your FSA administrator", steps: ["Filling the dependent care claim", "Attaching the provider's receipt", "Claim submitted"] },
   fitness: { verb: "Claim", to: "your health plan", steps: ["Filling the fitness reimbursement form", "Attaching proof of payment", "Claim submitted"] },
-  vision: { verb: "Use", to: "your vision plan", steps: ["Booking an in-network exam", "Ordering glasses or contacts", "Allowance applied"] },
+  vision: { verb: "Use", to: "your vision plan", steps: ["Booking an in-network exam if you're due for one", "Ordering only what this allowance covers", "Allowance applied"] },
   retirement: { verb: "Claim", to: "your HR or benefits team", steps: ["Checking the rule in your plan", "Making the change before the deadline", "Confirmed"] },
   // Uploaded guides and typed-in notes: the same crop, in neutral words, for everything else.
   fsa: { verb: "Use", to: "your FSA administrator", steps: ["Listing care or supplies you already need", "Paying with the FSA card or filing a claim", "Claim approved"] },
@@ -214,8 +214,24 @@ const DOC_KINDS: Partial<Record<Balance["category"], { verb: string; to: string;
 function documentTiles(ex: Extraction, covered: Set<string>): Tile[] {
   // Uploads and typed-in notes may name a benefit with no dollar figure (a companion pass, a window).
   const yours = (b: Balance) => b.id.startsWith("up_");
-  return ex.balances.filter((b) => !covered.has(b.id) && (b.amount > 0 || yours(b)) && DOC_KINDS[b.category] && daysBetween(DEMO_TODAY, b.deadline) >= 0).map((b): Tile => {
+  // Once you've told the check-in what's left, a plan limit becomes your balance (an FSA's carryover
+  // is taken off first, so only what would really be lost is at stake).
+  const told = (b: Balance): Balance => {
+    const left = ex.facts[`${b.id}:balance`];
+    if (b.basis !== "plan_limit" || left == null) return b;
+    const atRisk = b.category === "fsa" ? Math.max(0, round2(left - (ex.facts.fsa_carryover_limit ?? 0))) : left;
+    return { ...b, amount: atRisk, basis: undefined, ruleText: `You said ${usd(left)} is left. ${b.ruleText}` };
+  };
+  return ex.balances.map(told).filter((b) => !covered.has(b.id) && (b.amount > 0 || yours(b)) && DOC_KINDS[b.category] && daysBetween(DEMO_TODAY, b.deadline) >= 0).map((b): Tile => {
     const k = DOC_KINDS[b.category]!;
+    // You checked, and nothing would be lost (e.g. what's left is under the FSA carryover).
+    if (b.amount === 0 && /^You said /.test(b.ruleText)) return {
+      balanceIds: [b.id], deadline: b.deadline, daysLeft: daysBetween(DEMO_TODAY, b.deadline), sources: [b.source], engine: "mock",
+      id: `tile_${b.id}`, category: b.category, live: false, atStake: 0, doNothingCost: 0, recommendation: "none",
+      title: `${b.label}: nothing at risk`, candidates: [{ id: "none", label: "Nothing to do", costToUser: 0, detail: b.ruleText }],
+      headline: b.ruleText, tradeoff: "No need to spend anything to use it up.", doNothing: "Nothing is lost.",
+      action: { kind: "none", summary: "No action needed", savings: 0, payload: {} },
+    };
     const by = new Date(`${b.deadline}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
     // A guide's limit says what the plan allows, not what you have or what you'd lose: a reminder to
     // check your balance, with the plan's own rule. Nothing to claim, buy or book until you know it.
@@ -237,7 +253,7 @@ function documentTiles(ex: Extraction, covered: Set<string>): Tile[] {
     const what = days ? `${b.amount} PTO day${b.amount === 1 ? "" : "s"}` : !b.amount ? b.label : named;
     const money = days || limit ? 0 : b.amount;
     // The same gating question the library plans ask, so nobody is nudged to spend just to use it up.
-    const ask = days ? `Do you want to take ${b.amount} day${b.amount === 1 ? "" : "s"} off before ${by}?` : b.category === "retirement" || k.verb === "Decide on" ? undefined : "Is there something you'd buy or do anyway that it covers?";
+    const ask = days ? `Do you want to take ${b.amount} day${b.amount === 1 ? "" : "s"} off before ${by}?` : b.category === "retirement" || k.verb === "Decide on" ? undefined : `Do you already need something your ${b.label} covers, that you'd buy anyway?`;
     // A guide's PTO rule isn't your balance: say the rule, not a number of days you'd lose.
     const title = days && limit ? `PTO: days over the rollover are forfeited ${by}` : days ? `${what} will be forfeited ${by}` : `${k.verb} your ${what} before ${by}`;
     return {

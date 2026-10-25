@@ -492,3 +492,6 @@ input[type=file]::file-selector-button:hover { filter: brightness(1.08); }
 .ev-onb-extra { width: 100%; font: 400 16px/1.4 var(--read); color: var(--ink); background: #fff8e2; border: 3px solid var(--wood-dark); box-shadow: inset 0 -3px 0 var(--parchment-2); padding: 8px 10px; resize: vertical; border-radius: 0; }
 .ev-onb-extra::placeholder { color: #9a7a55; }
 .ev-onb-extra:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }
+
+/* Ruth's lookup says your employer offers this; you still decide whether to tick it. */
+.ev-offered { font-style: normal; font-weight: 700; color: #2f7d4f; }

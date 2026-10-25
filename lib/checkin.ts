@@ -8,11 +8,19 @@ import { fresh, record } from "./rewards";
 import type { AppState } from "./types";
 import { structured } from "./engine/llm";
 
-// The weekly check-in, by form or by voice: update the answers behind your planted library plans
-// and rescan, so the farm matches your week. Harvests already confirmed stay confirmed.
-export async function applyCheckin(pid: string | null | undefined, updates: Record<string, Answers>, how: "form" | "voice" = "form") {
+// The weekly check-in, by form or by voice: update the answers behind your planted library plans,
+// and say what's left of any plan limit from an uploaded guide, then rescan so the farm matches
+// your week. Harvests already confirmed stay confirmed. Plans you don't have are reported, not applied.
+export async function applyCheckin(pid: string | null | undefined, updates: Record<string, Answers>, how: "form" | "voice" = "form", balances: Record<string, number> = {}) {
   await hydrate(pid);
   const s = load(pid);
+  const planted = new Set(s.docs.map((d) => d.meta?.plan).filter(Boolean));
+  const ignored = Object.keys(updates ?? {}).filter((plan) => !planted.has(plan));
+  const limits = new Set((s.extraction?.balances ?? []).filter((b) => b.basis === "plan_limit").map((b) => b.id));
+  for (const [id, v] of Object.entries(balances ?? {})) {
+    if (limits.has(id) && Number.isFinite(v) && v >= 0) (s.myBalances ??= {})[id] = Math.round(v * 100) / 100;
+    else ignored.push(id);
+  }
   const docs = s.docs.map((d) => {
     const plan = d.meta?.plan;
     if (!plan || !updates?.[plan]) return d;
@@ -23,7 +31,7 @@ export async function applyCheckin(pid: string | null | undefined, updates: Reco
   const gained = record((state.rewards ??= fresh()), { kind: "checkin" });
   if (how === "voice") log(state, "checkin", `Voice check-in: updated ${Object.entries(updates).map(([p, a]) => `${p} (${Object.keys(a).join(", ")})`).join("; ")}`);
   save(state, pid);
-  return { state, gained };
+  return { state, gained, ignored };
 }
 
 // What the person said → which answers change. Only questions the planted plans actually ask.
