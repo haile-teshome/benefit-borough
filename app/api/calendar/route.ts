@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   const open = s.tiles.filter((t) => !s.done.includes(t.id) && t.daysLeft >= 0);
   const events = open.flatMap((t) => [
     "BEGIN:VEVENT",
-    `UID:${t.id}-${pid ?? "default"}@benefitburrow`,
+    `UID:${t.id}-${pid ?? "default"}@benefitborough`,
     `DTSTAMP:${stamp}`,
     `DTSTART;VALUE=DATE:${day(t.deadline)}`,
     `DTEND;VALUE=DATE:${day(next(t.deadline))}`,
@@ -33,7 +33,7 @@ export async function GET(req: Request) {
   const sunday = new Date(); sunday.setDate(sunday.getDate() + ((7 - sunday.getDay()) % 7 || 7));
   const checkin = [
     "BEGIN:VEVENT",
-    `UID:weekly-checkin-${pid ?? "default"}@benefitburrow`,
+    `UID:weekly-checkin-${pid ?? "default"}@benefitborough`,
     `DTSTAMP:${stamp}`,
     `DTSTART:${day(sunday.toISOString().slice(0, 10))}T100000`,
     `DTEND:${day(sunday.toISOString().slice(0, 10))}T101000`,
@@ -45,5 +45,5 @@ export async function GET(req: Request) {
     "END:VEVENT",
   ];
   const body = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Benefit Borough//Deadlines//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:Benefit Borough", ...events, ...checkin, "END:VCALENDAR"].map(fold).join("\r\n");
-  return new Response(body, { headers: { "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": 'attachment; filename="benefit-burrow.ics"', "Cache-Control": "no-store" } });
+  return new Response(body, { headers: { "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": 'attachment; filename="benefit-borough.ics"', "Cache-Control": "no-store" } });
 }

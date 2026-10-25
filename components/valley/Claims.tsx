@@ -73,7 +73,7 @@ export function Claims({ state, pid, onOpen, onCheckin, onClose }: { state: AppS
           {!rows.length && <p className="ev-sub">{show === "claimed" ? "Nothing claimed yet." : "Nothing open. Plant your plans to get started."}</p>}
         </div>
         <div className="ev-actions">
-          <a className="ev-btn ghost" href={`/api/calendar?pid=${pid}`} download="benefit-burrow.ics">Add deadlines to my calendar</a>
+          <a className="ev-btn ghost" href={`/api/calendar?pid=${pid}`} download="benefit-borough.ics">Add deadlines to my calendar</a>
           <button className="ev-btn ghost" onClick={onCheckin}>Weekly check-in</button>
           <button className="ev-btn ghost" onClick={onClose}>Close</button>
         </div>
