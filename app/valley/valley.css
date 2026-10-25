@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Pixelify+Sans:wght@400;500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Jersey+10&display=swap");
 
 /* Benefit Burrow: cozy pixel farm. Wooden frames, parchment, chunky pixel type. */
 :root {
@@ -13,7 +13,7 @@
   --ok: #3f8a2e;
   --stamp: #c0392b;
   --gold: #f2b33d;
-  --pixel: "Pixelify Sans", ui-monospace, monospace;
+  --pixel: "Jersey 10", ui-monospace, monospace; /* clean, chunky pixel letters (Pixelify's bold B read like a G) */
   /* Body text uses a font designed for legibility; the pixel face is kept for titles and labels. */
   --read: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -149,7 +149,8 @@ button.ev-stat { cursor: pointer; }
 /* Title: a wooden signboard on two posts. */
 .ev-title-screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 24px; background: radial-gradient(ellipse at center, rgba(40, 20, 5, 0) 40%, rgba(40, 20, 5, 0.45)); text-align: center; }
 .ev-sign { position: relative; animation: ev-sway 3s steps(6) infinite; }
-.ev-sign::before, .ev-sign::after { content: ""; position: absolute; top: 60%; width: 18px; height: 120px; background: var(--wood); border: 4px solid var(--wood-dark); z-index: -1; }
+.ev-sign { margin-bottom: 22px; }
+.ev-sign::before, .ev-sign::after { content: ""; position: absolute; top: 60%; width: 18px; height: 64px; background: var(--wood); border: 4px solid var(--wood-dark); z-index: -1; }
 .ev-sign::before { left: 18%; }
 .ev-sign::after { right: 18%; }
 .ev-sign-board { padding: 22px 46px 18px; border: 6px solid var(--wood-dark); background: repeating-linear-gradient(180deg, var(--wood-light) 0 26px, var(--wood) 26px 30px); box-shadow: inset 0 0 0 4px var(--wood-hi), 0 10px 0 rgba(40,20,5,0.4); }
@@ -266,7 +267,7 @@ button.ev-stat { cursor: pointer; }
 
 /* Readability pass: the pixel face only where it's decorative and short. */
 /* One typeface everywhere; only the logo on the title sign keeps the pixel face. */
-.ev-sign-board .l1, .ev-sign-board .l2 { font-family: var(--pixel); }
+.ev-sign-board .l1, .ev-sign-board .l2 { font-family: var(--pixel); font-weight: 400; font-size: 96px; letter-spacing: 3px; line-height: 0.9; }
 .ev-title, .ev-speaker, .ev-btn, .ev-name, .ev-district, .ev-tag b, .ev-burst, .ev-live-head, .ev-tabs button, .ev-stamp { font-family: var(--read); letter-spacing: 0; }
 .ev-title { font-weight: 700; }
 .ev-speaker, .ev-btn, .ev-name, .ev-district, .ev-tag b, .ev-live-head { font-weight: 700; }
@@ -468,3 +469,4 @@ body:has(.ev-poster) nextjs-portal { display: none !important; }
 .ev-onb-file input { font-size: 14px; }
 .ev-onb .ev-lib-list { overflow: visible; flex: none; } /* one scrollbar: the dialog body */
 .ev-onb-changes { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 2px; font-size: 14px; }
+@media (max-width: 700px) { .ev-sign-board .l1, .ev-sign-board .l2 { font-size: 60px; } }
