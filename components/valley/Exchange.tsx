@@ -5,7 +5,9 @@ import { CATALOG, EARN, QUESTS, questProgress, type Contact, type Rewards } from
 
 // The Acorn Exchange: your streak and weekly quests, the reward catalog, and your history.
 // Cosmetics unlock instantly; real-world rewards are recorded for a rewards partner to fulfill.
-export function Exchange({ pid, rewards, onRewards, onWear, onClose }: { pid: string; rewards: Rewards; onRewards: (r: Rewards) => void; onWear: (color: string) => void; onClose: () => void }) {
+export function Exchange({ pid, rewards, tango, onRewards, onWear, onClose }: { pid: string; rewards: Rewards; tango: boolean; onRewards: (r: Rewards) => void; onWear: (color: string) => void; onClose: () => void }) {
+  // Only rewards that can actually be delivered: gift cards need a connected Tango Card account.
+  const catalog = CATALOG.filter((c) => c.partner !== "tango" || tango);
   const [tab, setTab] = useState<"earn" | "rewards" | "history">("earn");
   const [msg, setMsg] = useState("");
   const [asking, setAsking] = useState<string | null>(null);
@@ -15,12 +17,12 @@ export function Exchange({ pid, rewards, onRewards, onWear, onClose }: { pid: st
   async function buy(id: string) {
     setMsg("");
     const item = CATALOG.find((c) => c.id === id);
-    if ((item?.partner === "tango" || item?.partner === "coinbase") && asking !== id) { setAsking(id); return; }
+    if (item?.partner === "tango" && asking !== id) { setAsking(id); return; }
     const res = await fetch("/api/rewards", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pid, redeem: id, contact }) });
     const json = (await res.json()) as { rewards: Rewards; error?: string; redemption?: { name: string; status: string } };
     onRewards(json.rewards);
     if (!json.error) setAsking(null);
-    setMsg(json.error ?? (json.redemption?.status === "unlocked" ? `${json.redemption.name} unlocked. Wear it below.` : `${json.redemption?.name} requested. A person reviews every real reward before it's sent.`));
+    setMsg(json.error ?? (json.redemption?.status === "unlocked" ? `${json.redemption.name} unlocked. Wear it below.` : json.redemption?.status === "sent" ? `${json.redemption.name} is on its way to your email.` : json.redemption?.status === "failed" ? `Tango Card couldn't send it, so your acorns are back.` : `${json.redemption?.name}: done.`));
   }
 
   return (
@@ -67,12 +69,12 @@ export function Exchange({ pid, rewards, onRewards, onWear, onClose }: { pid: st
           {tab === "rewards" && (
             <>
               <ul className="ev-catalog">
-                {CATALOG.map((c) => {
+                {catalog.map((c) => {
                   const have = owned.has(c.id) && c.kind === "cosmetic";
                   return (
                     <li key={c.id}>
                       {c.color && <i style={{ background: c.color }} />}
-                      <span><b>{c.name}</b><em>{c.blurb}{c.kind === "real" ? " · fulfilled by a rewards partner" : ""}</em></span>
+                      <span><b>{c.name}</b><em>{c.blurb}</em></span>
                       <strong>{c.cost.toLocaleString("en-US")} 🌰</strong>
                       {have ? <button className="ev-btn" onClick={() => onWear(c.color!)}>Wear it</button>
                         : <button className="ev-btn ghost" disabled={rewards.acorns < c.cost} onClick={() => void buy(c.id)}>{rewards.acorns < c.cost ? `${(c.cost - rewards.acorns).toLocaleString("en-US")} to go` : "Redeem"}</button>}
@@ -94,7 +96,7 @@ export function Exchange({ pid, rewards, onRewards, onWear, onClose }: { pid: st
                 })}
               </ul>
               {msg && <p className="ev-good">{msg}</p>}
-              <p className="ev-sub">Real-world rewards need a funded rewards partner (a gift card API or a Coinbase payout). Every real reward is reviewed by a person first, and they're capped at $10 a month each.</p>
+              <p className="ev-sub">{tango ? "Gift cards are emailed by Tango Card right away, up to $10 a month." : "Spend acorns on looks and on more data for Ruth's agents. Gift cards appear here once a Tango Card account is connected."}</p>
             </>
           )}
           {tab === "history" && (

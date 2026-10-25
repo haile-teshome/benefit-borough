@@ -7,7 +7,7 @@ import { DbConnection, tables } from "@/lib/valley_bindings";
 import type { Player, Plot } from "@/lib/valley_bindings/types";
 import { expire } from "@/lib/valley/expire";
 import { CROP_LOOK, ELDER_POS, slotPosition, usd } from "@/lib/valley/layout";
-import type { AppState, DispatchResult, Packet, Quest, ShiftReport, Tile, Verdict } from "@/lib/types";
+import type { AppState, DispatchResult, Handoff, Packet, Quest, ShiftReport, Tile, Verdict } from "@/lib/types";
 import { playAudio, sound, speak } from "@/lib/valley/audio";
 import { clockLabel, dateLabel, gameHour, setHour } from "@/lib/valley/clock";
 import { anchors, registerLabel, setAnchor } from "@/lib/valley/labels";
@@ -22,7 +22,7 @@ import { Claims } from "./Claims";
 import { Checkin } from "./Checkin";
 import { Onboarding } from "./Onboarding";
 import { Exchange } from "./Exchange";
-import { Outbox, PacketReview } from "./Outbox";
+import { HandoffPanel, Outbox, PacketReview } from "./Outbox";
 import { Checkout } from "./Checkout";
 import { SwapMarket } from "./SwapMarket";
 import { TermsNews } from "./TermsNews";
@@ -94,6 +94,7 @@ type Modal =
   | { kind: "packet"; packet: Packet }
   | { kind: "preparing"; tileId: string }
   | { kind: "outbox" }
+  | { kind: "handoff"; packet: Packet; handoff: Handoff }
   | { kind: "checkout" }
   | { kind: "swap" }
   | { kind: "terms" }
@@ -354,6 +355,18 @@ function Valley() {
     }
   }
 
+  // The company came through: now the money counts as rescued, on the farm and the ledger.
+  async function moneyArrived(packet: Packet) {
+    if (!conn) return;
+    try {
+      const r = await expire.paid(pid, packet.id);
+      setState(r.state);
+      sound.coins();
+      await conn.reducers.harvest({ tileId: packet.tileId, saved: packet.amount });
+      setToast(`+${usd(packet.amount)} rescued from ${packet.provider}. Nicely done.`); setTimeout(() => setToast(""), 5000);
+    } catch (e) { setError((e as Error).message); }
+  }
+
   // Ruth fills in the claim; you review it in the packet view and press Submit.
   async function prepareClaim(tileId: string) {
     setModal({ kind: "preparing", tileId });
@@ -374,6 +387,13 @@ function Valley() {
     if (tile.action.kind === "book_call") sound.dial(); else sound.harvest();
     try {
       const r = await expire.submit(pid, packet.id, packet.hash);
+      // Most claims are filed by you at the real place: show where, and don't count money yet.
+      if (r.result.status === "handoff" && r.result.handoff) {
+        setState(r.state);
+        if (r.result.audioBase64) playAudio(`data:audio/mpeg;base64,${r.result.audioBase64}`);
+        setModal({ kind: "handoff", packet: r.state.packets!.find((p) => p.id === packet.id)!, handoff: r.result.handoff });
+        return;
+      }
       if (r.result.audioBase64) playAudio(`data:audio/mpeg;base64,${r.result.audioBase64}`);
       for (const line of r.result.transcript) {
         sound.blip();
@@ -608,7 +628,7 @@ function Valley() {
       })()}
       {modal?.kind === "claims" && state && <Claims state={state} pid={pid} onOpen={(tileId) => setModal({ kind: "crop", tileId })} onCheckin={() => setModal({ kind: "checkin" })} onClose={() => setModal(null)} />}
       {modal?.kind === "checkin" && state && <Checkin state={state} pid={pid} onDone={async (s) => { setState(s); await plant(s); setModal(null); setToast(`Check-in saved. Your farm is up to date.${s.rewards?.week.checkin ? " +50 🌰" : ""}`); setTimeout(() => setToast(""), 5000); }} onLibrary={() => setModal({ kind: "library" })} onClose={() => setModal(null)} />}
-      {modal?.kind === "exchange" && <Exchange pid={pid} rewards={rewards} onRewards={setRewards} onClose={() => setModal(null)}
+      {modal?.kind === "exchange" && <Exchange pid={pid} rewards={rewards} tango={Boolean(integrations.tango)} onRewards={setRewards} onClose={() => setModal(null)}
         onWear={(color) => { if (conn && me) void conn.reducers.setProfile({ name: me.name, color, avatar: me.avatar }); setToast("Looking sharp."); setTimeout(() => setToast(""), 3000); }} />}
       {modal?.kind === "almanac" && <Almanac state={state} players={players} myPid={pid} live={Boolean(convex)} onClose={() => setModal(null)} />}
       {modal?.kind === "library" && <Library pid={pid} onPlanted={libraryPlanted} onClose={() => setModal(null)} />}
@@ -627,7 +647,8 @@ function Valley() {
           onSubmit={(p) => (tileById(p.tileId)?.action.kind === "transfer" && tileById(p.tileId)?.action.payload.rail !== "nessie-savings" ? setModal({ kind: "confirm", tileId: p.tileId, packet: p }) : void harvest(p.tileId, p))}
           onClose={() => setModal(null)} />
       )}
-      {modal?.kind === "outbox" && state && <Outbox state={state} onOpen={(p) => setModal({ kind: "packet", packet: p })} onClose={() => setModal(null)} />}
+      {modal?.kind === "outbox" && state && <Outbox state={state} onOpen={(p) => setModal({ kind: "packet", packet: p })} onPaid={(p) => void moneyArrived(p)} onClose={() => setModal(null)} />}
+      {modal?.kind === "handoff" && <HandoffPanel pid={pid} packet={modal.packet} handoff={modal.handoff} onClose={() => setModal(null)} />}
       {modal?.kind === "checkout" && <Checkout pid={pid} onClose={() => setModal(null)} />}
       {modal?.kind === "swap" && conn && <SwapMarket conn={conn} me={myHex} players={[...players]} onClose={() => setModal(null)} />}
       {modal?.kind === "terms" && <TermsNews onClose={() => setModal(null)} />}
@@ -934,7 +955,8 @@ function CropCard({ tile, state, pid, onState, onAnswer, onClose, onHarvest, onP
     <Dialogue
       speaker={`${shortTitle(tile.title)} · ${tile.daysLeft} days`}
       onClose={onClose}
-      actions={packet && (can || done) ? <button className="ev-btn" onClick={() => onPacket(packet)}>{done ? "See what was submitted" : packet.status === "ready" ? `Review and submit · ${usd(packet.amount)}` : "Finish Ruth's form"}</button>
+      actions={packet?.status === "waiting" ? <button className="ev-btn" onClick={() => onPacket(packet)}>Filed · waiting on {packet.provider}</button>
+        : packet && (can || done) ? <button className="ev-btn" onClick={() => onPacket(packet)}>{done ? "See what was submitted" : packet.status === "ready" ? `Review and submit · ${usd(packet.amount)}` : "Finish Ruth's form"}</button>
         : can ? <button className="ev-btn" onClick={onHarvest}>Ruth, fill it in · {usd(tile.action.savings)}</button> : done ? <span className="ev-good">Harvested</span> : null}
     >
       <p className="ev-lead">{tile.headline}</p>

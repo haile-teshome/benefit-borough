@@ -2,8 +2,8 @@ import type { Action, DispatchResult } from "../types";
 import { nessie } from "./nessie";
 import { savingsAccount } from "../payday";
 
-// Peer dining transfer. Planned rail is Coinbase x402; Capital One Nessie is used as the bank
-// ledger when configured. Without keys the transfer is simulated and clearly marked as mock.
+// Transfers through Capital One Nessie (the sandbox bank): rescued money into savings, or dining
+// dollars to a friend. If the bank call fails, nothing moves and the error says so.
 export async function peerTransfer(action: Action): Promise<DispatchResult> {
   const amount = Number(action.payload.amount);
   // Payday: move rescued money from checking to Burrow Savings (both your own Nessie accounts).
@@ -36,12 +36,5 @@ export async function peerTransfer(action: Action): Promise<DispatchResult> {
       console.warn("[nessie] request failed, using mock transfer", err);
     }
   }
-  const tx = "0x" + Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-  return {
-    status: "confirmed",
-    confirmation: tx,
-    transcript: [`x402 payment request: $${amount} to ${action.payload.to}`, "Signed by user wallet", `Settled on Base Sepolia (mock), tx ${tx}`],
-    integration: "Coinbase x402 (mock)",
-    mocked: true,
-  };
+  throw new Error("The transfer didn't go through at the bank (Nessie); nothing was moved");
 }

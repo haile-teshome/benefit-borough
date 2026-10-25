@@ -53,7 +53,7 @@ export function RuthRecord({ state, pid, integrations, live, onClose }: { state:
     ["Multiplayer farms, gifts, chat", true, "SpacetimeDB"],
     ["Store prices for price matches", Boolean(integrations.apify), integrations.apify ? "Read live from the store's page with Apify" : "Price from the sample statement"],
     ["Ruth pays for the data she uses", Boolean(integrations.x402), integrations.x402 ? "Coinbase x402: $0.01 USDC per price check, settled on Base Sepolia" : "Not connected"],
-    ["Dining-dollar transfers", Boolean(integrations.nessie), integrations.nessie ? "Posted as a Nessie transfer" : "Simulated x402 payment"],
+    ["Transfers (savings moves, dining dollars)", Boolean(integrations.nessie), integrations.nessie ? "Real Nessie transfers you submit" : "Not connected: Ruth opens where to do it instead"],
     ["Filling in claim forms", true, "Ruth fills every claim (form, receipts, message, PDF) from your documents; you review and submit"],
     ["Night shifts (Autopilot)", Boolean(integrations.convex), integrations.convex ? "Scheduled by a Convex cron; prepares claims, never submits" : "Scheduled on this server; prepares claims, never submits"],
     ["Voice check-in", Boolean(integrations.cartesia), integrations.cartesia ? "Cartesia speech-to-text, Claude maps it onto your plans, Ruth answers in her voice" : "Typed check-in"],
@@ -61,8 +61,7 @@ export function RuthRecord({ state, pid, integrations, live, onClose }: { state:
     ["Fine-print watch", true, integrations.termsActor ? "Benefit Terms Watcher, a custom Apify actor" : "Same checks run on this server until the Apify actor is deployed"],
     ["Benefit Bazaar (agents shop for you)", Boolean(integrations.claude), integrations.claude ? `Three shopkeeper agents search the live web (Claude web search) and sell quotes over x402; Apify checks live prices; Ruth reviews. She never buys.` : "Needs Claude"],
     ["Swap Market", true, "SpacetimeDB: live offers between players; the transfer itself happens in each program's app"],
-    ["Phone calls to offices", false, "Voice is real; the other side of the call is scripted"],
-    ["Forms, chats and app taps (refunds, disputes, cancels)", false, "Scripted: each provider's API is the next step"],
+    ["Filing claims, refunds, disputes and calls", true, "Ruth fills everything in; Submit opens the real page, email or phone number and you send it. Money counts only when you confirm it arrived."],
   ];
   return (
     <div className="ev-dialogue-wrap">
@@ -77,7 +76,7 @@ export function RuthRecord({ state, pid, integrations, live, onClose }: { state:
           {tab === "record" && (live ? <LiveTrail pid={pid} fallback={state?.audit ?? []} /> : <Trail events={state?.audit ?? []} />)}
           {tab === "real" && (
             <ul className="ev-real">
-              {real.map(([what, isLive, how]) => <li key={what}><b className={isLive ? "live" : "sim"}>{isLive ? "LIVE" : "SIMULATED"}</b><span>{what}</span><em>{how}</em></li>)}
+              {real.map(([what, isLive, how]) => <li key={what}><b className={isLive ? "live" : "sim"}>{isLive ? "LIVE" : "OFF"}</b><span>{what}</span><em>{how}</em></li>)}
             </ul>
           )}
           {tab === "rules" && (

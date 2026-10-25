@@ -15,6 +15,7 @@ export const expire = {
     call<{ state: AppState; reply: { stance: "hold" | "acknowledge"; reply: string; rule_cited: number | null; engine: string } }>("/api/challenge", { pid, key, message }),
   scan: (pid: string) => call<{ state: AppState }>("/api/scan", { pid }),
   prepare: (pid: string, tileId: string) => call<{ state: AppState; packet: Packet }>("/api/packets", { pid, action: "prepare", tileId }),
+  paid: (pid: string, packetId: string) => call<{ state: AppState; result: DispatchResult }>("/api/packets", { pid, action: "paid", packetId }),
   submit: (pid: string, packetId: string, hash: string) => call<{ state: AppState; result: DispatchResult }>("/api/packets", { pid, action: "submit", packetId, hash }),
   reviewCart: (pid: string, balanceId: string, items: string[]) => call<{ state: AppState; verdict: Verdict }>("/api/review-cart", { pid, balanceId, items }),
   upload: async (pid: string, file: File) => {

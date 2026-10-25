@@ -3,19 +3,19 @@ import { extract } from "./engine/extract";
 import { optimize } from "./engine/optimize";
 import { defend, review } from "./engine/reviewer";
 import { usd } from "./engine/spans";
-import { bookingCall } from "./integrations/cartesia";
+import { ruthReads } from "./integrations/cartesia";
 import { livePrices } from "./integrations/apify";
 import { nessieEnabled, nessieStatement } from "./integrations/nessie";
 import { attachProof } from "./claims/packet";
 import { MARKET, buy, paidPrices, txUrl, x402Enabled } from "./integrations/x402";
 import { statementLines } from "./claims/forms";
 import { withEvidence } from "./claims/packet";
-import { requestAction } from "./integrations/request";
 import { peerTransfer } from "./integrations/transfer";
 import { hydrate, load, log, save } from "./store";
 import type { AppState, DispatchResult } from "./types";
 import { fresh, record } from "./rewards";
 import { editPacket, fingerprint, preparePacket, profileFromDocs, refreshFromProfile } from "./claims/packet";
+import { handoffFor } from "./claims/destinations";
 import type { Packet, Profile } from "./types";
 
 // Ruth's data budget for x402 purchases: your Autopilot mandate's, or $0.25 a month by default.
@@ -94,6 +94,7 @@ export async function prepare(tileId: string, pid?: string | null, by: Packet["p
   if (!tile) throw new Error("Unknown tile");
   if (!tile.live || tile.action.kind === "none") throw new Error("Nothing to claim here");
   if (s.done.includes(tileId)) throw new Error("Already claimed");
+  if (s.packets?.some((x) => x.tileId === tileId && x.status === "waiting")) throw new Error("Already filed; waiting on the company");
   s.profile = { ...profileFromDocs(s), ...(s.profile ?? {}) };
   // Receipts: Ruth reads your live bank activity too, so proof of payment is found, not asked for.
   if (nessieEnabled() && !s.docs.some((d) => d.id === "upload_nessie")) {
@@ -166,19 +167,55 @@ export async function saveProfile(profile: Profile, pid?: string | null) {
 }
 
 // You press Submit on a packet you've reviewed. The fingerprint you saw must match what's sent.
+// Moves between your own accounts (Nessie) run right away. Everything else opens the real place
+// it goes, for you to file; the money counts as rescued only once you say it arrived.
 export async function submitPacket(packetId: string, hash: string, pid?: string | null) {
   await hydrate(pid);
   const s0 = load(pid);
   const pk = s0.packets?.find((x) => x.id === packetId);
   if (!pk) throw new Error("Unknown packet");
-  if (pk.status === "submitted") throw new Error("Already submitted");
+  if (pk.status === "submitted" || pk.status === "waiting") throw new Error("Already submitted");
   if (!pk.check.ok) throw new Error(`Not ready: ${pk.check.issues[0]}`);
   if (hash !== pk.hash || fingerprint(pk) !== pk.hash) throw new Error("This packet changed since you reviewed it. Review it again.");
-  const out = await dispatch(pk.tileId, pid, { packetId, hash });
-  const s = out.state;
-  s.packets = (s.packets ?? []).map((x) => (x.id === packetId ? { ...x, status: out.result.status === "confirmed" ? "submitted" : x.status, submittedAt: new Date().toISOString(), confirmation: out.result.confirmation } : x));
+  const tile = s0.tiles.find((t) => t.id === pk.tileId)!;
+  if (tile.action.kind === "transfer" && nessieEnabled()) {
+    const out = await dispatch(pk.tileId, pid, { packetId, hash });
+    const s = out.state;
+    s.packets = (s.packets ?? []).map((x) => (x.id === packetId ? { ...x, status: out.result.status === "confirmed" ? "submitted" : x.status, submittedAt: new Date().toISOString(), confirmation: out.result.confirmation } : x));
+    save(s, pid);
+    return out;
+  }
+  const handoff = handoffFor(tile, pk, s0);
+  if (handoff.kind === "phone" && handoff.script) handoff.script = handoff.script.slice(0, 600);
+  const audioBase64 = handoff.kind === "phone" && handoff.script ? await ruthReads(handoff.script) : undefined;
+  s0.packets = s0.packets!.map((x) => (x.id === packetId ? { ...x, status: "waiting", handoff, submittedAt: new Date().toISOString() } : x));
+  log(s0, "submit", `You approved the ${pk.form} (fingerprint ${pk.hash.slice(0, 8)}) and are filing it at ${handoff.label}. Waiting for ${pk.provider}; nothing counts as rescued until the money arrives.`);
+  save(s0, pid);
+  const result: DispatchResult = { status: "handoff", handoff, confirmation: "", transcript: handoff.steps, audioBase64, integration: handoff.label, mocked: false };
+  return { state: s0, result };
+}
+
+// You tell Ruth the money arrived (or the change went through). Only now does the ledger move.
+export async function confirmPaid(packetId: string, pid?: string | null) {
+  await hydrate(pid);
+  const s = load(pid);
+  const pk = s.packets?.find((x) => x.id === packetId);
+  if (!pk || pk.status !== "waiting") throw new Error("Nothing waiting on that claim");
+  const tile = s.tiles.find((t) => t.id === pk.tileId);
+  if (!tile) throw new Error("Unknown claim");
+  const confirmation = `YOU-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${pk.id.slice(-4).toUpperCase()}`;
+  s.packets = s.packets!.map((x) => (x.id === packetId ? { ...x, status: "submitted", confirmation } : x));
+  if (tile.action.savings > 0) {
+    s.ledger.push({ id: `L${s.ledger.length + 1}`, tileId: tile.id, amount: pk.amount, description: tile.action.summary, confirmation, at: new Date().toISOString() });
+    const r = (s.rewards ??= fresh());
+    const got = record(r, { kind: "harvest", saved: pk.amount, title: tile.title });
+    if (got.acorns) log(s, "acorns", `+${got.acorns} acorns (${got.notes.join(", ")})`);
+  }
+  s.done.push(tile.id);
+  log(s, "ledger", `+${usd(pk.amount)}: you confirmed ${pk.provider} came through (${confirmation})`);
   save(s, pid);
-  return out;
+  const result: DispatchResult = { status: "confirmed", confirmation, transcript: [`${pk.provider} came through`], integration: "You confirmed it", mocked: false };
+  return { state: s, result };
 }
 
 export async function dispatch(tileId: string, pid?: string | null, approval?: { packetId: string; hash: string }): Promise<{ state: AppState; result: DispatchResult }> {
@@ -196,7 +233,8 @@ export async function dispatch(tileId: string, pid?: string | null, approval?: {
 
   log(s, "submit", `You approved and submitted the ${pk.form} (fingerprint ${pk.hash.slice(0, 8)})`);
   log(s, "dispatch", `${tileId}: ${tile.action.summary}`);
-  const result = tile.action.kind === "book_call" ? await bookingCall(tile.action) : tile.action.kind === "request" ? await requestAction(tile.action) : await peerTransfer(tile.action);
+  if (tile.action.kind !== "transfer") throw new Error("Ruth files this one with you: use Submit to open where it goes");
+  const result = await peerTransfer(tile.action);
   // Rule 6: the ledger moves only on a confirmed action.
   if (result.status === "confirmed" && tile.action.savings <= 0) {
     s.done.push(tileId);

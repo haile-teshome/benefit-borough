@@ -6,7 +6,7 @@ import type { AppState, Attachment, Packet, PacketField, Profile, Tile } from ".
 
 export type Draft = Omit<Packet, "id" | "check" | "status" | "hash" | "preparedAt" | "preparedBy" | "engine">;
 
-type Line = { date: string; what: string; amount: number; text: string; doc: string };
+type Line = { date: string; what: string; amount: number; text: string; doc: string; account?: string };
 
 // One statement line as a receipt: "Oct 3   Walgreens — prescription  $28.15" or a CSV row like
 // 2026-10-12,"TARGET AIRPODS PRO",-249.00,"Freedom Flex".
@@ -14,8 +14,8 @@ export function parseLine(text: string, doc = ""): Line | null {
   const t = text.trim();
   const m = t.match(/^([A-Z][a-z]{2} \d{1,2})\s+(.+?)\s+\$([\d,]+\.\d{2})/);
   if (m) return { date: m[1], what: m[2].trim(), amount: parseFloat(m[3].replace(/,/g, "")), text: t, doc };
-  const c = t.match(/^(\d{4}-\d{2}-\d{2}),"?([^",]+)"?,\s*(-?[\d.]+)/);
-  if (c) return { date: new Date(`${c[1]}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }), what: c[2].trim(), amount: Math.abs(parseFloat(c[3])), text: t, doc };
+  const c = t.match(/^(\d{4}-\d{2}-\d{2}),"?([^",]+)"?,\s*(-?[\d.]+)(?:,"?([^",]+)"?)?/);
+  if (c) return { date: new Date(`${c[1]}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }), what: c[2].trim(), amount: Math.abs(parseFloat(c[3])), text: t, doc, account: c[4]?.trim() };
   return null;
 }
 
@@ -39,6 +39,11 @@ function proof(lines: Line[], re: RegExp, name: string, tile?: Tile): { found: L
   const found = own.length ? own : lines.filter((l) => re.test(l.what));
   return { found, att: { name, kind: "statement", lines: found.map((l) => l.text), cite: found[0]?.doc, todo: found.length ? undefined : "No receipts found in your statements yet. Upload one and Ruth will attach it." } };
 }
+
+// Which company to deal with, from the account a charge posted to.
+const BANKS: [RegExp, string][] = [[/chase|freedom|sapphire/i, "Chase"], [/amex|american express|platinum|gold card/i, "American Express"], [/capital one|venture|quicksilver/i, "Capital One"], [/citi|strata|best buy/i, "Citi"], [/wells fargo/i, "Wells Fargo"], [/bank of america|boa\b/i, "Bank of America"]];
+const bankOf = (account?: string, fallback = "your bank") => BANKS.find(([re]) => re.test(account ?? ""))?.[1] ?? fallback;
+const plain = (l: Line) => `a ${usd(l.amount)} ${l.what.toLowerCase().replace(/\b(fee)\b/, "fee")} on ${l.date}`;
 
 export function draftFor(tile: Tile, s: AppState): Draft {
   const p = s.profile ?? {};
@@ -95,14 +100,20 @@ export function draftFor(tile: Tile, s: AppState): Draft {
     }
     case "dispute": {
       const dup = tile.sources.map((x) => parseLine(x.text, x.doc)).filter((x): x is Line => Boolean(x));
-      return { ...base, form: "Billing dispute", provider: to, method: "app", submitTo: `${to} app → Transactions → Dispute`,
+      const bank = bankOf(dup[0]?.account, to);
+      return { ...base, form: "Billing dispute", provider: bank, method: "app", submitTo: `${bank} app → Transactions → Dispute`,
         fields: [P("fullName", "Cardholder", p), D("txn", "Charge to dispute", dup[1]?.text ?? cite ?? "", cite), D("reason", "Reason", "Duplicate charge: same merchant, amount and minute as another charge"), D("amount", "Amount", usd(amount), cite), MINE("note", "Note to the issuer", "I was charged twice for one order. I'm keeping the first charge and disputing the duplicate.")],
         attachments: [{ name: "Both charges from your statement", kind: "statement", lines: dup.map((l) => l.text), cite: dup[0]?.doc }], minutes: { you: 1, without: 15 } };
     }
-    case "bank_fee": return { ...base, form: "Fee refund request", provider: to, method: "chat", submitTo: `${to} secure message`,
-      fields: [P("fullName", "Account holder", p), D("fee", "Fee", cite ?? "", cite), D("amount", "Refund requested", usd(amount), cite)], attachments: [],
-      minutes: { you: 1, without: 20 },
-      message: `Hi, I was charged ${tile.sources.map((x) => x.text).join(" and ")}. It's my first in a long time; could you refund it as a courtesy? Thank you, ${p.fullName ?? "[your name]"}.` };
+    case "bank_fee": {
+      const fees = tile.sources.map((x) => parseLine(x.text, x.doc)).filter((x): x is Line => Boolean(x));
+      const bank = bankOf(fees[0]?.account, to);
+      const what = fees.length ? fees.map(plain).join(" and ") : (cite ?? "a fee");
+      return { ...base, form: "Fee refund request", provider: bank, method: "chat", submitTo: `${bank} secure message`,
+        fields: [P("fullName", "Account holder", p), D("fee", "Fee", cite ?? "", cite), D("amount", "Refund requested", usd(amount), cite)], attachments: [],
+        minutes: { you: 1, without: 20 },
+        message: `Hi, I was charged ${what}${fees[0]?.account ? ` on my ${fees[0].account} account` : ""}. It's the first in a long time; could you refund it as a courtesy? Thank you, ${p.fullName ?? "[your name]"}.` };
+    }
     case "annual_fee": case "subscription": return { ...base, form: tile.category === "annual_fee" ? "Downgrade and fee refund request" : "Cancellation request", provider: to, method: "phone", submitTo: `${to} (call or chat)`,
       fields: [P("fullName", "Account holder", p), D("what", "Account", cite ?? tile.title, cite), D("amount", "Saved", usd(amount), cite)], attachments: [],
       minutes: { you: 2, without: 25 },

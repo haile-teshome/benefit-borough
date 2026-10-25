@@ -91,8 +91,13 @@ export type ReviewSubject =
 
 export type LedgerEntry = { id: string; tileId: string; amount: number; description: string; confirmation: string; at: string };
 
+// Where a claim goes when you press Submit: the real page, email or phone number, with Ruth's
+// steps and script. Ruth can't file with most companies herself, so you do, in one tap.
+export type Handoff = { kind: "web" | "email" | "mail" | "phone" | "app"; label: string; url?: string; phone?: string; steps: string[]; script?: string; sample?: boolean };
+
 export type DispatchResult = {
-  status: "confirmed" | "failed";
+  status: "confirmed" | "failed" | "handoff";
+  handoff?: Handoff;
   confirmation: string;
   transcript: string[];
   audioBase64?: string;
@@ -115,7 +120,8 @@ export type Packet = {
   amount: number; // what the packet asks for
   minutes: { you: number; without: number }; // your time with Ruth vs doing it yourself
   check: { ok: boolean; passed: string[]; issues: string[] };
-  status: "needs you" | "ready" | "submitted" | "rejected";
+  status: "needs you" | "ready" | "submitted" | "waiting" | "rejected"; // waiting: you filed it; waiting for the money
+  handoff?: Handoff;
   hash: string; // fingerprint of exactly what you approve
   preparedAt: string; preparedBy: "ruth" | "autopilot"; engine: "claude" | "rules";
   submittedAt?: string; confirmation?: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { AppState, Packet } from "@/lib/types";
+import type { AppState, Handoff, Packet } from "@/lib/types";
 import styles from "./Outbox.module.css";
 import { openOutside } from "@/lib/valley/popup";
 
@@ -26,7 +26,7 @@ export function PacketReview({ pid, packet, onState, onSubmit, onClose }: {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const dirty = Object.keys(values).length > 0 || message !== null;
-  const done = packet.status === "submitted";
+  const done = packet.status === "submitted" || packet.status === "waiting";
 
   async function save() {
     setSaving(true); setError("");
@@ -100,7 +100,7 @@ export function PacketReview({ pid, packet, onState, onSubmit, onClose }: {
             </ul>
           </div>
           {error && <p className="ev-bad">{error}</p>}
-          {done && <p className="ev-good">Submitted {new Date(packet.submittedAt!).toLocaleString("en-US")} · {packet.confirmation}</p>}
+          {done && <p className="ev-good">{packet.status === "waiting" ? `Filed ${new Date(packet.submittedAt!).toLocaleString("en-US")}${packet.handoff ? ` at ${packet.handoff.label}` : ""}. Waiting on ${packet.provider}.` : `Done ${new Date(packet.submittedAt!).toLocaleString("en-US")} · ${packet.confirmation}`}</p>}
         </div>
         <div className="ev-actions">
           <a className="ev-btn ghost" href={`/api/packets/pdf?pid=${pid}&id=${packet.id}`} target="_blank" rel="noreferrer" onClick={openOutside}>Open the filled form (PDF)</a>
@@ -120,9 +120,9 @@ export function PacketReview({ pid, packet, onState, onSubmit, onClose }: {
   );
 }
 
-export function Outbox({ state, onOpen, onClose }: { state: AppState; onOpen: (p: Packet) => void; onClose: () => void }) {
+export function Outbox({ state, onOpen, onPaid, onClose }: { state: AppState; onOpen: (p: Packet) => void; onPaid: (p: Packet) => void; onClose: () => void }) {
   const packets = state.packets ?? [];
-  const waiting = packets.filter((p) => p.status !== "submitted");
+  const waiting = packets.filter((p) => p.status !== "submitted" && p.status !== "waiting");
   const ready = waiting.filter((p) => p.status === "ready");
   const value = waiting.reduce((s, p) => s + p.amount, 0);
   const saved = waiting.reduce((s, p) => s + p.minutes.without - p.minutes.you, 0);
@@ -143,14 +143,43 @@ export function Outbox({ state, onOpen, onClose }: { state: AppState; onOpen: (p
                 <button onClick={() => onOpen(p)}>
                   <span><b>{p.form}</b><em>{p.provider} · {p.preparedBy === "autopilot" ? "prepared overnight" : "prepared by Ruth"}</em></span>
                   <strong>${p.amount.toFixed(2)}</strong>
-                  <i className={p.status === "submitted" ? styles.ok : p.status === "ready" ? styles.ready : styles.issue}>{p.status === "submitted" ? "Submitted" : p.status === "ready" ? "Ready for you" : `Needs you (${p.check.issues.length})`}</i>
+                  <i className={p.status === "submitted" ? styles.ok : p.status === "ready" ? styles.ready : p.status === "waiting" ? "" : styles.issue}>{p.status === "submitted" ? "Done" : p.status === "ready" ? "Ready for you" : p.status === "waiting" ? `Filed, waiting on ${p.provider}` : `Needs you (${p.check.issues.length})`}</i>
                 </button>
+                {p.status === "waiting" && <button className="ev-btn" style={{ marginTop: 4 }} onClick={() => onPaid(p)}>Money arrived: count it</button>}
               </li>
             ))}
             {!packets.length && <li className="ev-sub">Nothing yet. Open a crop and ask Ruth to fill it in, or turn on Autopilot.</li>}
           </ul>
         </div>
         <div className="ev-actions"><button className="ev-btn ghost" onClick={onClose}>Close</button></div>
+      </div>
+    </div>
+  );
+}
+
+// After Submit: the real place this claim goes, with everything Ruth prepared ready to paste.
+export function HandoffPanel({ pid, packet, handoff, onClose }: { pid: string; packet: Packet; handoff: Handoff; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const open = (url: string) => { const w = window.open(url, "_blank", "popup,width=1180,height=860"); if (w) w.opener = null; else window.open(url, "_blank", "noopener,noreferrer"); };
+  async function copy() { try { await navigator.clipboard.writeText(handoff.script ?? packet.message ?? packet.fields.map((f) => `${f.label}: ${f.value}`).join("\n")); setCopied(true); } catch { /* clipboard blocked */ } }
+  return (
+    <div className="ev-dialogue-wrap">
+      <div className={`ev-panel ev-dialogue ${styles.panel}`}>
+        <div className="ev-speaker">File it: {handoff.label}</div>
+        <div className={`ev-body ${styles.body}`}>
+          <p className="ev-lead">Ruth filled it in. Now it goes to {packet.provider}, from you.</p>
+          {handoff.sample && <p className="ev-bad">This claim comes from the sample person's documents, so the office in it is part of the sample.</p>}
+          <ol className={styles.check}>{handoff.steps.map((x) => <li key={x}>{x}</li>)}</ol>
+          {handoff.phone && <p><b>Call:</b> <a className="ev-link" href={`tel:${handoff.phone.replace(/[^\d+]/g, "")}`}>{handoff.phone}</a></p>}
+          {handoff.script && <div className={styles.block}><b>{handoff.kind === "phone" ? "What to say" : "Your message"}</b><span>{handoff.script}</span></div>}
+          <p className="ev-sub">When {packet.provider} comes through, tap “Money arrived” in Ruth's outbox. That's when it counts as rescued.</p>
+        </div>
+        <div className="ev-actions">
+          {handoff.url && <button className="ev-btn" onClick={() => open(handoff.url!)}>Open {handoff.label}</button>}
+          {(packet.message || handoff.script) && <button className="ev-btn ghost" onClick={() => void copy()}>{copied ? "Copied" : "Copy the message"}</button>}
+          <button className="ev-btn ghost" onClick={() => open(`/api/packets/pdf?pid=${pid}&id=${packet.id}`)}>Get the PDF</button>
+          <button className="ev-btn ghost" onClick={onClose}>Done</button>
+        </div>
       </div>
     </div>
   );

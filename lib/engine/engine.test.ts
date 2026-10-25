@@ -99,7 +99,7 @@ test("an uploaded CSV statement yields grounded findings", async () => {
 });
 
 test("Ruth prepares, you submit: she waits for answers and never sends on her own", async () => {
-  const { scan, dispatch, answer, prepare, submitPacket, editPacketFields } = await import("../pipeline");
+  const { scan, dispatch, answer, prepare, submitPacket, editPacketFields, confirmPaid } = await import("../pipeline");
   const pid = "test_ask";
   (await import("node:fs")).rmSync(`.data/state-${pid}.json`, { force: true });
   const s = await scan(SAMPLE_DOCS, pid);
@@ -116,7 +116,15 @@ test("Ruth prepares, you submit: she waits for answers and never sends on her ow
   assert.equal(packet.status, "ready");
   // The fingerprint you approved must match what's sent.
   await assert.rejects(submitPacket(packet.id, "0000", pid), /changed since you reviewed/);
-  assert.equal((await submitPacket(packet.id, packet.hash, pid)).result.status, "confirmed");
+  // Ruth can't file with Hulu or Duolingo herself: Submit opens the real place, and nothing counts
+  // as rescued until you confirm it went through.
+  const sent = await submitPacket(packet.id, packet.hash, pid);
+  assert.equal(sent.result.status, "handoff");
+  assert.match(sent.result.handoff!.url!, /hulu\.com/);
+  assert.equal(sent.state.ledger.length, 0);
+  const paid = await confirmPaid(packet.id, pid);
+  assert.equal(paid.result.status, "confirmed");
+  assert.equal(paid.state.ledger.length, 1);
   // Editing a packet changes its fingerprint, so an old approval no longer works.
   const fsa = await prepare("tile_fsa_claim", pid);
   const edited = await editPacketFields(fsa.packet.id, { employeeId: "E-4417" }, pid);

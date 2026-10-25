@@ -47,7 +47,7 @@ export async function runShift(pid: string, why: ShiftReport["why"]) {
   const prepared: ShiftReport["prepared"] = [];
   for (const t of s.tiles) {
     if (!t.live || t.action.kind === "none" || s.done.includes(t.id) || s.reviews[t.id]?.verdict !== "approve" || !allowed(ap.mandate, t)) continue;
-    if (s.packets?.some((p) => p.tileId === t.id && (p.status === "submitted" || p.status === "ready"))) continue;
+    if (s.packets?.some((p) => p.tileId === t.id && (p.status === "submitted" || p.status === "ready" || p.status === "waiting"))) continue;
     try {
       const { packet } = await prepare(t.id, pid, "autopilot");
       prepared.push({ packetId: packet.id, form: packet.form, amount: packet.amount, status: packet.status });

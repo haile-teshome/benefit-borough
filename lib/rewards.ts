@@ -29,7 +29,7 @@ export const QUESTS: Quest[] = [
 ];
 
 export type Partner = "tango" | "coinbase" | "manual";
-export type Reward = { id: string; name: string; cost: number; kind: "cosmetic" | "real"; blurb: string; color?: string; usd?: number; partner?: Partner; prefer?: string[] };
+export type Reward = { id: string; name: string; cost: number; kind: "cosmetic" | "real" | "perk"; blurb: string; color?: string; usd?: number; partner?: Partner; prefer?: string[] };
 // Real-world rewards per person per calendar month, in dollars. Every real reward is reviewed first.
 export const MONTHLY_USER_CAP = 10;
 export const CATALOG: Reward[] = [
@@ -37,11 +37,11 @@ export const CATALOG: Reward[] = [
   { id: "scarf-ruth", name: "Ruth's purple scarf", cost: 200, kind: "cosmetic", blurb: "The Reviewer's own shade.", color: "#6A4C93" },
   { id: "scarf-mint", name: "Mint-condition scarf", cost: 120, kind: "cosmetic", blurb: "Fresh, like a refunded fee.", color: "#3FA6A0" },
   { id: "scarf-ink", name: "Midnight scarf", cost: 250, kind: "cosmetic", blurb: "For night owls who check in late.", color: "#2F2340" },
-  { id: "tree", name: "Plant a real tree", cost: 1000, kind: "real", blurb: "Through a tree-planting partner.", usd: 1, partner: "manual" },
-  { id: "foodbank", name: "$5 to a local food bank", cost: 2000, kind: "real", blurb: "Donated in your name.", usd: 5, partner: "manual" },
-  { id: "coffee", name: "$5 coffee gift card", cost: 2500, kind: "real", blurb: "Emailed via Tango Card.", usd: 5, partner: "tango", prefer: ["Starbucks", "Dunkin", "Peet"] },
-  { id: "usdc", name: "$5 in USDC", cost: 2500, kind: "real", blurb: "Sent to your wallet on Base via Coinbase.", usd: 5, partner: "coinbase" },
-  { id: "giftcard10", name: "$10 gift card", cost: 5000, kind: "real", blurb: "Emailed via Tango Card.", usd: 10, partner: "tango", prefer: ["Amazon", "Target", "Visa"] },
+  // A real perk: more x402 data budget this month, so Ruth's agents can buy more live prices and checks.
+  { id: "databoost", name: "Data boost for Ruth's agents", cost: 300, kind: "perk", blurb: "+$0.25 of x402 data budget this month: more live prices and eligibility checks." },
+  // Gift cards are emailed by Tango Card and only show up when a Tango account is connected.
+  { id: "coffee", name: "$5 coffee gift card", cost: 2500, kind: "real", blurb: "Emailed by Tango Card.", usd: 5, partner: "tango", prefer: ["Starbucks", "Dunkin", "Peet"] },
+  { id: "giftcard10", name: "$10 gift card", cost: 5000, kind: "real", blurb: "Emailed by Tango Card.", usd: 10, partner: "tango", prefer: ["Amazon", "Target", "Visa"] },
 ];
 
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -134,7 +134,7 @@ export function redeem(r: Rewards, itemId: string, contact: Contact = {}, now = 
   r.acorns -= item.cost;
   const redemption: Redemption = {
     id: `R${r.redemptions.length + 1}-${now.getTime().toString(36)}`, item: item.id, name: item.name, cost: item.cost, at: now.toISOString(),
-    status: item.kind === "cosmetic" ? "unlocked" : "awaiting review", usd: item.usd, partner: item.partner,
+    status: item.kind === "real" ? "awaiting review" : "unlocked", usd: item.usd, partner: item.partner,
     contact: item.partner === "tango" ? { email: contact.email!.trim(), firstName: contact.firstName!.trim() } : item.partner === "coinbase" ? { wallet: contact.wallet } : undefined,
   };
   r.redemptions.unshift(redemption);
