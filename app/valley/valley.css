@@ -473,3 +473,17 @@ body:has(.ev-poster) nextjs-portal { display: none !important; }
 .ev-onb .ev-lib-list { overflow: visible; flex: none; } /* one scrollbar: the dialog body */
 .ev-onb-changes { margin: 4px 0 0; padding-left: 18px; display: grid; gap: 2px; font-size: 14px; }
 @media (max-width: 700px) { .ev-poster .ev-sign-board .l1, .ev-poster .ev-sign-board .l2 { font-size: 60px; } }
+
+/* Inline pixel icons sit on the text baseline. */
+.ev-ico { display: inline-block; vertical-align: -3px; }
+
+/* Dropdowns and upload buttons dressed like the rest of the game: parchment fields, wooden buttons. */
+select { appearance: none; -webkit-appearance: none; border-radius: 0; font: 700 16px var(--read); color: var(--ink); cursor: pointer;
+  background: #fff8e2 url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 4' shape-rendering='crispEdges'><path fill='%234a2a12' d='M0 0h6v1H0zM1 1h4v1H1zM2 2h2v1H2z'/></svg>") no-repeat right 10px center / 12px 8px;
+  border: 3px solid var(--wood-dark); box-shadow: inset 0 -3px 0 var(--parchment-2); padding: 7px 34px 7px 10px; }
+.ev-onb .ev-lib-q select { padding-right: 34px; }
+select:focus-visible { outline: 3px solid #ffd23f; outline-offset: 2px; }
+input[type=file] { font: 400 14px var(--read); color: var(--ink); max-width: 100%; }
+input[type=file]::file-selector-button { font: 700 15px var(--read); color: var(--parchment); background: var(--wood-light); border: 3px solid var(--wood-dark);
+  box-shadow: inset 0 3px 0 var(--wood-hi), 0 3px 0 rgba(40, 20, 5, 0.35); padding: 6px 14px; margin-right: 10px; cursor: pointer; border-radius: 0; }
+input[type=file]::file-selector-button:hover { filter: brightness(1.08); }

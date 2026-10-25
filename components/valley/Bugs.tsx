@@ -9,6 +9,7 @@ import { sound } from "@/lib/valley/audio";
 import { driftClouds, flowers, ground, makeStage, mat, rnd, toScreen, tree } from "@/lib/valley/three-kit";
 import fish from "./Fishing.module.css";
 import styles from "./Minigame.module.css";
+import { Acorn } from "./PixelIcon";
 
 // Bug catching in the meadow, first person. Butterflies circle the flowers, bees zip between them,
 // beetles sit on tree trunks, dragonflies dart over the pond, and fireflies come out at night.
@@ -220,9 +221,9 @@ export function Bugs({ pid, onClose, onRewards }: { pid: string; onClose: () => 
     <div className={fish.full} onPointerMove={move} onPointerDown={swing} style={{ cursor: "none" }}>
       <div ref={host} style={{ position: "absolute", inset: 0 }} />
       <div ref={cross} className={styles.cross} style={{ left: "50%", top: "55%" }} />
-      <div className={`ev-panel ${fish.top}`} data-panel><b>Bug catching</b><span>Journal {Object.keys(seen).length}/{BUGS.length}{journal ? ` · 🌰 today ${journal.todayAcorns}/${journal.cap}` : ""}</span></div>
+      <div className={`ev-panel ${fish.top}`} data-panel><b>Bug catching</b><span>Journal {Object.keys(seen).length}/{BUGS.length}{journal ? <> · <Acorn /> today {journal.todayAcorns}/{journal.cap}</> : ""}</span></div>
       {phase === "play" && <div className={styles.hud} data-panel><span className={styles.pill}>Bugs left: {left}</span>{hint && <span className={styles.pill}>{hint}</span>}</div>}
-      {toast && <div className={styles.toast} data-panel><span style={{ width: 22, height: 22, background: toast.bug.colors[0], boxShadow: "0 0 0 3px #3b2412", flex: "none" }} /><div><b>{toast.bug.name}{toast.first ? " · New!" : ""}</b><span>{toast.bug.blurb}</span></div>{toast.acorns > 0 && <em>+{toast.acorns} 🌰</em>}</div>}
+      {toast && <div className={styles.toast} data-panel><span style={{ width: 22, height: 22, background: toast.bug.colors[0], boxShadow: "0 0 0 3px #3b2412", flex: "none" }} /><div><b>{toast.bug.name}{toast.first ? " · New!" : ""}</b><span>{toast.bug.blurb}</span></div>{toast.acorns > 0 && <em>+{toast.acorns} <Acorn /></em>}</div>}
       {phase === "journal" ? (
         <div className={`ev-panel ${fish.journal}`} data-panel>
           <div className="ev-speaker">Bug journal</div>
@@ -232,7 +233,7 @@ export function Bugs({ pid, onClose, onRewards }: { pid: string; onClose: () => 
               <div key={b.id} className={fish.entry}>
                 <span style={{ width: 40, height: 28, background: seen[b.id] ? b.colors[0] : "#5a4a3a", boxShadow: "0 0 0 3px #3b2412", borderRadius: b.kind === "beetle" ? "50% 50% 40% 40%" : 4 }} />
                 <b>{seen[b.id] ? b.name : "???"}</b>
-                <span>{seen[b.id] ? `×${seen[b.id]} · ${b.acorns} 🌰` : b.when ? `Comes out at ${b.when}` : "Not caught yet"}</span>
+                <span>{seen[b.id] ? <>×{seen[b.id]} · {b.acorns} <Acorn /></> : b.when ? `Comes out at ${b.when}` : "Not caught yet"}</span>
               </div>
             ))}
           </div>
@@ -244,8 +245,8 @@ export function Bugs({ pid, onClose, onRewards }: { pid: string; onClose: () => 
           {phase === "play" && <p className={styles.keys}>WASD to walk · hold Shift to tiptoe · click to swing the net</p>}
           {phase === "done" && (
             <>
-              <p className={fish.msg}>{got.length ? `You caught ${got.length} bug${got.length === 1 ? "" : "s"}: +${total} 🌰` : "They all got away. Tiptoe closer next time!"}</p>
-              {got.length > 0 && <ul className={styles.list}>{got.map((x, i) => <li key={i}><span><b>{x.bug.name}</b>{x.first ? " · New!" : ""} · {x.bug.blurb}</span>{x.acorns > 0 && <em>+{x.acorns} 🌰</em>}</li>)}</ul>}
+              <p className={fish.msg}>{got.length ? `You caught ${got.length} bug${got.length === 1 ? "" : "s"}: +${total} acorns` : "They all got away. Tiptoe closer next time!"}</p>
+              {got.length > 0 && <ul className={styles.list}>{got.map((x, i) => <li key={i}><span><b>{x.bug.name}</b>{x.first ? " · New!" : ""} · {x.bug.blurb}</span>{x.acorns > 0 && <em>+{x.acorns} <Acorn /></em>}</li>)}</ul>}
             </>
           )}
           <div className={fish.buttons}>

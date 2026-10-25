@@ -5,16 +5,17 @@ import { useTable } from "spacetimedb/react";
 import { DbConnection, tables } from "@/lib/valley_bindings";
 import type { Offer, Player } from "@/lib/valley_bindings/types";
 import s from "./SwapMarket.module.css";
+import { PixelIcon } from "./PixelIcon";
 
 type Kind = "dining" | "points" | "pass" | "other";
 
 // What Ruth says about each kind before a swap. Only claim a transfer is allowed when the program
 // actually allows it, and say plainly what can't move.
 const KINDS: Record<Kind, { label: string; icon: string; unit: string; rule: string }> = {
-  dining: { label: "Dining dollars", icon: "🍱", unit: "USD", rule: "Many campus plans (like Cal Dining Flex dollars) allow peer transfers between students. Meal swipes usually can't be transferred." },
-  points: { label: "Points & miles", icon: "🏨", unit: "points", rule: "Most hotel programs (Marriott Bonvoy, Hilton Honors) allow free points transfers to another member, within yearly limits. Airline miles often charge a fee." },
-  pass: { label: "Passes & seats", icon: "🎟️", unit: "pass", rule: "Guest passes and companion seats are shared by bringing or naming the person. The pass itself stays on the holder's account." },
-  other: { label: "Other", icon: "🧺", unit: "USD", rule: "Only post what the program lets you transfer. Benefits tied to you (FSA/DCFSA funds, insurance, meal swipes) can't be traded." },
+  dining: { label: "Dining dollars", icon: "food", unit: "USD", rule: "Many campus plans (like Cal Dining Flex dollars) allow peer transfers between students. Meal swipes usually can't be transferred." },
+  points: { label: "Points & miles", icon: "suitcase", unit: "points", rule: "Most hotel programs (Marriott Bonvoy, Hilton Honors) allow free points transfers to another member, within yearly limits. Airline miles often charge a fee." },
+  pass: { label: "Passes & seats", icon: "gift", unit: "pass", rule: "Guest passes and companion seats are shared by bringing or naming the person. The pass itself stays on the holder's account." },
+  other: { label: "Other", icon: "groceries", unit: "USD", rule: "Only post what the program lets you transfer. Benefits tied to you (FSA/DCFSA funds, insurance, meal swipes) can't be traded." },
 };
 
 const hex = (id: { toHexString(): string } | undefined | null) => id?.toHexString() ?? "";
@@ -63,7 +64,7 @@ export function SwapMarket({ conn, me, players, onClose }: { conn: DbConnection;
     const k = KINDS[(o.kind as Kind)] ?? KINDS.other;
     return (
       <li className={s.row}>
-        <span className={s.icon} aria-hidden>{k.icon}</span>
+        <span className={s.icon} aria-hidden><PixelIcon name={k.icon} size={28} /></span>
         <span className={s.main}>
           <b>{o.title}</b>
           <em>{fmt(o)} · wants {o.want} · <Owner o={o} /></em>
@@ -121,7 +122,7 @@ export function SwapMarket({ conn, me, players, onClose }: { conn: DbConnection;
                 <b>Post a stall</b>
                 <div className={s.kinds}>
                   {(Object.keys(KINDS) as Kind[]).map((k) => (
-                    <button key={k} className={kind === k ? s.on : ""} onClick={() => { setKind(k); setUnit(KINDS[k].unit); }}>{KINDS[k].icon} {KINDS[k].label}</button>
+                    <button key={k} className={kind === k ? s.on : ""} onClick={() => { setKind(k); setUnit(KINDS[k].unit); }}><PixelIcon name={KINDS[k].icon} size={16} className="ev-ico" /> {KINDS[k].label}</button>
                   ))}
                 </div>
                 <p className={s.rule}>Ruth: {KINDS[kind].rule}</p>

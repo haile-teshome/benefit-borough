@@ -7,6 +7,7 @@ import { AVATARS, portrait } from "@/lib/valley/pixel/animals";
 import { openOutside } from "@/lib/valley/popup";
 import type { AppState, Profile } from "@/lib/types";
 import { type Answers, Field } from "./Library";
+import { PixelIcon } from "./PixelIcon";
 
 // Create your farmer: who you are (work, health plan, cards, school), not which persona you fit.
 // While you answer, Ruth looks up the benefits that come with your employer, health plan and
@@ -212,7 +213,7 @@ export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile
 
           {step === "review" && (
             <>
-              {looking === "busy" && <p className="ev-sub">🔎 Ruth is reading {[p.employer, insured && p.insurer !== "Other" ? p.insurer : "", student ? p.school : ""].filter(Boolean).join(", ")}'s benefit pages… (about a minute; you can plant now and add these later)</p>}
+              {looking === "busy" && <p className="ev-sub"><PixelIcon name="magnifier" size={16} className="ev-ico" /> Ruth is reading {[p.employer, insured && p.insurer !== "Other" ? p.insurer : "", student ? p.school : ""].filter(Boolean).join(", ")}'s benefit pages… (about a minute; you can plant now and add these later)</p>}
               {looking === "failed" && <p className="ev-sub">Ruth couldn't look that up right now. Your answers are enough to start.</p>}
               {factRows.length > 0 && (
                 <div className="ev-onb-found">
@@ -244,7 +245,7 @@ export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile
           )}
           {error && <p className="ev-bad">{error}</p>}
         </div>
-        {planting && <p className="ev-sub ev-onb-progress">🌱 {PLANTING[Math.min(beat, PLANTING.length - 1)]} (about half a minute)</p>}
+        {planting && <p className="ev-sub ev-onb-progress"><PixelIcon name="sprout" size={16} className="ev-ico" /> {PLANTING[Math.min(beat, PLANTING.length - 1)]} (about half a minute)</p>}
         <div className="ev-actions">
           {step === "you" && <button className="ev-btn ghost" disabled={busy} onClick={() => onDemo(name, color, me?.avatar ?? "")}>{busy ? "Planting…" : "Just show me a demo"}</button>}
           {step !== "you" && <button className="ev-btn ghost" onClick={back}>Back</button>}

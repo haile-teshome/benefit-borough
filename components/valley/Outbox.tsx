@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { AppState, Handoff, Packet } from "@/lib/types";
 import styles from "./Outbox.module.css";
 import { openOutside } from "@/lib/valley/popup";
+import { PixelIcon } from "./PixelIcon";
 
 // Ruth's outbox. She fills in every claim (form, proof, message) and checks it; you read it, fix
 // anything, and press Submit. Nothing leaves the borough without that press.
@@ -74,7 +75,7 @@ export function PacketReview({ pid, packet, onState, onSubmit, onClose }: {
 
           {packet.attachments.map((a) => (
             <div key={a.name} className={styles.block}>
-              <b>📎 {a.name}</b>
+              <b><PixelIcon name="doc" size={16} className="ev-ico" /> {a.name}</b>
               {a.lines.map((l, i) => <code key={i}>{l}</code>)}
               {a.todo && <p className="ev-bad">{a.todo}</p>}
               {a.todo && !done && (

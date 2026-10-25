@@ -6,9 +6,16 @@ import type React from "react";
 const PAL: Record<string, string> = {
   k: "#3b2412", w: "#fffaf0", "+": "#ffffff", r: "#e2574c", o: "#f08a3c", y: "#f2c94c", g: "#3fa66b", G: "#2f6e46",
   b: "#3e8ed0", p: "#f49ac8", u: "#8e5bd0", v: "#5e3a99", t: "#3fa6a0", n: "#8a4f22", s: "#b8b0a8", d: "#4a4458", c: "#f3e3c3",
+  a: "#c9813f", A: "#6b3a16",
 };
 
 const SHAPES: Record<string, string[]> = {
+  acorn: [".....kk.....", ".....kAk....", "..kkkkkkkk..", ".kAAAAAAAAk.", "kAA+AAAAAAAk", "kkkkkkkkkkkk", ".kaaaaaaaak.", ".ka+aaaaaak.", ".kaaaaaaaak.", "..kaaaaaak..", "...kaaaak...", ".....kk....."],
+  flame: ["......k.....", ".....kok....", "....koook...", "...kooyook..", "..kooyyook..", "..koyyyyok..", ".kooyy+yook.", ".koyyyyyyok.", ".koyyyyyyok.", "..koyyyyok..", "...kooook...", "....kkkk...."],
+  crown: ["............", "............", ".k...kk...k.", "kyk.kyyk.kyk", "kyykyyyykyyk", "kyyyyyyyyyyk", "kyy+yyyyyyyk", "kyyyryybyyyk", "kyyyyyyyyyyk", "kkkkkkkkkkkk", "............", "............"],
+  magnifier: ["..kkkk......", ".kttttk.....", "kt+ttttk....", "kttttttk....", "kttttttk....", "kttttttk....", ".kttttk.....", "..kkkkkk....", "......knk...", ".......knk..", "........knk.", ".........kk."],
+  sprout: ["............", ".kkk....kkk.", "kgggk..kgggk", "kgGggkkggGgk", ".kgGggggGgk.", "..kkkggkkk..", ".....kgk....", ".....kgk....", "..kkkkkkkk..", ".knnnnnnnnk.", ".knnnnnnnnk.", "..kkkkkkkk.."],
+  doc: ["..kkkkkk....", "..kwwwwkk...", "..kwwwwkwk..", "..kwwwwkkkk.", "..kwsssswwk.", "..kwwwwwwwk.", "..kwssssswk.", "..kwwwwwwwk.", "..kwssssswk.", "..kwwwwwwwk.", "..kkkkkkkkk.", "............"],
   bottle: ["....kkkk....", "....kssk....", "...kkkkkk...", "...kt+ttk...", "...kt+ttk...", "...kttttk...", "...kwwwwk...", "...kwwwwk...", "...kttttk...", "...kt+ttk...", "...kttttk...", "....kkkk...."],
   roller: ["............", "............", "..kkkkkkkk..", ".kuuuuuuuuk.", "ku+u+u+u+uuk", "kuuuuuuuuuuk", "kuuuuuuuuuuk", "kvvvvvvvvvvk", ".kvvvvvvvvk.", "..kkkkkkkk..", "............", "............"],
   shoe: ["............", "............", "......kkk...", ".....krrrk..", "....krrwrk..", "..kkrrrrrk..", ".krrrrrrrrk.", "krrr+rrrrrk.", "krrrrrrrrrrk", "kwwwwwwwwwwk", ".kkkkkkkkkk.", "............"],
@@ -63,3 +70,6 @@ export function PixelIcon({ name, size = 48, className }: { name: string; size?:
   }));
   return <svg className={className} width={size} height={size} viewBox="0 0 12 12" shapeRendering="crispEdges" aria-hidden="true">{cells}</svg>;
 }
+
+// The borough's currency, drawn inline next to numbers.
+export const Acorn = ({ size = 16 }: { size?: number }) => <PixelIcon name="acorn" size={size} className="ev-ico" />;

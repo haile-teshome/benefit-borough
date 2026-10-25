@@ -158,7 +158,7 @@ function Valley() {
       const res = await fetch("/api/rewards", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pid, event }) });
       const json = (await res.json()) as { rewards: Rewards; gained?: { acorns: number; notes: string[] } };
       setRewards(json.rewards);
-      if (json.gained?.acorns) { setToast(`+${json.gained.acorns} 🌰 acorns · ${json.gained.notes.join(" · ")}`); setTimeout(() => setToast(""), 4500); }
+      if (json.gained?.acorns) { setToast(`+${json.gained.acorns} acorns · ${json.gained.notes.join(" · ")}`); setTimeout(() => setToast(""), 4500); }
     } catch { /* acorns are a bonus; never block play */ }
   }, [pid]);
 
@@ -660,7 +660,7 @@ function Valley() {
         );
       })()}
       {modal?.kind === "claims" && state && <Claims state={state} pid={pid} onOpen={(tileId) => setModal({ kind: "crop", tileId })} onCheckin={() => setModal({ kind: "checkin" })} onClose={() => setModal(null)} />}
-      {modal?.kind === "checkin" && state && <Checkin state={state} pid={pid} onDone={async (s) => { setState(s); await plant(s); setModal(null); setToast(`Check-in saved. Your farm is up to date.${s.rewards?.week.checkin ? " +50 🌰" : ""}`); setTimeout(() => setToast(""), 5000); }} onLibrary={() => setModal({ kind: "library" })} onClose={() => setModal(null)} />}
+      {modal?.kind === "checkin" && state && <Checkin state={state} pid={pid} onDone={async (s) => { setState(s); await plant(s); setModal(null); setToast(`Check-in saved. Your farm is up to date.${s.rewards?.week.checkin ? " +50 acorns" : ""}`); setTimeout(() => setToast(""), 5000); }} onLibrary={() => setModal({ kind: "library" })} onClose={() => setModal(null)} />}
       {modal?.kind === "exchange" && <Exchange pid={pid} rewards={rewards} tango={Boolean(integrations.tango)} onRewards={setRewards} onClose={() => setModal(null)}
         onWear={(color) => { if (conn && me) void conn.reducers.setProfile({ name: me.name, color, avatar: me.avatar }); setToast("Looking sharp."); setTimeout(() => setToast(""), 3000); }} />}
       {modal?.kind === "fishing" && <Fishing pid={pid} onClose={() => setModal(null)} onRewards={setRewards} />}
@@ -693,7 +693,7 @@ function Valley() {
       {!title && (calls.length > 0 || (late && modal?.kind !== "intro" && modal?.kind !== "findings")) && (
         <div className="ev-calls">
           {late && modal?.kind !== "intro" && modal?.kind !== "findings" && (
-            <div className="ev-panel ev-call ringing"><span className="ev-call-icon">🔎</span><div><b>Ruth found more</b><em>{Object.keys(late.found.facts).length} things about your benefits{late.who.employer ? ` at ${late.who.employer}` : ""}</em></div>
+            <div className="ev-panel ev-call ringing"><span className="ev-call-icon"><PixelIcon name="magnifier" size={30} /></span><div><b>Ruth found more</b><em>{Object.keys(late.found.facts).length} things about your benefits{late.who.employer ? ` at ${late.who.employer}` : ""}</em></div>
               <button className="ev-btn" onClick={() => setModal({ kind: "findings" })}>Review</button>
               <button className="ev-btn ghost" onClick={() => setLate(null)}>Dismiss</button>
             </div>
@@ -852,7 +852,7 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
     <>
       <div className="ev-panel ev-date">
         <div className="ev-title">Benefit Borough</div>
-        <div className="ev-clock">{clock.date} · {clock.label} {clock.night ? "☾" : "☀"}</div>
+        <div className="ev-clock">{clock.date} · {clock.label} {clock.night ? "\u263E\uFE0E" : "\u2600\uFE0E"}</div>
       </div>
       <div className="ev-topright">
         <button className="ev-panel ev-stat" onClick={onExchange} title="Open the Acorn Exchange">

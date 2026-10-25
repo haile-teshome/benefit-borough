@@ -163,7 +163,7 @@
 <body>
 <script>try { if (localStorage.getItem("sky") === "day") document.documentElement.dataset.sky = "day"; } catch (e) {}</script>
 <div class="daysky" aria-hidden="true"><div class="sun"><div class="glow"></div><div class="rays"></div><div class="disc"></div></div></div>
-<button class="sky-toggle" type="button" aria-pressed="false"><span class="ico" aria-hidden="true">☀</span><span class="txt">Day</span></button>
+<button class="sky-toggle" type="button" aria-pressed="false"><span class="ico" aria-hidden="true">☀︎</span><span class="txt">Day</span></button>
 <header class="hero wrap">
   <div class="signpost">
     <div class="sign" role="img" aria-label="Benefit Borough"><span>Benefit</span><span>Borough</span></div>
@@ -339,7 +339,7 @@
   const sky = document.querySelector(".sky-toggle");
   const paint = () => {
     const day = document.documentElement.dataset.sky === "day";
-    sky.querySelector(".ico").textContent = day ? "☾" : "☀";
+    sky.querySelector(".ico").textContent = day ? "☾︎" : "☀︎";
     sky.querySelector(".txt").textContent = day ? "Night" : "Day";
     sky.setAttribute("aria-label", day ? "Switch to the night sky" : "Switch to the day sky");
     document.querySelector('meta[name="theme-color"]').content = day ? "#4fa3e3" : "#2b2552";

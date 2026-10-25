@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CATALOG, EARN, QUESTS, questProgress, type Contact, type Rewards } from "@/lib/rewards";
+import { Acorn, PixelIcon } from "./PixelIcon";
 
 // The Acorn Exchange: your streak and weekly quests, the reward catalog, and your history.
 // Cosmetics unlock instantly; real-world rewards are recorded for a rewards partner to fulfill.
@@ -30,8 +31,8 @@ export function Exchange({ pid, rewards, tango, onRewards, onWear, onClose }: { 
       <div className="ev-panel ev-dialogue ev-almanac">
         <div className="ev-speaker">Acorn Exchange</div>
         <div className="ev-acorn-head">
-          <div><b>🌰 {rewards.acorns.toLocaleString("en-US")}</b><span>acorns to spend</span></div>
-          <div><b>🔥 {rewards.streak}</b><span>day streak (best {rewards.best})</span></div>
+          <div><b><Acorn size={22} /> {rewards.acorns.toLocaleString("en-US")}</b><span>acorns to spend</span></div>
+          <div><b><PixelIcon name="flame" size={22} className="ev-ico" /> {rewards.streak}</b><span>day streak (best {rewards.best})</span></div>
           <div><b>{rewards.earned.toLocaleString("en-US")}</b><span>earned all time</span></div>
         </div>
         <div className="ev-tabs">
@@ -51,7 +52,7 @@ export function Exchange({ pid, rewards, tango, onRewards, onWear, onClose }: { 
                     <li key={q.id} className={done ? "done" : ""}>
                       <span>{done ? "✓ " : ""}{q.label}</span>
                       <div className="track"><div style={{ width: `${(p / q.goal) * 100}%` }} /></div>
-                      <em>{p}/{q.goal} · +{q.reward} 🌰</em>
+                      <em>{p}/{q.goal} · +{q.reward} <Acorn /></em>
                     </li>
                   );
                 })}
@@ -75,7 +76,7 @@ export function Exchange({ pid, rewards, tango, onRewards, onWear, onClose }: { 
                     <li key={c.id}>
                       {c.color && <i style={{ background: c.color }} />}
                       <span><b>{c.name}</b><em>{c.blurb}</em></span>
-                      <strong>{c.cost.toLocaleString("en-US")} 🌰</strong>
+                      <strong>{c.cost.toLocaleString("en-US")} <Acorn /></strong>
                       {have ? <button className="ev-btn" onClick={() => onWear(c.color!)}>Wear it</button>
                         : <button className="ev-btn ghost" disabled={rewards.acorns < c.cost} onClick={() => void buy(c.id)}>{rewards.acorns < c.cost ? `${(c.cost - rewards.acorns).toLocaleString("en-US")} to go` : "Redeem"}</button>}
                       {asking === c.id && (
@@ -101,8 +102,8 @@ export function Exchange({ pid, rewards, tango, onRewards, onWear, onClose }: { 
           )}
           {tab === "history" && (
             <ul className="ev-earn">
-              {rewards.redemptions.map((r) => <li key={r.id}><span>{r.name}</span><em>−{r.cost} 🌰 · {r.status}</em></li>)}
-              {rewards.history.slice(0, 30).map((h, i) => <li key={i}><span>{h.note}</span><em>{h.amount > 0 ? "+" : ""}{h.amount} 🌰 · {new Date(h.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</em></li>)}
+              {rewards.redemptions.map((r) => <li key={r.id}><span>{r.name}</span><em>−{r.cost} <Acorn /> · {r.status}</em></li>)}
+              {rewards.history.slice(0, 30).map((h, i) => <li key={i}><span>{h.note}</span><em>{h.amount > 0 ? "+" : ""}{h.amount} <Acorn /> · {new Date(h.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</em></li>)}
               {!rewards.history.length && <li>Nothing yet. Come back tomorrow to start a streak.</li>}
             </ul>
           )}

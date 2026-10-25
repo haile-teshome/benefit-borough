@@ -8,6 +8,7 @@ import { gameHour } from "@/lib/valley/clock";
 import { sound } from "@/lib/valley/audio";
 import styles from "./Fishing.module.css";
 import { FishingScene, type FishView } from "./FishingScene";
+import { Acorn } from "./PixelIcon";
 
 // Pond fishing, seen first-person from the dock in 3D. Cast with a swinging power meter, wait for a bite, hit it in time, then reel:
 // hold (space, mouse or touch) to lift the green bar and keep the fish inside it until the catch
@@ -173,7 +174,7 @@ export function Fishing({ pid, onClose, onRewards }: { pid: string; onClose: () 
       <FishingScene live={view} />
       <div className={`ev-panel ${styles.top}`} data-panel>
         <b>Fishing at the pond</b>
-        <span>Journal {count}/{FISH.length}{journal ? ` · 🌰 today ${journal.todayAcorns}/${journal.cap}` : ""}</span>
+        <span>Journal {count}/{FISH.length}{journal ? <> · <Acorn /> today {journal.todayAcorns}/{journal.cap}</> : ""}</span>
       </div>
       {phase === "bite" && <b className={styles.bang}>!</b>}
       {phase === "aim" && <div className={styles.meter}><div ref={meterRef} /><span>Power</span></div>}
@@ -195,7 +196,7 @@ export function Fishing({ pid, onClose, onRewards }: { pid: string; onClose: () 
               <div key={f.id} className={styles.entry}>
                 <FishSprite fish={f} size={48} hidden={!seen[f.id]} />
                 <b>{seen[f.id] ? f.name : "???"}</b>
-                <span>{seen[f.id] ? `×${seen[f.id]} · ${f.acorns} 🌰` : f.when ? `Bites at ${f.when}` : "Not caught yet"}</span>
+                <span>{seen[f.id] ? <>×{seen[f.id]} · {f.acorns} <Acorn /></> : f.when ? `Bites at ${f.when}` : "Not caught yet"}</span>
               </div>
             ))}
           </div>
@@ -210,7 +211,7 @@ export function Fishing({ pid, onClose, onRewards }: { pid: string; onClose: () 
                 <div>
                   <h3>{result.fish.name}</h3>
                   <p>{result.fish.blurb}</p>
-                  <p className={styles.gain}>{result.acorns > 0 ? `+${result.acorns} 🌰 acorns${result.first ? " (first catch bonus)" : ""}` : result.fish.acorns === 0 ? "Worth nothing, but it's in your journal now." : "You've hit today's fishing acorn limit. It still counts for your journal."}</p>
+                  <p className={styles.gain}>{result.acorns > 0 ? `+${result.acorns} acorns${result.first ? " (first catch bonus)" : ""}` : result.fish.acorns === 0 ? "Worth nothing, but it's in your journal now." : "You've hit today's fishing acorn limit. It still counts for your journal."}</p>
                 </div>
               </div>
             ) : (

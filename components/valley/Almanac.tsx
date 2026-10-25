@@ -7,6 +7,7 @@ import type { AppState } from "@/lib/types";
 import type { Player } from "@/lib/valley_bindings/types";
 import { whatIfPlans, yearlyValue } from "@/lib/library/value";
 import { usd } from "@/lib/valley/layout";
+import { PixelIcon } from "./PixelIcon";
 
 // The Borough Almanac: a leaderboard by quarter, year or all time; your seasons (what you rescued,
 // what you missed, what's coming due each quarter); and what-if projections for new benefits.
@@ -48,7 +49,7 @@ function Board({ since, players, myPid }: { since?: string; players: readonly Pl
   if (!rows.length) return <p className="ev-sub">No harvests in this period yet. The first one takes the crown.</p>;
   return (
     <ol className="ev-board big">
-      {rows.slice(0, 8).map((r, i) => <li key={r.pid} className={r.pid === myPid ? "me" : ""}><b>{i === 0 ? "👑" : i + 1}</b><span>{name(r.pid)}{r.pid === myPid ? " (you)" : ""}</span><em>{usd(r.total)}</em></li>)}
+      {rows.slice(0, 8).map((r, i) => <li key={r.pid} className={r.pid === myPid ? "me" : ""}><b>{i === 0 ? <PixelIcon name="crown" size={18} className="ev-ico" /> : i + 1}</b><span>{name(r.pid)}{r.pid === myPid ? " (you)" : ""}</span><em>{usd(r.total)}</em></li>)}
     </ol>
   );
 }

@@ -9,6 +9,7 @@ import { sound } from "@/lib/valley/audio";
 import { driftClouds, flowers, ground, makeStage, mat, rnd, toScreen, tree } from "@/lib/valley/three-kit";
 import fish from "./Fishing.module.css";
 import styles from "./Minigame.module.css";
+import { Acorn } from "./PixelIcon";
 
 // Slingshot balloons, from the north bluff. Gift balloons drift across the sky on the wind; hold
 // to pull the slingshot back, aim with the pointer, let go to fire. A popped balloon drops its
@@ -200,7 +201,7 @@ export function Balloons({ pid, onClose, onRewards }: { pid: string; onClose: ()
     <div className={fish.full} onPointerMove={move} onPointerDown={down} onPointerUp={up} onPointerLeave={up} style={{ cursor: "none" }}>
       <div ref={host} style={{ position: "absolute", inset: 0 }} />
       <div ref={cross} className={styles.cross} style={{ left: "50%", top: "40%" }} />
-      <div className={`ev-panel ${fish.top}`} data-panel><b>Slingshot balloons</b><span>{today ? `🌰 today ${today.todayAcorns}/${today.cap}` : ""}</span></div>
+      <div className={`ev-panel ${fish.top}`} data-panel><b>Slingshot balloons</b><span>{today ? <><Acorn /> today {today.todayAcorns}/{today.cap}</> : ""}</span></div>
       {phase === "play" && (
         <div className={styles.hud} data-panel>
           <span className={styles.pill}>Pellets: {pellets}</span>
@@ -208,14 +209,14 @@ export function Balloons({ pid, onClose, onRewards }: { pid: string; onClose: ()
         </div>
       )}
       {phase === "play" && <div className={styles.power}><div ref={meter} style={{ width: "0%" }} /></div>}
-      {toast && <div className={styles.toast} data-panel><div><b>{toast.name}</b><span>{toast.blurb}</span></div>{toast.acorns > 0 && <em>+{toast.acorns} 🌰</em>}</div>}
+      {toast && <div className={styles.toast} data-panel><div><b>{toast.name}</b><span>{toast.blurb}</span></div>{toast.acorns > 0 && <em>+{toast.acorns} <Acorn /></em>}</div>}
       <div className={`ev-panel ${fish.bottom}`} data-panel>
         {phase === "ready" && <p className={fish.msg}>Gift balloons are drifting over the bluff. Hold to pull back the slingshot, aim with your pointer, and let go to fire. Lead your shot: the wind pushes them.</p>}
         {phase === "play" && <p className={styles.keys}>Hold to pull back · release to fire · a longer pull flies farther</p>}
         {phase === "done" && (
           <>
-            <p className={fish.msg}>{got.length ? `You popped ${got.length} balloon${got.length === 1 ? "" : "s"}: +${total} 🌰` : "They all floated away. Try leading your shots!"}</p>
-            {got.length > 0 && <ul className={styles.list}>{got.map((x, i) => <li key={i}><span><b>{x.name}</b> · {x.blurb}</span>{x.acorns > 0 && <em>+{x.acorns} 🌰</em>}</li>)}</ul>}
+            <p className={fish.msg}>{got.length ? `You popped ${got.length} balloon${got.length === 1 ? "" : "s"}: +${total} acorns` : "They all floated away. Try leading your shots!"}</p>
+            {got.length > 0 && <ul className={styles.list}>{got.map((x, i) => <li key={i}><span><b>{x.name}</b> · {x.blurb}</span>{x.acorns > 0 && <em>+{x.acorns} <Acorn /></em>}</li>)}</ul>}
           </>
         )}
         <div className={fish.buttons}>
