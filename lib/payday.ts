@@ -9,7 +9,7 @@ import type { Tile } from "./types";
 type Deposit = { _id: string; transaction_date: string; amount: number; description?: string };
 type Account = { _id: string; nickname: string; type: string; balance: number };
 
-const SAVINGS = "Burrow Savings";
+const SAVINGS = "Borough Savings";
 
 export async function savingsAccount(): Promise<string> {
   const accounts = await nessie<Account[]>(`/customers/${process.env.NESSIE_CUSTOMER_ID}/accounts`);

@@ -23,8 +23,8 @@ export async function GET(req: Request) {
     `DTSTAMP:${stamp}`,
     `DTSTART;VALUE=DATE:${day(t.deadline)}`,
     `DTEND;VALUE=DATE:${day(next(t.deadline))}`,
-    `SUMMARY:${esc(`Benefit Burrow: ${t.title}${t.atStake ? ` (${usd(t.atStake)})` : ""}`)}`,
-    `DESCRIPTION:${esc(`${t.headline}\nIf you do nothing: ${t.doNothing}\nOpen the burrow: ${game}`)}`,
+    `SUMMARY:${esc(`Benefit Borough: ${t.title}${t.atStake ? ` (${usd(t.atStake)})` : ""}`)}`,
+    `DESCRIPTION:${esc(`${t.headline}\nIf you do nothing: ${t.doNothing}\nOpen the borough: ${game}`)}`,
     `URL:${game}`,
     ...[3, 1].flatMap((d) => ["BEGIN:VALARM", "ACTION:DISPLAY", `TRIGGER:-P${d}D`, `DESCRIPTION:${esc(`${t.title} is due in ${d} day${d > 1 ? "s" : ""}`)}`, "END:VALARM"]),
     "END:VEVENT",
@@ -38,12 +38,12 @@ export async function GET(req: Request) {
     `DTSTART:${day(sunday.toISOString().slice(0, 10))}T100000`,
     `DTEND:${day(sunday.toISOString().slice(0, 10))}T101000`,
     "RRULE:FREQ=WEEKLY",
-    "SUMMARY:Benefit Burrow weekly check-in (2 minutes)",
+    "SUMMARY:Benefit Borough weekly check-in (2 minutes)",
     `DESCRIPTION:${esc(`Tick the credits you used, update a balance or two, and see what's due this week.\n${game}?checkin=1`)}`,
     `URL:${game}?checkin=1`,
-    "BEGIN:VALARM", "ACTION:DISPLAY", "TRIGGER:PT0M", "DESCRIPTION:Benefit Burrow check-in", "END:VALARM",
+    "BEGIN:VALARM", "ACTION:DISPLAY", "TRIGGER:PT0M", "DESCRIPTION:Benefit Borough check-in", "END:VALARM",
     "END:VEVENT",
   ];
-  const body = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Benefit Burrow//Deadlines//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:Benefit Burrow", ...events, ...checkin, "END:VCALENDAR"].map(fold).join("\r\n");
+  const body = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Benefit Borough//Deadlines//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:Benefit Borough", ...events, ...checkin, "END:VCALENDAR"].map(fold).join("\r\n");
   return new Response(body, { headers: { "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": 'attachment; filename="benefit-burrow.ics"', "Cache-Control": "no-store" } });
 }

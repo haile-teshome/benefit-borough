@@ -5,7 +5,7 @@ import { LIBRARY } from "@/lib/library/catalog";
 import s from "./TermsNews.module.css";
 import { openOutside } from "@/lib/valley/popup";
 
-// The Burrow Gazette: what each plan's source page says today about the credits and limits the
+// The Borough Gazette: what each plan's source page says today about the credits and limits the
 // library relies on (from the Benefit Terms Watcher actor on Apify, or the local fallback).
 type Finding = { key: string; name: string; expected: number; seen: number | null; snippet: string; status: "same" | "changed" | "missing" };
 type Page = { planId: string; url: string; fetchedAt: string; ok: boolean; title: string; findings: Finding[]; error?: string };
@@ -36,7 +36,7 @@ export function TermsNews({ onClose }: { onClose: () => void }) {
   return (
     <div className="ev-dialogue-wrap">
       <div className={`ev-panel ev-dialogue ${s.panel}`}>
-        <div className="ev-speaker">The Burrow Gazette</div>
+        <div className="ev-speaker">The Borough Gazette</div>
         <div className={`ev-body ${s.body}`}>
           <p><b>What changed in your plans&apos; fine print</b></p>
           <p className="ev-sub">

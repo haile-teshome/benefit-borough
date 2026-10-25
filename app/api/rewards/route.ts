@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     // Gift cards go out right away through Tango Card (monthly cap already checked); a failure refunds.
     if (item.partner === "tango") {
       try {
-        const sent = await sendGiftCard({ amount: item.usd!, prefer: item.prefer ?? [], email: out.redemption.contact!.email!, firstName: out.redemption.contact!.firstName!, externalRefID: out.redemption.id, message: "Earned with acorns in Benefit Burrow." });
+        const sent = await sendGiftCard({ amount: item.usd!, prefer: item.prefer ?? [], email: out.redemption.contact!.email!, firstName: out.redemption.contact!.firstName!, externalRefID: out.redemption.id, message: "Earned with acorns in Benefit Borough." });
         out.redemption.status = "sent"; out.redemption.detail = `${sent.reward} · order ${sent.referenceOrderID}`;
       } catch (e) {
         refund(r, out.redemption.id, "failed", (e as Error).message);

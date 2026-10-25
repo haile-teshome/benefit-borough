@@ -2,7 +2,7 @@ import { decodePaymentResponseHeader, wrapFetchWithPaymentFromConfig } from "@x4
 import { ExactEvmScheme } from "@x402/evm/exact/client";
 import { privateKeyToAccount } from "viem/accounts";
 
-// Coinbase x402: Ruth pays per price check. The Burrow's price desk (/api/x402/prices) answers
+// Coinbase x402: Ruth pays per price check. The Borough's price desk (/api/x402/prices) answers
 // 402 Payment Required with a $0.01 USDC price on Base Sepolia; Ruth's wallet signs a USDC
 // transfer authorization, the x402.org facilitator settles it on-chain, and the desk returns the
 // live price. Ruth only pays when a price-match crop needs a fresh price.

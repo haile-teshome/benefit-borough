@@ -49,7 +49,7 @@ export function RuthRecord({ state, pid, integrations, live, onClose }: { state:
     ["Reading your documents", Boolean(integrations.claude), integrations.claude ? "Claude extracts and reviews every balance" : "Rules engine on the sample documents"],
     ["Bank and card activity", Boolean(integrations.nessie), integrations.nessie ? "Live from Capital One Nessie (sandbox bank)" : "Sample statement"],
     ["Ruth's voice and booking calls", Boolean(integrations.cartesia), integrations.cartesia ? "Cartesia text-to-speech" : "Text only"],
-    ["Saved games and the Burrow ledger", Boolean(integrations.convex), integrations.convex ? "Convex, live queries" : "Local file"],
+    ["Saved games and the Borough ledger", Boolean(integrations.convex), integrations.convex ? "Convex, live queries" : "Local file"],
     ["Multiplayer farms, gifts, chat", true, "SpacetimeDB"],
     ["Store prices for price matches", Boolean(integrations.apify), integrations.apify ? "Read live from the store's page with Apify" : "Price from the sample statement"],
     ["Ruth pays for the data she uses", Boolean(integrations.x402), integrations.x402 ? "Coinbase x402: $0.01 USDC per price check, settled on Base Sepolia" : "Not connected"],

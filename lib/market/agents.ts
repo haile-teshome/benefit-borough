@@ -2,14 +2,14 @@ import { z } from "zod";
 import { searchStructured } from "../engine/claude";
 import { feedEnabled, marketFeed, pickFrom } from "../integrations/shopping";
 
-// The burrow's seller agents. Each shopkeeper searches the live web its own way and sells its
+// The borough's seller agents. Each shopkeeper searches the live web its own way and sells its
 // quote to buyers (Ruth) over x402. Same request, different strategies: that's the market.
 
 export type AgentId = "deal" | "quality" | "specialist";
 export const AGENTS: Record<AgentId, { shop: string; keeper: string; strategy: string; prompt: string }> = {
   deal: { shop: "The Deal Desk", keeper: "Dealer Fen", strategy: "Lowest price that still does the job",
     prompt: "You are Dealer Fen, a bargain-hunting shopping agent. Find the cheapest products that genuinely meet the need. Skip anything with poor reviews (under 4.0 stars) or sketchy sellers." },
-  quality: { shop: "Burrow General Store", keeper: "Scout Juniper", strategy: "Best reviewed within budget",
+  quality: { shop: "Borough General Store", keeper: "Scout Juniper", strategy: "Best reviewed within budget",
     prompt: "You are Scout Juniper, a quality-first shopping agent. Find the best-reviewed, most durable products that meet the need within the budget, from reputable US retailers." },
   specialist: { shop: "Pharmacy & Optical / The Card House", keeper: "Hazel & Rosa", strategy: "Only what this benefit actually covers",
     prompt: "You are a benefits specialist shopping agent. Find products that are clearly covered by the stated benefit (e.g. labeled HSA/FSA eligible, or sold by the merchant a card credit requires). Coverage first, then price." },

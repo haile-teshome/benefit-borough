@@ -8,7 +8,7 @@ import type { Player } from "@/lib/valley_bindings/types";
 import { whatIfPlans, yearlyValue } from "@/lib/library/value";
 import { usd } from "@/lib/valley/layout";
 
-// The Burrow Almanac: a leaderboard by quarter, year or all time; your seasons (what you rescued,
+// The Borough Almanac: a leaderboard by quarter, year or all time; your seasons (what you rescued,
 // what you missed, what's coming due each quarter); and what-if projections for new benefits.
 // Green is money you rescued, purple is money ahead of you (validated for color-blind readers).
 
@@ -44,7 +44,7 @@ function Bars({ bars, aName, bName }: { bars: Bar[]; aName: string; bName?: stri
 function Board({ since, players, myPid }: { since?: string; players: readonly Player[]; myPid: string }) {
   const rows = useQuery(api.states.board, { since });
   const name = (pid: string) => players.find((p) => p.identity.toHexString().startsWith(pid))?.name ?? "A farmer";
-  if (!rows) return <p className="ev-sub">Loading the Burrow ledger…</p>;
+  if (!rows) return <p className="ev-sub">Loading the Borough ledger…</p>;
   if (!rows.length) return <p className="ev-sub">No harvests in this period yet. The first one takes the crown.</p>;
   return (
     <ol className="ev-board big">
@@ -85,7 +85,7 @@ export function Almanac({ state, players, myPid, live, onClose }: { state: AppSt
   return (
     <div className="ev-dialogue-wrap">
       <div className="ev-panel ev-dialogue ev-almanac">
-        <div className="ev-speaker">Burrow Almanac</div>
+        <div className="ev-speaker">Borough Almanac</div>
         <div className="ev-tabs">
           <button className={tab === "board" ? "on" : ""} onClick={() => setTab("board")}>Leaderboard</button>
           <button className={tab === "seasons" ? "on" : ""} onClick={() => setTab("seasons")}>Your seasons</button>

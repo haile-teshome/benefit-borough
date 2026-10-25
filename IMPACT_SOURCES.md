@@ -1,6 +1,6 @@
 # How much money Americans lose to expiring benefits (sources)
 
-Every figure below is an annual, nationwide estimate from a primary or official source, for a category Benefit Burrow tracks. Links were checked on Oct 24–25, 2026. The years differ, so the total is a combined estimate, not a single measurement.
+Every figure below is an annual, nationwide estimate from a primary or official source, for a category Benefit Borough tracks. Links were checked on Oct 24–25, 2026. The years differ, so the total is a combined estimate, not a single measurement.
 
 | What's lost each year | Amount | Data year | Source |
 |---|---|---|---|
@@ -12,7 +12,7 @@ Every figure below is an annual, nationwide estimate from a primary or official 
 | Credit card rewards forfeited | $0.5B | ~2022 | CFPB, [Consumer Credit Card Market Report 2023](https://files.consumerfinance.gov/f/documents/cfpb_consumer-credit-card-market-report_2023.pdf) |
 | **Total** | **≈ $105.9B** | | |
 
-Additional verified figures that are not in the total, because Benefit Burrow doesn't track them yet:
+Additional verified figures that are not in the total, because Benefit Borough doesn't track them yet:
 - Earned Income Tax Credit unclaimed: $5.9B (IRS, TY2020, same IRS report).
 - Child Tax Credit unclaimed: $9.3B (IRS, TY2020, same IRS report).
 - Credit card late fees: $17.0B (CFPB 2025 report, 2024 data).

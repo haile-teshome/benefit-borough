@@ -6,7 +6,7 @@ import { gameHour } from "@/lib/valley/clock";
 
 // First-person 3D view from the end of the pond dock: low-poly water, the far shore with trees,
 // the bluff and its waterfall, and your rod. Rendered at a low resolution and scaled up with
-// crisp pixels so it matches the burrow's pixel art. The minigame drives it through `live`.
+// crisp pixels so it matches the borough's pixel art. The minigame drives it through `live`.
 
 export type FishView = {
   phase: "aim" | "wait" | "bite" | "reel" | "result" | "journal";

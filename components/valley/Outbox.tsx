@@ -6,7 +6,7 @@ import styles from "./Outbox.module.css";
 import { openOutside } from "@/lib/valley/popup";
 
 // Ruth's outbox. She fills in every claim (form, proof, message) and checks it; you read it, fix
-// anything, and press Submit. Nothing leaves the burrow without that press.
+// anything, and press Submit. Nothing leaves the borough without that press.
 
 const SOURCE: Record<string, string> = { profile: "your profile", document: "your documents", computed: "Ruth's math", ruth: "Ruth wrote this", you: "you" };
 const METHOD: Record<Packet["method"], string> = { portal: "Uploads to", email: "Emails", mail: "Mails to", phone: "Calls", chat: "Messages", app: "Files in", transfer: "Sends via" };

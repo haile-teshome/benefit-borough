@@ -52,8 +52,8 @@ export async function sendGiftCard(opts: { amount: number; prefer: string[]; ema
       accountIdentifier: process.env.TANGO_ACCOUNT_ID, customerIdentifier: process.env.TANGO_CUSTOMER_ID,
       utid: item.utid, amount: opts.amount, deliveryMethod: "EMAIL",
       recipient: { email: opts.email, firstName: opts.firstName },
-      sender: { firstName: "Benefit", lastName: "Burrow" },
-      externalRefID: opts.externalRefID, message: opts.message, emailSubject: "Your Benefit Burrow reward",
+      sender: { firstName: "Benefit", lastName: "Borough" },
+      externalRefID: opts.externalRefID, message: opts.message, emailSubject: "Your Benefit Borough reward",
     },
   });
   return { referenceOrderID: order.referenceOrderID, status: order.status, reward: item.rewardName, utid: item.utid };

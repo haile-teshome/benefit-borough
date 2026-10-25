@@ -28,7 +28,7 @@ export async function GET(req: Request) {
 
   text(pk.form, 40, 18, bold);
   text(`To: ${pk.submitTo}`, 40, 10, font, muted);
-  text(`Prepared by Ruth (Benefit Burrow) on ${new Date(pk.preparedAt).toLocaleDateString("en-US", { dateStyle: "long" })}. Packet ${pk.id}, fingerprint ${pk.hash}.`, 40, 9, font, muted);
+  text(`Prepared by Ruth (Benefit Borough) on ${new Date(pk.preparedAt).toLocaleDateString("en-US", { dateStyle: "long" })}. Packet ${pk.id}, fingerprint ${pk.hash}.`, 40, 9, font, muted);
   y -= 10;
   for (const f of pk.fields) {
     page.drawLine({ start: { x: 40, y: y + 12 }, end: { x: 572, y: y + 12 }, thickness: 0.4, color: rgb(0.85, 0.82, 0.88) });

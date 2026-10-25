@@ -10,7 +10,7 @@ export type Bug = { id: string; name: string; blurb: string; weight: number; aco
 export type Prize = { id: string; name: string; blurb: string; weight: number; acorns: number };
 
 export const BUGS: Bug[] = [
-  { id: "cabbage", name: "Cabbage White", blurb: "The most common butterfly in the burrow. Always in a hurry.", weight: 30, acorns: 1, kind: "butterfly", colors: ["#fffaf0", "#3b2412"], speed: 1 },
+  { id: "cabbage", name: "Cabbage White", blurb: "The most common butterfly in the borough. Always in a hurry.", weight: 30, acorns: 1, kind: "butterfly", colors: ["#fffaf0", "#3b2412"], speed: 1 },
   { id: "monarch", name: "Monarch", blurb: "Orange and proud. Migrates further than any farmer ever has.", weight: 14, acorns: 3, kind: "butterfly", colors: ["#f08a3c", "#3b2412"], when: "day", speed: 1.2 },
   { id: "bluebutterfly", name: "Receipt Blue", blurb: "Its wings are the color of a paid-in-full stamp.", weight: 10, acorns: 4, kind: "butterfly", colors: ["#5fb0e0", "#2b5f8e"], speed: 1.4 },
   { id: "honeybee", name: "Honeybee", blurb: "Works hard, never wastes a drop. Ruth approves.", weight: 18, acorns: 2, kind: "bee", colors: ["#f2c94c", "#3b2412"], when: "day", speed: 1.5 },

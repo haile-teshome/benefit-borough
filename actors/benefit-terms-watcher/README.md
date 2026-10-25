@@ -1,8 +1,8 @@
 # Benefit Terms Watcher
 
-An Apify Actor built at Cal Hacks 13.0 for **Benefit Burrow**. It reads public benefit and terms pages (credit card benefit write-ups, plan pages, employer-benefit limit pages) and reports what each page says **today** about the credits and dollar limits you expect. It flags anything that changed or is no longer mentioned.
+An Apify Actor built at Cal Hacks 13.0 for **Benefit Borough**. It reads public benefit and terms pages (credit card benefit write-ups, plan pages, employer-benefit limit pages) and reports what each page says **today** about the credits and dollar limits you expect. It flags anything that changed or is no longer mentioned.
 
-Benefit Burrow keeps a curated library of plan terms ("Amex Platinum: $200 airline fee credit", "SHIP: $450 deductible"). Issuers change these terms quietly. This Actor re-reads the sources so the library, and the people relying on it, find out.
+Benefit Borough keeps a curated library of plan terms ("Amex Platinum: $200 airline fee credit", "SHIP: $450 deductible"). Issuers change these terms quietly. This Actor re-reads the sources so the library, and the people relying on it, find out.
 
 ## Input
 
@@ -76,7 +76,7 @@ cd actors/benefit-terms-watcher
 apify push                        # builds the Actor as <your-username>/benefit-terms-watcher
 ```
 
-Then point the Benefit Burrow app at it by adding these to `.env.local` and restarting `next dev`:
+Then point the Benefit Borough app at it by adding these to `.env.local` and restarting `next dev`:
 
 ```
 APIFY_TOKEN=apify_api_...

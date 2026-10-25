@@ -57,7 +57,7 @@ export function AutopilotPanel({ pid, state, live, onState, onOutbox, onClose }:
               <li className={styles.issue}>✕ Change what she prepared after you've reviewed it</li>
             </ul>
           </div>
-          <p className="ev-sub">{live ? "The schedule runs on Convex: a cron marks your shift due at your hour, and the burrow's server runs it." : "The schedule runs on this server."} {m.signedAt ? `Signed ${new Date(m.signedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}.` : ""}</p>
+          <p className="ev-sub">{live ? "The schedule runs on Convex: a cron marks your shift due at your hour, and the borough's server runs it." : "The schedule runs on this server."} {m.signedAt ? `Signed ${new Date(m.signedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}.` : ""}</p>
           {ap?.reports.length ? <ReportList reports={ap.reports} /> : null}
           {error && <p className="ev-bad">{error}</p>}
         </div>

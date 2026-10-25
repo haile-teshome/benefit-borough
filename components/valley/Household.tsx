@@ -25,14 +25,14 @@ export function Household({ pid, name, color, onClose }: { pid: string; name: st
             <>
               <p className="ev-lead">Share your farm with a partner, family or roommates. You'll see each other's deadlines live, and can co-sign each other's claims before they're sent.</p>
               <div className={styles.fields}>
-                <label className={styles.field}><span>Start a household</span><input value={houseName} placeholder="The Lee-Chen burrow" onChange={(e) => setHouseName(e.target.value)} /></label>
+                <label className={styles.field}><span>Start a household</span><input value={houseName} placeholder="The Lee-Chen borough" onChange={(e) => setHouseName(e.target.value)} /></label>
                 <label className={styles.field}><span>Or join with a code</span><input value={code} placeholder="ABC123" onChange={(e) => setCode(e.target.value.toUpperCase())} /></label>
               </div>
             </>
           )}
           {house && (
             <>
-              <p className="ev-sub">Invite code <b>{house.code}</b>: anyone in the burrow can join with it. Live from Convex.</p>
+              <p className="ev-sub">Invite code <b>{house.code}</b>: anyone in the borough can join with it. Live from Convex.</p>
               <div className={styles.summary}>
                 <div><b>${house.members.reduce((x, m) => x + m.open, 0).toFixed(0)}</b><span>open across the household</span></div>
                 <div><b>${house.members.reduce((x, m) => x + m.rescued, 0).toFixed(0)}</b><span>rescued together</span></div>

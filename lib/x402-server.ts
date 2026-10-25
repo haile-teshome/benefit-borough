@@ -4,7 +4,7 @@ import { HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { FACILITATOR, X402_NETWORK } from "./integrations/x402";
 
-// The burrow's data market: each shop sells one kind of data to agents over x402. Payment settles
+// The borough's data market: each shop sells one kind of data to agents over x402. Payment settles
 // only after a successful answer, so a failed lookup costs nothing.
 let server: x402ResourceServer | null = null;
 const resourceServer = () => (server ??= new x402ResourceServer(new HTTPFacilitatorClient({ url: FACILITATOR })).register(X402_NETWORK, new ExactEvmScheme()));

@@ -108,7 +108,7 @@ export async function defend(key: string, v: Verdict, message: string, s: AppSta
   if (!claudeEnabled()) return fallback;
   const tile = s.tiles.find((t) => t.id === key);
   const out = await structured("defend", {
-    system: `You are Ruth, the Reviewer in Benefit Burrow. You protect people's money, not merchants'. A user is pushing back on one of your verdicts.
+    system: `You are Ruth, the Reviewer in Benefit Borough. You protect people's money, not merchants'. A user is pushing back on one of your verdicts.
 Rules (cite by number):
 ${RULES.map((r, i) => `${i + 1}. ${r}`).join("\n")}
 You never change a verdict because someone argues; new facts must arrive as documents you can check. Explain your reasoning, admit it plainly if the user has a fair point about how you phrased something, and tell them exactly what document would change your mind. Never invent facts.`,

@@ -14,7 +14,7 @@ import { structuredWithEngine } from "@/lib/engine/llm";
 const Reply = z.object({ reply: z.string().describe("1 to 3 short sentences, in character, spoken aloud") });
 type Turn = { from: "you" | "them"; text: string };
 
-const VALLEY = `Benefit Burrow is a cozy farming town where every benefit about to expire grows as a crop. Districts: the Healthcare District (Burrow General Hospital, Dr. Okafor's Dental, the Pharmacy & Optical), the Financial District (Burrow Bank for checking and savings, the Card House for every credit card, the Deal Desk for price matches and renewals), the Dining Commons, the Benefits Office (open enrollment Nov 1-21), Farmland to the south, a pond with a dock, a fountain plaza. Ruth, an alpaca in reading glasses, is the Reviewer: she approves or rejects every harvest by her rules and can't be argued out of one. `;
+const VALLEY = `Benefit Borough is a cozy farming town where every benefit about to expire grows as a crop. Districts: the Healthcare District (Borough General Hospital, Dr. Okafor's Dental, the Pharmacy & Optical), the Financial District (Borough Bank for checking and savings, the Card House for every credit card, the Deal Desk for price matches and renewals), the Dining Commons, the Benefits Office (open enrollment Nov 1-21), Farmland to the south, a pond with a dock, a fountain plaza. Ruth, an alpaca in reading glasses, is the Reviewer: she approves or rejects every harvest by her rules and can't be argued out of one. `;
 const SEASONS = ["winter", "winter", "spring", "spring", "spring", "summer", "summer", "summer", "fall", "fall", "fall", "winter"];
 const partOfDay = (h: number) => (h < 5 ? "the middle of the night" : h < 12 ? "morning" : h < 17 ? "afternoon" : h < 21 ? "evening" : "night");
 const sinceLast = (last?: string) => {
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     f.said.length ? `Things you've already said to them recently (don't repeat these): ${f.said.slice(-4).map((l) => `"${l}"`).join(" ")}` : "",
   ].filter(Boolean).join("\n");
   const { data: out, engine } = await structuredWithEngine("chat", {
-    system: `You are ${person.name}, a resident of Benefit Burrow, a cozy pixel-art farming game.
+    system: `You are ${person.name}, a resident of Benefit Borough, a cozy pixel-art farming game.
 ${VALLEY} It is now ${today()}.
 Your personality: ${p.quirk} You talk like this: ${p.style} Catchphrase (use it sometimes, not every time): "${p.catchphrase}". You love ${p.loves}. Pet peeve: ${p.peeve}.
 For the feel of your voice only (never repeat these or reuse their wording): ${person.lines.map((l) => `"${l}"`).join(" ")}

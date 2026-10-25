@@ -57,8 +57,8 @@ export function draftFor(tile: Tile, s: AppState): Draft {
   const to = String(tile.action.payload.to ?? "the provider");
 
   // Payday: moving rescued money into your own savings.
-  if (tile.action.payload.rail === "nessie-savings") return { ...base, amount: Number(tile.action.payload.amount), form: "Move rescued money to savings", provider: "Capital One Nessie", method: "transfer", submitTo: "Capital One Nessie: Chase Total Checking → Burrow Savings",
-      fields: [P("fullName", "Account holder", p), D("from", "From", "Chase Total Checking"), D("to", "To", "Burrow Savings"), D("amount", "Amount", usd(Number(tile.action.payload.amount)), cite), D("why", "Why", "Money Ruth rescued since your last paycheck")],
+  if (tile.action.payload.rail === "nessie-savings") return { ...base, amount: Number(tile.action.payload.amount), form: "Move rescued money to savings", provider: "Capital One Nessie", method: "transfer", submitTo: "Capital One Nessie: Chase Total Checking → Borough Savings",
+      fields: [P("fullName", "Account holder", p), D("from", "From", "Chase Total Checking"), D("to", "To", "Borough Savings"), D("amount", "Amount", usd(Number(tile.action.payload.amount)), cite), D("why", "Why", "Money Ruth rescued since your last paycheck")],
       attachments: [{ name: "The paycheck that triggered this", kind: "statement", lines: tile.sources.map((x) => x.text) }], minutes: { you: 1, without: 5 } };
 
   switch (tile.category) {

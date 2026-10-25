@@ -1,6 +1,6 @@
-# Benefit Burrow
+# Benefit Borough
 
-**$100B+ a year in earned benefits goes unclaimed.** Benefit Burrow is a cozy multiplayer pixel-art farming town where every benefit you're about to lose grows as a crop, and AI agents find the money, fill your claims and shop your perks. Nothing is sent or bought without your approval.
+**$100B+ a year in earned benefits goes unclaimed.** Benefit Borough is a cozy multiplayer pixel-art farming town where every benefit you're about to lose grows as a crop, and AI agents find the money, fill your claims and shop your perks. Nothing is sent or bought without your approval.
 
 Built at Cal Hacks 13.0. **[Watch the trailer and see it in action →](https://haile-teshome.github.io/benefit-burrow/)**
 

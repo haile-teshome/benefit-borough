@@ -44,7 +44,7 @@ export async function scan(docs: SourceDoc[], pid?: string | null, opts: { payFo
     let prices: Record<string, number | null>;
     let bought = false;
     if (x402Enabled() && opts.payForData !== false) {
-      // Ruth buys the price from the Burrow's price desk over x402.
+      // Ruth buys the price from the Borough's price desk over x402.
       const paid = await paidPrices(urls);
       prices = paid.prices;
       bought = Boolean(paid.payment);
@@ -106,7 +106,7 @@ export async function prepare(tileId: string, pid?: string | null, by: Packet["p
     try { s.docs = [...s.docs, await nessieStatement()]; log(s, "prepare", "Read your live bank activity (Capital One Nessie) to find receipts"); } catch { /* receipts can still be uploaded */ }
   }
   let packet = await preparePacket(tile, s, by);
-  // Ruth buys the checks a claim needs from the burrow's shops over x402, within your data budget.
+  // Ruth buys the checks a claim needs from the borough's shops over x402, within your data budget.
   if (["fsa_claim", "fsa"].includes(tile.category) && canSpend(s, MARKET.eligibility.price)) {
     const items = statementLines(s).filter((l) => packet.attachments.some((a) => a.lines.includes(l.text))).map((l) => l.what);
     if (items.length) {

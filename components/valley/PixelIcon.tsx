@@ -1,7 +1,7 @@
 import type React from "react";
 
 // Tiny 12x12 pixel-art icons for shop items and the phone, drawn as SVG so they stay crisp at any
-// size and match the burrow's art. Each letter is a palette color; "." is transparent.
+// size and match the borough's art. Each letter is a palette color; "." is transparent.
 
 const PAL: Record<string, string> = {
   k: "#3b2412", w: "#fffaf0", "+": "#ffffff", r: "#e2574c", o: "#f08a3c", y: "#f2c94c", g: "#3fa66b", G: "#2f6e46",

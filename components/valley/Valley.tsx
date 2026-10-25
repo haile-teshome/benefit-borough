@@ -68,7 +68,7 @@ export default function ValleyApp() {
   const [token, setToken] = useState<string | null>(null);
   const [failed, setFailed] = useState("");
   useEffect(() => {
-    ensureToken(slotKey()).then(setToken).catch((e) => setFailed(`Can’t reach the Benefit Burrow server (${(e as Error).message}). Is \`spacetime start\` running?`));
+    ensureToken(slotKey()).then(setToken).catch((e) => setFailed(`Can’t reach the Benefit Borough server (${(e as Error).message}). Is \`spacetime start\` running?`));
   }, []);
   const builder = useMemo(() => {
     if (!token) return null;
@@ -81,7 +81,7 @@ export default function ValleyApp() {
       .onConnect((_c, _id, t) => localStorage.setItem(key, t));
   }, [token]);
   if (failed) return <div className="ev-loading">{failed}</div>;
-  if (!builder) return <div className="ev-loading">Walking into Benefit Burrow…</div>;
+  if (!builder) return <div className="ev-loading">Walking into Benefit Borough…</div>;
   const game = (
     <SpacetimeDBProvider connectionBuilder={builder}>
       <Valley />
@@ -478,7 +478,7 @@ function Valley() {
     if (!near || modal || title) return;
     sound.click();
     if (near.kind === "crop") { setModal({ kind: "crop", tileId: near.tileId }); setEmotes((e) => ({ ...e, [myHex]: { clip: "Interact", at: performance.now() } })); }
-    if (near.kind === "elder") { setModal({ kind: "elder", step: "hello" }); void speak("I audit every harvest in this burrow. Show me what you want to buy with your FSA."); }
+    if (near.kind === "elder") { setModal({ kind: "elder", step: "hello" }); void speak("I audit every harvest in this borough. Show me what you want to buy with your FSA."); }
     if (near.kind === "mailbox") void openGifts();
     if (near.kind === "fish") setModal({ kind: "fishing" });
     if (near.kind === "balloons") setModal({ kind: "balloons" });
@@ -583,7 +583,7 @@ function Valley() {
 
       {chatOpen && (
         <form className="ev-chat" onSubmit={(e) => { e.preventDefault(); const v = (e.currentTarget.elements.namedItem("t") as HTMLInputElement).value; if (v.trim() && conn) void conn.reducers.say({ text: v }); setChatOpen(false); }}>
-          <input name="t" autoFocus placeholder="Say something to the burrow…" onKeyDown={(e) => e.key === "Escape" && setChatOpen(false)} />
+          <input name="t" autoFocus placeholder="Say something to the borough…" onKeyDown={(e) => e.key === "Escape" && setChatOpen(false)} />
         </form>
       )}
 
@@ -851,7 +851,7 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
   return (
     <>
       <div className="ev-panel ev-date">
-        <div className="ev-title">Benefit Burrow</div>
+        <div className="ev-title">Benefit Borough</div>
         <div className="ev-clock">{clock.date} · {clock.label} {clock.night ? "☾" : "☀"}</div>
       </div>
       <div className="ev-topright">
@@ -878,7 +878,7 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
         <div className="ev-panel ev-menu" onClick={(e) => { if ((e.target as HTMLElement).closest("button")) setOpen(false); }}>
           <div className="ev-menu-head">
             {me && <div className="who"><i style={{ background: me.color }} />{me.name}</div>}
-            <span className="ev-sub">{isActive ? `${others.length + (me ? 1 : 0)} in the burrow` : "Connecting…"}</span>
+            <span className="ev-sub">{isActive ? `${others.length + (me ? 1 : 0)} in the borough` : "Connecting…"}</span>
           </div>
           <section>
             <h4>Your claims</h4>
@@ -901,7 +901,7 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
             <button className="ev-link" onClick={onLibrary}>Find my plans (plan library)</button>
             <UploadButton busy={busy} onUpload={onUpload} className="ev-link" label="Upload a document (statement, benefits guide, photo)" />
             {onHousehold && <button className="ev-link" onClick={onHousehold}>Household (share with family)</button>}
-            <button className="ev-link" onClick={onTerms}>Burrow Gazette (fine-print news)</button>
+            <button className="ev-link" onClick={onTerms}>Borough Gazette (fine-print news)</button>
           </section>
           <section>
             <h4>Settings</h4>
@@ -930,7 +930,7 @@ function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }
       <div className="ev-sign">
         <div className="ev-sign-board">
           <span className="l1">Benefit</span>
-          <span className="l2">Burrow</span>
+          <span className="l2">Borough</span>
         </div>
       </div>
       <p className="ev-tagline"><b>$100B+ a year</b> in earned benefits goes unclaimed.<br />AI agents find it, fill your claims and shop your perks.</p>
@@ -944,7 +944,7 @@ function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }
       <div className="ev-sign">
         <div className="ev-sign-board">
           <span className="l1">Benefit</span>
-          <span className="l2">Burrow</span>
+          <span className="l2">Borough</span>
         </div>
       </div>
       <p className="ev-tagline">Track every benefit before it expires. AI agents find it and fill the claims; you approve.</p>
@@ -964,7 +964,7 @@ function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }
   );
 }
 
-// Payday at Burrow Bank: look for a new paycheck in Nessie (or, for the demo, deposit one).
+// Payday at Borough Bank: look for a new paycheck in Nessie (or, for the demo, deposit one).
 function PaydayButtons({ pid, onState }: { pid: string; onState: (s: AppState, tileId?: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
@@ -1021,7 +1021,7 @@ function Intro({ busy, me, onPlant, onPick, onUpload, onLibrary }: { busy: boole
   const [name, setName] = useState("");
   const [color, setColor] = useState(me?.color ?? COLORS[0]);
   return (
-    <Dialogue speaker="Welcome to Benefit Burrow" actions={<button className="ev-btn" disabled={busy} onClick={() => onPlant(name, color, me?.avatar ?? "")}>{busy ? "Planting…" : "Plant my documents"}</button>}>
+    <Dialogue speaker="Welcome to Benefit Borough" actions={<button className="ev-btn" disabled={busy} onClick={() => onPlant(name, color, me?.avatar ?? "")}>{busy ? "Planting…" : "Plant my documents"}</button>}>
       <p>Plant your paperwork and it grows: every benefit you’re about to lose becomes a crop bearing coins. The closer its deadline, the more it wilts. Harvest it before the date and the money is yours.</p>
       <div className="ev-field">Pick your farmer</div>
       <AvatarPicker value={me?.avatar ?? ""} onPick={onPick} />
@@ -1090,7 +1090,7 @@ function Confirm({ tile, others, onCancel, onConfirm }: { tile: Tile; others: Pl
               <i style={{ background: p.color }} />{p.name}
             </button>
           ))}
-          <button className={to === "" ? "on" : ""} onClick={() => setTo("")}>A classmate outside the burrow</button>
+          <button className={to === "" ? "on" : ""} onClick={() => setTo("")}>A classmate outside the borough</button>
         </div>
       )}
       <ul className="ev-options">
@@ -1128,7 +1128,7 @@ function ElderTalk({ step, verdict, onAsk, onClose, onRecord, pushBack }: { step
     <Dialogue speaker="Ruth, the Reviewer" onClose={onClose}
       actions={step === "hello" ? [...CARTS.map((c) => <button key={c.join()} className="ev-btn ghost" onClick={() => onAsk(c)}>Spend my FSA on {c.join(" + ").toLowerCase()}?</button>), <button key="rec" className="ev-btn ghost" onClick={onRecord}>Show me your record</button>] : step === "verdict" ? <button className="ev-btn ghost" onClick={() => onAsk(CARTS[0])}>Ask again</button> : null}
     >
-      {step === "hello" && <p>I audit every harvest in this burrow. Merchants profit when you spend; I don’t. Show me what you want to buy with your FSA.</p>}
+      {step === "hello" && <p>I audit every harvest in this borough. Merchants profit when you spend; I don’t. Show me what you want to buy with your FSA.</p>}
       {step === "thinking" && <p>Checking it against your receipts and stated needs…</p>}
       {step === "verdict" && verdict && (
         <div>

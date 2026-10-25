@@ -9,7 +9,7 @@ import { PixelIcon, iconFor } from "./PixelIcon";
 import { openOutside } from "@/lib/valley/popup";
 
 // The Benefit Bazaar: tell Ruth what you need and which unspent benefit should pay, then press
-// Search. The burrow's shopkeeper agents each search the web their own way and sell her their
+// Search. The borough's shopkeeper agents each search the web their own way and sell her their
 // quotes over x402; she checks live prices and reviews every offer while you go about your day,
 // and the shopkeeper calls you with the results. She never buys: the pick and the link are yours.
 
@@ -42,7 +42,7 @@ export function Bazaar({ state, preset, quest: shown, searching, keeper, onSearc
           {!benefits.length && <p className="ev-sub">No unspent benefits to shop with yet. Plant your plans first.</p>}
           {benefits.length > 0 && (
             <>
-              <p className="ev-sub">Name something you actually need. The burrow's shopkeeper agents compete to find the best one your benefit covers, for the least money. Press Search, then go about your day: {keeper} will call you when they've found it.</p>
+              <p className="ev-sub">Name something you actually need. The borough's shopkeeper agents compete to find the best one your benefit covers, for the least money. Press Search, then go about your day: {keeper} will call you when they've found it.</p>
               <div className={styles.fields}>
                 <label className={styles.field}><span>Pay with</span>
                   <select value={benefitId} onChange={(e) => setBenefitId(e.target.value)} style={{ font: "15px var(--read)", padding: "5px 8px", border: "3px solid var(--wood)", background: "#fffaf0" }}>

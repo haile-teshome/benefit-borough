@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
 // Shared pieces for the first-person minigames (balloons, bugs): a low-resolution renderer scaled
-// up with crisp pixels to match the burrow's art, a gradient sky with drifting clouds, rolling
+// up with crisp pixels to match the borough's art, a gradient sky with drifting clouds, rolling
 // hills, low-poly trees and flowers. Client-only.
 
 export const SCALE = 3; // one rendered pixel = 3 screen pixels

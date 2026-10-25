@@ -6,14 +6,14 @@ import { savingsAccount } from "../payday";
 // dollars to a friend. If the bank call fails, nothing moves and the error says so.
 export async function peerTransfer(action: Action): Promise<DispatchResult> {
   const amount = Number(action.payload.amount);
-  // Payday: move rescued money from checking to Burrow Savings (both your own Nessie accounts).
+  // Payday: move rescued money from checking to Borough Savings (both your own Nessie accounts).
   if (action.payload.rail === "nessie-savings") {
     const savings = await savingsAccount();
     const date = new Date().toISOString().slice(0, 10);
-    const out = await nessie<{ objectCreated?: { _id: string } }>(`/accounts/${process.env.NESSIE_ACCOUNT_ID}/withdrawals`, { method: "POST", body: { medium: "balance", transaction_date: date, status: "completed", amount, description: "To Burrow Savings (rescued by Ruth)" } });
+    const out = await nessie<{ objectCreated?: { _id: string } }>(`/accounts/${process.env.NESSIE_ACCOUNT_ID}/withdrawals`, { method: "POST", body: { medium: "balance", transaction_date: date, status: "completed", amount, description: "To Borough Savings (rescued by Ruth)" } });
     await nessie(`/accounts/${savings}/deposits`, { method: "POST", body: { medium: "balance", transaction_date: date, status: "completed", amount, description: "From checking (rescued by Ruth)" } });
     const id = out.objectCreated?._id ?? "nessie";
-    return { status: "confirmed", confirmation: `NES-${id}`, transcript: [`Capital One Nessie: $${amount.toFixed(2)} out of Chase Total Checking`, `$${amount.toFixed(2)} into Burrow Savings`, `Transfer id ${id}`], integration: "Capital One Nessie", mocked: false };
+    return { status: "confirmed", confirmation: `NES-${id}`, transcript: [`Capital One Nessie: $${amount.toFixed(2)} out of Chase Total Checking`, `$${amount.toFixed(2)} into Borough Savings`, `Transfer id ${id}`], integration: "Capital One Nessie", mocked: false };
   }
   const key = process.env.NESSIE_API_KEY;
   const from = process.env.NESSIE_ACCOUNT_ID;

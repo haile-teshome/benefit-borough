@@ -1,4 +1,4 @@
-// Acorns: the burrow's loyalty currency. Earned for coming back (daily visits with a streak, the
+// Acorns: the borough's loyalty currency. Earned for coming back (daily visits with a streak, the
 // weekly check-in, weekly quests) and for rescuing money, but only on confirmed harvests, so nobody
 // is ever rewarded for spending. Awarded on the server with a daily cap.
 
@@ -35,7 +35,7 @@ export type Reward = { id: string; name: string; cost: number; kind: "cosmetic" 
 // Real-world rewards per person per calendar month, in dollars. Every real reward is reviewed first.
 export const MONTHLY_USER_CAP = 10;
 export const CATALOG: Reward[] = [
-  { id: "scarf-gold", name: "Golden scarf", cost: 150, kind: "cosmetic", blurb: "Everyone in the burrow sees it.", color: "#E9BC3C" },
+  { id: "scarf-gold", name: "Golden scarf", cost: 150, kind: "cosmetic", blurb: "Everyone in the borough sees it.", color: "#E9BC3C" },
   { id: "scarf-ruth", name: "Ruth's purple scarf", cost: 200, kind: "cosmetic", blurb: "The Reviewer's own shade.", color: "#6A4C93" },
   { id: "scarf-mint", name: "Mint-condition scarf", cost: 120, kind: "cosmetic", blurb: "Fresh, like a refunded fee.", color: "#3FA6A0" },
   { id: "scarf-ink", name: "Midnight scarf", cost: 250, kind: "cosmetic", blurb: "For night owls who check in late.", color: "#2F2340" },

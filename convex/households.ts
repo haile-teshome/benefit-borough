@@ -11,7 +11,7 @@ export const create = mutation({
   handler: async (ctx, { pid, name, color, house }) => {
     for (const m of await ctx.db.query("members").withIndex("by_pid", (q) => q.eq("pid", pid)).collect()) await ctx.db.delete(m._id);
     const c = code();
-    await ctx.db.insert("households", { code: c, name: house.slice(0, 40) || "Our burrow", createdBy: pid });
+    await ctx.db.insert("households", { code: c, name: house.slice(0, 40) || "Our borough", createdBy: pid });
     await ctx.db.insert("members", { code: c, pid, name: name.slice(0, 20), color, joinedAt: Date.now() });
     return c;
   },
@@ -68,6 +68,6 @@ export const mine = query({
         ready: (s.packets ?? []).filter((p) => p.status === "ready").map((p) => ({ id: p.id, form: p.form, amount: p.amount, cosignedBy: cosigns.filter((c) => c.packetId === p.id && c.owner === m.pid).map((c) => c.by) })),
       });
     }
-    return { code: me.code, name: house?.name ?? "Our burrow", members };
+    return { code: me.code, name: house?.name ?? "Our borough", members };
   },
 });

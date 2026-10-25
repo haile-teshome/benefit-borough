@@ -59,7 +59,7 @@ export const NPCS: Npc[] = [
   {
     id: "mayor", name: "Mayor Maple", species: "deer", x: 3.0, z: 3.4, outfit: { body: "#6A4C93", hat: "cap", hatColor: "#3A2357" },
     persona: { quirk: "A pompous but lovable mayor who turns every sentence into a campaign speech and keeps announcing ribbon cuttings.", style: "Booming, oratorical, 'fellow citizens', ends lines with a slogan.", catchphrase: "Not a single dollar left behind!", loves: "ribbon cuttings, slogans, open enrollment season", peeve: "wilted crops on Main Street", idle: "speech", voice: "b7187e84-fe22-4344-ba4a-bc013fcb533e" },
-    talk: ["Fellow citizen! Welcome to Benefit Burrow, where not a single dollar is left behind!", "Open enrollment opens November first at the Benefits Office. I will be cutting a ribbon. There is always a ribbon.", "My platform: zero wilted crops by December. Also, more benches. Mostly the crops."],
+    talk: ["Fellow citizen! Welcome to Benefit Borough, where not a single dollar is left behind!", "Open enrollment opens November first at the Benefits Office. I will be cutting a ribbon. There is always a ribbon.", "My platform: zero wilted crops by December. Also, more benches. Mostly the crops."],
   },
   {
     id: "postman", name: "Postman Pete", species: "fox", x: 0.9, z: 6.5, outfit: { body: "#3E8ED0", hat: "cap", hatColor: "#2B5F8E" },
@@ -69,11 +69,11 @@ export const NPCS: Npc[] = [
   },
   {
     id: "granny", name: "Granny Fern", species: "rabbit", x: -7.4, z: -7.4, outfit: { scarf: "#E07BB0" },
-    persona: { quirk: "A sweet granny who hums constantly, feeds the ducks, and is secretly the sharpest financial mind in the burrow.", style: "Warm and sing-song, then suddenly razor-precise about money.", catchphrase: "Now listen here, sugar.", loves: "ducks, humming, catching sneaky fees", peeve: "auto-renewals nobody asked for", idle: "note", voice: "a7b8d8fa-f6e5-4908-900e-0c11d1d82519" },
+    persona: { quirk: "A sweet granny who hums constantly, feeds the ducks, and is secretly the sharpest financial mind in the borough.", style: "Warm and sing-song, then suddenly razor-precise about money.", catchphrase: "Now listen here, sugar.", loves: "ducks, humming, catching sneaky fees", peeve: "auto-renewals nobody asked for", idle: "note", voice: "a7b8d8fa-f6e5-4908-900e-0c11d1d82519" },
     talk: ["Hmm hmm hmm... oh! Hello, sugar. I feed the ducks every morning. They know about compound interest. I told them.", "Now listen here, sugar. A free trial is just a subscription wearing a costume. Cancel before it bills.", "Back in my day nobody read the benefits summary. I did. I read it twice and found forty dollars."],
     route: [[-7.4, -7.4], [-7, -9.2], [-12.5, -9.2], [-12.5, -15.6], [-12.5, -9.2], [-7, -9.2]],
   },
-  // Wanderers: they roam the roads, so the burrow always has someone out and about.
+  // Wanderers: they roam the roads, so the borough always has someone out and about.
   {
     id: "dash", name: "Dash", species: "husky", x: -28, z: 9.6, outfit: { body: "#E2574C", hat: "cap", hatColor: "#2F2F3A" },
     persona: { quirk: "A jogger who is always mid-run, counts everything in laps and treats money goals like personal bests.", style: "Puffing, upbeat, short bursts between breaths, sports metaphors.", catchphrase: "New personal best!", loves: "laps, sunrise runs, his gym reimbursement", peeve: "gym memberships nobody uses", idle: "sweat", voice: "17044048-bfab-44b2-9532-9c1b65e9c217" },
@@ -89,7 +89,7 @@ export const NPCS: Npc[] = [
   {
     id: "birdie", name: "Birdie", species: "deer", x: -6, z: -11, outfit: { scarf: "#3FA66B", hat: "cap", hatColor: "#6E4428" },
     persona: { quirk: "A birdwatcher with binoculars who climbs the north bluff every day and narrates life like a nature documentary.", style: "Hushed, delighted whisper, nature-documentary narration.", catchphrase: "Ooh, a rare one.", loves: "the waterfall, warblers, quiet mornings", peeve: "people stomping past the nesting trees", idle: "sparkle", voice: "4b31d090-8d2d-4bcd-8a32-1c135301e26e" },
-    talk: ["Shh... from the bluff you can see the whole burrow. And a kingfisher. Ooh, a rare one.", "Here we observe the farmer, approaching an expiring benefit. Will it harvest in time? Yes. Yes it will.", "The waterfall is loudest at dawn. Take the stairs up behind the Benefits Office."],
+    talk: ["Shh... from the bluff you can see the whole borough. And a kingfisher. Ooh, a rare one.", "Here we observe the farmer, approaching an expiring benefit. Will it harvest in time? Yes. Yes it will.", "The waterfall is loudest at dawn. Take the stairs up behind the Benefits Office."],
     route: [[-6, -11], [-6, -25.6], [-5.2, -27.4], [-6, -25.6]],
   },
   {
@@ -128,7 +128,7 @@ export const NPCS: Npc[] = [
 export type Chat = { a: string; b: string; lines: [0 | 1, string][] };
 export const CHATTER: Chat[] = [
   { a: "okafor", b: "nurse", lines: [[0, "Why did the crown wait for January? Fresh maximum! Ha!"], [1, "Okay so, that's the fourth time today, doctor."], [0, "And it gets funnier every time!"]] },
-  { a: "nurse", b: "okafor", lines: [[0, "Okay so, half the burrow met their deductible!"], [1, "Then ordered imaging before January. That's the tooth!"], [0, "That's not even about teeth."], [1, "It's ALL about teeth."]] },
+  { a: "nurse", b: "okafor", lines: [[0, "Okay so, half the borough met their deductible!"], [1, "Then ordered imaging before January. That's the tooth!"], [0, "That's not even about teeth."], [1, "It's ALL about teeth."]] },
   { a: "teller", b: "clerk", lines: [[0, "Someone downgraded inside the 30 days. Full refund."], [1, "Darling, that's magnificent!"], [0, "Yes. This is my magnificent face."]] },
   { a: "clerk", b: "teller", lines: [[0, "The AirPods dropped to $199.99! Scandal!"], [1, "That is a $49.01 difference. I counted."], [0, "Twice?"], [1, "Three times. It was a big day."]] },
   { a: "chef", b: "diner", lines: [[0, "Dining dollars expire like a soufflé! December 14!"], [1, "Sorry, is that, um, today?"], [0, "No, dear! Breathe. Send your extra to a friend."]] },
@@ -140,7 +140,7 @@ export const CHATTER: Chat[] = [
   { a: "postman", b: "teller", lines: [[0, "Statements! Mind the duplicate charges!"], [1, "I already found two. I counted them."]] },
   { a: "postman", b: "nurse", lines: [[0, "Explanation of benefits for the clinic!"], [1, "Okay so, step one: OPEN IT!"]] },
   { a: "granny", b: "bertie", lines: [[0, "Hmm hmm hmm... the ducks were hungry today, Bertie."], [1, "So was I. Mmm."], [0, "Now listen here, cancel that streaming trial before Saturday."], [1, "...How did you know?"]] },
-  { a: "granny", b: "mayor", lines: [[0, "Mayor, the pond crystals are glowing again."], [1, "Burrow magic, Fern! Not a single sparkle left behind!"], [0, "Hmm. Your slogan needs work, sugar."]] },
+  { a: "granny", b: "mayor", lines: [[0, "Mayor, the pond crystals are glowing again."], [1, "Borough magic, Fern! Not a single sparkle left behind!"], [0, "Hmm. Your slogan needs work, sugar."]] },
   { a: "dash", b: "biscuit", lines: [[0, "Huff... lap ten! Got a roll for the finish line?"], [1, "I had one for you. Had."], [0, "New personal best... at eating my roll."]] },
   { a: "kiko", b: "rex", lines: [[0, "Wait wait wait, you have a 401(k) match and you're not using it?"], [1, "I am now! No way, it's free money?"], [0, "It's literally free money."]] },
   { a: "clover", b: "rex", lines: [[0, "Slow down on that board, young'un."], [1, "Sorry Clover! Did you know my job matches my savings?"], [0, "Reap it before it rots, son."]] },
@@ -219,14 +219,14 @@ export const STORY: Record<string, [string, string]> = {
   florist: ["Lila can tell what month it is by which flowers are sulking.", "Lila plants a marigold for every farmer who rescues their first benefit; the bed behind the shop is getting crowded."],
   cottage1: ["Rosie bakes cinnamon rolls on Sundays and leaves one on Ruth's desk, anonymously.", "Rosie is saving for a bigger oven and tracks every perk she earns on a chalkboard in her kitchen."],
   cottage2: ["Willow hangs a wind chime for every friend who moves away, so the porch is never quiet.", "Willow howls along with the evening church bell and has never once been on key, proudly."],
-  cottage3: ["Maple's cat is also named Maple, which causes confusion at the vet.", "Maple reads the Burrow Gazette's fine print aloud to the cat every morning, and the cat seems to prefer the credit card section."],
+  cottage3: ["Maple's cat is also named Maple, which causes confusion at the vet.", "Maple reads the Borough Gazette's fine print aloud to the cat every morning, and the cat seems to prefer the credit card section."],
   dash: ["Dash started running to get his gym reimbursement and kept going after he got it; that was three hundred laps ago.", "Dash ran his first race to raise money for the animal shelter Nurse Pip volunteers at, and finished last, happily."],
   kiko: ["Kiko is the first in her family to go to college, and keeps her acceptance letter folded in her library card holder.", "Kiko made a spreadsheet of every student perk before graduation and shares it with every freshman she meets."],
   birdie: ["Birdie has spotted 112 kinds of birds in the valley and named the waterfall's resident heron Gerald, after Cook Dot's soup pot.", "Birdie used to work in an office with no windows; she quit the day she realized she'd lost two years of unused vacation."],
   clover: ["Clover's family has farmed the south road for four generations; the scarecrow on the first farm wears her grandpa's hat.", "Clover once lost a whole season's crop insurance claim because she mailed it a day late, and she's been everyone's reminder ever since."],
   pebble: ["Pebble wants to be a mayor when she grows up, or a butterfly. She hasn't decided.", "Pebble saves every acorn she finds in a jar under her bed for something she won't tell anyone about. It's a birthday present for Granny Fern."],
   biscuit: ["Biscuit was Baker Rye's very first customer, then his first employee, then his best friend.", "Biscuit leaves the last roll of every delivery on Old Bertie's bench, because Bertie once shared his lunch with him when he was new in town."],
-  tilly: ["Tilly has visited thirty-one towns entirely on travel credits and keeps a postcard from each one.", "Tilly came to Benefit Burrow for one night and stayed three weeks, because Sol at the inn reminded her of her grandmother."],
+  tilly: ["Tilly has visited thirty-one towns entirely on travel credits and keeps a postcard from each one.", "Tilly came to Benefit Borough for one night and stayed three weeks, because Sol at the inn reminded her of her grandmother."],
   rex: ["Rex taught himself to skate on the farm road and has fallen into Clover's hay bale more times than he'll admit.", "Rex wants to buy his mom a new oven with his first year of savings, which is why the 401(k) match blew his mind."],
   inn: ["Sol has never charged a resort fee and gets visibly upset when anyone mentions them.", "Sol named the inn after the ledger his grandfather kept, the one that recorded every guest who ever couldn't pay, and every one who came back later to settle up."],
 };
