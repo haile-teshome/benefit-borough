@@ -11,5 +11,9 @@ export default defineSchema({
   audit: defineTable({ pid: v.string(), at: v.string(), type: v.string(), detail: v.string() }).index("by_pid", ["pid", "at"]),
   // Ruth's Autopilot mandates. A Convex cron marks a farmer "due" once a night at their chosen
   // local hour; the app server picks it up, runs the shift, and reports back.
+  // Co-op households: a partner, family or roommates share a live view of each other's claims.
+  households: defineTable({ code: v.string(), name: v.string(), createdBy: v.string() }).index("by_code", ["code"]),
+  members: defineTable({ code: v.string(), pid: v.string(), name: v.string(), color: v.string(), joinedAt: v.number() }).index("by_code", ["code"]).index("by_pid", ["pid"]),
+  cosigns: defineTable({ code: v.string(), packetId: v.string(), owner: v.string(), by: v.string(), at: v.number() }).index("by_code", ["code"]),
   mandates: defineTable({ pid: v.string(), on: v.boolean(), hour: v.number(), tzOffset: v.number(), due: v.boolean(), lastRun: v.string(), lastReport: v.optional(v.string()) }).index("by_pid", ["pid"]).index("by_due", ["due"]),
 });
