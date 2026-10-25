@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { SAMPLE_DOCS } from "@/lib/documents";
 import { scan } from "@/lib/pipeline";
 import { pdfText } from "@/lib/statement/read";
 import { load } from "@/lib/store";
@@ -32,13 +31,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Couldn't read that file. Try a PDF, a CSV export, or a clear photo." }, { status: 400 });
   }
   if (!text.trim()) return NextResponse.json({ error: image ? "Reading photos needs Claude connected. Try a PDF or CSV instead." : "That file has no readable text. Try a PDF, a CSV export, or a clear photo." }, { status: 400 });
-  // Keep what's already planted (library plans, earlier uploads); the sample person's documents
-  // are only the starting point when nothing else is there yet.
-  const have = load(pid).docs;
+  // Keep what's already planted (library plans, earlier uploads). A new player starts from just
+  // this document: the sample person's documents are never mixed into someone else's farm.
+  const saved = load(pid);
+  // A player who hasn't planted yet only holds the sample person's starter documents; skip those.
+  const have = saved.tiles.length ? saved.docs : saved.docs.filter((d) => d.id.startsWith("upload_"));
   const prev = have.filter((d) => d.id.startsWith("upload_"));
   const doc = { id: `upload_${prev.length + 1}`, name: file.name, text: text.slice(0, 200_000) };
   const planted = have.filter((d) => !d.id.startsWith("upload_") && d.id !== "statements");
-  const docs = [...(planted.length ? planted : SAMPLE_DOCS.filter((d) => d.id !== "statements")), ...prev, doc];
+  const docs = [...planted, ...prev, doc];
   const state = await scan(docs, pid);
   const found = state.tiles.filter((t) => t.balanceIds.some((id) => id.startsWith(`up_${doc.id.replace(/\W/g, "")}_`))).length;
   return NextResponse.json({ state, found, kind: read });
