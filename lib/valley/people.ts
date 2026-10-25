@@ -62,16 +62,65 @@ export const NPCS: Npc[] = [
     talk: ["Fellow citizen! Welcome to Benefit Burrow, where not a single dollar is left behind!", "Open enrollment opens November first at the Benefits Office. I will be cutting a ribbon. There is always a ribbon.", "My platform: zero wilted crops by December. Also, more benches. Mostly the crops."],
   },
   {
-    id: "postman", name: "Postman Pete", species: "fox", x: 0, z: 6, outfit: { body: "#3E8ED0", hat: "cap", hatColor: "#2B5F8E" },
+    id: "postman", name: "Postman Pete", species: "fox", x: 0.9, z: 6.5, outfit: { body: "#3E8ED0", hat: "cap", hatColor: "#2B5F8E" },
     persona: { quirk: "A breathless, gossipy postman who is always running late and knows everyone's business (but only the nice parts).", style: "Fast, out of breath, 'hey hey hey', spills gossip then remembers he's late.", catchphrase: "Can't stop, gotta drop!", loves: "gossip, letterbox flags, running", peeve: "letterboxes with the flag down when there IS mail", idle: "alert", voice: "710feaa3-b550-42f3-b3eb-6f37f2a7cc0a" },
     talk: ["Hey hey hey! Somebody mailed dining dollars to a friend yesterday. Sweetest thing. Can't stop, gotta drop!", "If your letterbox flag is up, you've got mail! If it's down... also maybe mail. I'm behind.", "Rumor has it Ruth smiled once. In 2019. I wasn't there but I heard."],
-    route: [[0, 6], [0, 15.2], [-7, 15.6], [0, 15.6], [0, 6], [7, 1], [13, 1.2], [21, 1.2], [8, 0.6], [-8, 0.6], [-14, 1.2], [-20, 1.2], [-8, 0.8], [-2, 5]],
+    route: [[0.9, 6.5], [0.9, 15.2], [-7, 15.2], [0.9, 15.2], [0.9, 6.5], [0.9, 3.4], [3.4, 1.8], [7.6, 0.4], [21, 0.4], [7.6, 0.4], [3.4, 1.8], [-3.4, 1.8], [-7.6, 0.4], [-21, 0.4], [-7.6, 0.4], [-3.4, 1.8], [0.9, 3.4]],
   },
   {
-    id: "granny", name: "Granny Fern", species: "rabbit", x: -6, z: -5.5, outfit: { scarf: "#E07BB0" },
+    id: "granny", name: "Granny Fern", species: "rabbit", x: -7.4, z: -7.4, outfit: { scarf: "#E07BB0" },
     persona: { quirk: "A sweet granny who hums constantly, feeds the ducks, and is secretly the sharpest financial mind in the burrow.", style: "Warm and sing-song, then suddenly razor-precise about money.", catchphrase: "Now listen here, sugar.", loves: "ducks, humming, catching sneaky fees", peeve: "auto-renewals nobody asked for", idle: "note", voice: "a7b8d8fa-f6e5-4908-900e-0c11d1d82519" },
     talk: ["Hmm hmm hmm... oh! Hello, sugar. I feed the ducks every morning. They know about compound interest. I told them.", "Now listen here, sugar. A free trial is just a subscription wearing a costume. Cancel before it bills.", "Back in my day nobody read the benefits summary. I did. I read it twice and found forty dollars."],
-    route: [[-6, -5.5], [-9.5, -9], [-12.6, -13], [-12.4, -15.6], [-12.6, -13], [-9.5, -9], [-6, -5.5], [-2.5, -3]],
+    route: [[-7.4, -7.4], [-7, -9.2], [-12.5, -9.2], [-12.5, -15.6], [-12.5, -9.2], [-7, -9.2]],
+  },
+  // Wanderers: they roam the roads, so the burrow always has someone out and about.
+  {
+    id: "dash", name: "Dash", species: "husky", x: -28, z: 9.6, outfit: { body: "#E2574C", hat: "cap", hatColor: "#2F2F3A" },
+    persona: { quirk: "A jogger who is always mid-run, counts everything in laps and treats money goals like personal bests.", style: "Puffing, upbeat, short bursts between breaths, sports metaphors.", catchphrase: "New personal best!", loves: "laps, sunrise runs, his gym reimbursement", peeve: "gym memberships nobody uses", idle: "sweat", voice: "17044048-bfab-44b2-9532-9c1b65e9c217" },
+    talk: ["Huff... hey! Lap nine! Did you know your health plan might pay back part of your gym? New personal best!", "I run the cottage lane every morning. Rosie gives me a cinnamon roll at the finish line. Don't tell my coach.", "Your benefits are like a race. Some of them have a finish line in December. Sprint!"],
+    route: [[-28, 9.6], [28, 9.6], [0.9, 9.6], [0.9, 30], [0.9, 9.6]],
+  },
+  {
+    id: "kiko", name: "Kiko", species: "shiba", x: -21.5, z: 10.6, outfit: { scarf: "#3E8ED0", glasses: true },
+    persona: { quirk: "A stressed but cheerful college student who lives at the library and knows every student discount in the valley.", style: "Fast, a bit frazzled, 'wait wait wait', then proud of a clever find.", catchphrase: "Student discount? Student discount.", loves: "free software, the library, cheap coffee", peeve: "perks that vanish the day you graduate", idle: "book", voice: "273f9ef7-9fc2-4def-88bb-ab108c6249ca" },
+    talk: ["Wait wait wait, did you know some student perks end the day you graduate? Use them now. Student discount? Student discount.", "I have three exams and one free coffee left on my meal plan. Priorities.", "Librarian Wren helped me file the FAFSA. It took twenty minutes. I'd been scared of it for a month."],
+    route: [[-21.5, 10.6], [-8, 10.6], [-0.9, 10.6], [-0.9, 16], [-0.9, 10.6], [-8, 10.6]],
+  },
+  {
+    id: "birdie", name: "Birdie", species: "deer", x: -6, z: -11, outfit: { scarf: "#3FA66B", hat: "cap", hatColor: "#6E4428" },
+    persona: { quirk: "A birdwatcher with binoculars who climbs the north bluff every day and narrates life like a nature documentary.", style: "Hushed, delighted whisper, nature-documentary narration.", catchphrase: "Ooh, a rare one.", loves: "the waterfall, warblers, quiet mornings", peeve: "people stomping past the nesting trees", idle: "sparkle", voice: "4b31d090-8d2d-4bcd-8a32-1c135301e26e" },
+    talk: ["Shh... from the bluff you can see the whole burrow. And a kingfisher. Ooh, a rare one.", "Here we observe the farmer, approaching an expiring benefit. Will it harvest in time? Yes. Yes it will.", "The waterfall is loudest at dawn. Take the stairs up behind the Benefits Office."],
+    route: [[-6, -11], [-6, -25.6], [-5.2, -27.4], [-6, -25.6]],
+  },
+  {
+    id: "clover", name: "Clover", species: "cow", x: 0.9, z: 16, outfit: { body: "#3E8ED0", hat: "cap", hatColor: "#E0A526" },
+    persona: { quirk: "A veteran farmer who checks on everyone's fields and talks about benefits like crops and weather.", style: "Slow, folksy, farm sayings, quietly wise.", catchphrase: "Reap it before it rots.", loves: "tidy rows, rain, a good harvest", peeve: "crops left in the field past their season", idle: "flower", voice: "57dcab65-68ac-45a6-8480-6c4c52ec1cd1" },
+    talk: ["Mornin'. Your field's looking good. Just remember: reap it before it rots.", "Forty years farming. Lost more money to forms I never mailed than to bad weather.", "The ones with the least days left get picked first. That's just sense."],
+    route: [[0.9, 16], [11, 16], [0.9, 16], [0.9, 30], [11, 30], [0.9, 30], [0.9, 44], [11, 44], [0.9, 44], [0.9, 16], [-11, 16]],
+  },
+  {
+    id: "pebble", name: "Pebble", species: "cat", x: -7, z: -4.1, outfit: { scarf: "#F2C94C" },
+    persona: { quirk: "A small kitten who chases butterflies around the town square and asks endless 'why' questions.", style: "Tiny, excited, lots of questions, giggles.", catchphrase: "But why though?", loves: "butterflies, the fountain, festival flags", peeve: "bedtime", idle: "heart", voice: "dcddf1f4-b114-4b5d-9158-895cbba0e406" },
+    talk: ["Why do benefits expire? Do they go bad like milk? But why though?", "I counted the flags on the strings! There's a million. Maybe forty.", "Mayor Maple let me cut a ribbon once. It was the best day of my whole life."],
+    route: [[-7, -4.1], [7, -4.1], [7, 2.2], [7, -4.1]],
+  },
+  {
+    id: "biscuit", name: "Biscuit", species: "bear", x: -15, z: 9.6, outfit: { body: "#FFFFFF", hat: "chef" },
+    persona: { quirk: "The bakery's delivery bear, always carrying a warm basket and accidentally eating one roll per house.", style: "Cheery, a little sheepish, crumbs in every sentence.", catchphrase: "Fresh out of the oven!", loves: "warm bread, deliveries, cottage porches", peeve: "cold toast", idle: "steam", voice: "66c6b81c-ddb7-4892-bdd5-19b5a7be38e7" },
+    talk: ["Fresh out of the oven! Well, there were twelve rolls. There are eleven. Long walk.", "Baker Rye says the bakery takes dining dollars. Spend them before they're gone, friend.", "Willow always tips in wind chimes. I have nine now."],
+    route: [[-15, 9.6], [28, 9.6]],
+  },
+  {
+    id: "tilly", name: "Tilly", species: "alpaca", x: 28.6, z: -13.4, outfit: { scarf: "#E07BB0", glasses: true },
+    persona: { quirk: "A tourist staying at the Sleepy Ledger Inn who travels on credit card points and gets very excited about free nights.", style: "Bubbly, chatty traveler, postcards and 'when I was in...'.", catchphrase: "Booked it on points!", loves: "travel credits, postcards, free hotel nights", peeve: "points that expire unused", idle: "speech", voice: "87bc56aa-ab01-4baa-9071-77d497064686" },
+    talk: ["Booked it on points! The whole trip. Well, the nights. The snacks were full price.", "Did you know a card's travel credit can reset every year? Mine resets in January. I'm already packed.", "Sol at the inn doesn't charge resort fees. I nearly cried."],
+    route: [[28.6, -13.4], [25.2, -13.4], [25.2, -9.8], [31, -9.8], [25.2, -9.8], [25.2, -13.4]],
+  },
+  {
+    id: "rex", name: "Rex", species: "fox", x: 0.9, z: 8, outfit: { body: "#8E5BD0", hat: "cap", hatColor: "#3FA6A0" },
+    persona: { quirk: "A teen skateboarder with a first job who just discovered his paycheck has benefits and thinks it's the coolest secret ever.", style: "Laid-back slang, 'no way', genuinely amazed.", catchphrase: "No way, that's free money?", loves: "skating the farm road, his first paycheck, the 401(k) match he just found", peeve: "being told to 'read the handbook'", idle: "note", voice: "b24f41fd-00a3-4cd8-992a-a0c9f13f3ef1" },
+    talk: ["Dude, my job matches my 401(k)? Like, they just give me money if I save? No way, that's free money?", "I skate the whole farm road. Clover yells 'slow down' every time. Love her.", "Ruth said I should use my PTO. I didn't even know I had PTO."],
+    route: [[0.9, 8], [0.9, 62], [-0.9, 62], [-0.9, 8]],
   },
 ];
 
@@ -92,6 +141,12 @@ export const CHATTER: Chat[] = [
   { a: "postman", b: "nurse", lines: [[0, "Explanation of benefits for the clinic!"], [1, "Okay so, step one: OPEN IT!"]] },
   { a: "granny", b: "bertie", lines: [[0, "Hmm hmm hmm... the ducks were hungry today, Bertie."], [1, "So was I. Mmm."], [0, "Now listen here, cancel that streaming trial before Saturday."], [1, "...How did you know?"]] },
   { a: "granny", b: "mayor", lines: [[0, "Mayor, the pond crystals are glowing again."], [1, "Burrow magic, Fern! Not a single sparkle left behind!"], [0, "Hmm. Your slogan needs work, sugar."]] },
+  { a: "dash", b: "biscuit", lines: [[0, "Huff... lap ten! Got a roll for the finish line?"], [1, "I had one for you. Had."], [0, "New personal best... at eating my roll."]] },
+  { a: "kiko", b: "rex", lines: [[0, "Wait wait wait, you have a 401(k) match and you're not using it?"], [1, "I am now! No way, it's free money?"], [0, "It's literally free money."]] },
+  { a: "clover", b: "rex", lines: [[0, "Slow down on that board, young'un."], [1, "Sorry Clover! Did you know my job matches my savings?"], [0, "Reap it before it rots, son."]] },
+  { a: "tilly", b: "kiko", lines: [[0, "Booked it on points! Have you been to the waterfall?"], [1, "No time. Exams. Is it free?"], [0, "Completely free. Take the stairs up the bluff."]] },
+  { a: "pebble", b: "mayor", lines: [[0, "Mayor, why do benefits expire?"], [1, "So we can rescue them, little one! Not a single dollar left behind!"], [0, "But why though?"]] },
+  { a: "birdie", b: "granny", lines: [[0, "Shh, Fern. A heron, by the dock. Ooh, a rare one."], [1, "Hmm hmm, he steals my duck bread, sugar."]] },
   { a: "postman", b: "granny", lines: [[0, "Hey Fern! You got a letter from the bank!"], [1, "Is it a fee? Give it here, sugar."], [0, "...She's terrifying. Gotta drop!"]] },
 ];
 
@@ -165,5 +220,13 @@ export const STORY: Record<string, [string, string]> = {
   cottage1: ["Rosie bakes cinnamon rolls on Sundays and leaves one on Ruth's desk, anonymously.", "Rosie is saving for a bigger oven and tracks every perk she earns on a chalkboard in her kitchen."],
   cottage2: ["Willow hangs a wind chime for every friend who moves away, so the porch is never quiet.", "Willow howls along with the evening church bell and has never once been on key, proudly."],
   cottage3: ["Maple's cat is also named Maple, which causes confusion at the vet.", "Maple reads the Burrow Gazette's fine print aloud to the cat every morning, and the cat seems to prefer the credit card section."],
+  dash: ["Dash started running to get his gym reimbursement and kept going after he got it; that was three hundred laps ago.", "Dash ran his first race to raise money for the animal shelter Nurse Pip volunteers at, and finished last, happily."],
+  kiko: ["Kiko is the first in her family to go to college, and keeps her acceptance letter folded in her library card holder.", "Kiko made a spreadsheet of every student perk before graduation and shares it with every freshman she meets."],
+  birdie: ["Birdie has spotted 112 kinds of birds in the valley and named the waterfall's resident heron Gerald, after Cook Dot's soup pot.", "Birdie used to work in an office with no windows; she quit the day she realized she'd lost two years of unused vacation."],
+  clover: ["Clover's family has farmed the south road for four generations; the scarecrow on the first farm wears her grandpa's hat.", "Clover once lost a whole season's crop insurance claim because she mailed it a day late, and she's been everyone's reminder ever since."],
+  pebble: ["Pebble wants to be a mayor when she grows up, or a butterfly. She hasn't decided.", "Pebble saves every acorn she finds in a jar under her bed for something she won't tell anyone about. It's a birthday present for Granny Fern."],
+  biscuit: ["Biscuit was Baker Rye's very first customer, then his first employee, then his best friend.", "Biscuit leaves the last roll of every delivery on Old Bertie's bench, because Bertie once shared his lunch with him when he was new in town."],
+  tilly: ["Tilly has visited thirty-one towns entirely on travel credits and keeps a postcard from each one.", "Tilly came to Benefit Burrow for one night and stayed three weeks, because Sol at the inn reminded her of her grandmother."],
+  rex: ["Rex taught himself to skate on the farm road and has fallen into Clover's hay bale more times than he'll admit.", "Rex wants to buy his mom a new oven with his first year of savings, which is why the 401(k) match blew his mind."],
   inn: ["Sol has never charged a resort fee and gets visibly upset when anyone mentions them.", "Sol named the inn after the ledger his grandfather kept, the one that recorded every guest who ever couldn't pay, and every one who came back later to settle up."],
 };

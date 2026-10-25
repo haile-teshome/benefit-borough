@@ -69,7 +69,7 @@ function curb(px: number, py: number) {
 // as the roads. Paths between the lawns line up with the four streets.
 const BLOOMS = ["#F48FB1", "#FFD45A", "#FFFFFF", "#C8A8F0", "#FF8A65"];
 function plaza(x: number, z: number, px: number, py: number) {
-  const r = Math.hypot(x, z), path = 1.5; // paths as wide as the main road
+  const r = Math.hypot(x, z), path = 1.3; // paths as wide as the main street
   let th = Math.atan2(z, x); if (th < 0) th += Math.PI * 2;
   if (r < 2.75) { // fan of stones around the fountain
     const W = 0.5, ring = Math.floor(r / W), fr = r / W - ring;
@@ -81,7 +81,7 @@ function plaza(x: number, z: number, px: number, py: number) {
   }
   if (r < 3.0) return curb(px, py);
   const ax = Math.abs(x), az = Math.abs(z);
-  const lawn = Math.min(ax - path, az - path, r - 3.0, 6.1 - r); // > 0 inside a lawn
+  const lawn = Math.min(ax - path, az - path, r - 3.0, 6.7 - r); // > 0 inside a lawn
   if (lawn <= 0) return pavers(px, py, LIGHT);
   if (lawn < 0.2) return curb(px, py);
   if (lawn < 0.6) {

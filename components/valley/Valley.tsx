@@ -797,7 +797,6 @@ function UploadButton({ busy, onUpload, className, label }: { busy: boolean; onU
 
 function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord, onLibrary, onClaims, onExchange, acorns, streak, onOutbox, onCheckout, onSwap, onTerms, onAutopilot, onVoice, onHousehold, onBazaar }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean; onLibrary: () => void; onClaims: () => void; onExchange: () => void; acorns: number; streak: number; onOutbox: () => void; onCheckout: () => void; onSwap: () => void; onTerms: () => void; onAutopilot: () => void; onVoice: () => void; onHousehold?: () => void; onBazaar: () => void }) {
   const waiting = (state?.packets ?? []).filter((p) => p.status !== "submitted");
-  const next = state?.tiles.filter((t) => !state.done.includes(t.id) && t.atStake > 0).sort((a, b) => a.daysLeft - b.daysLeft)[0];
   const clock = useClock();
   const [open, setOpen] = useState(false);
   const needYou = waiting.filter((p) => p.status !== "ready").length;
@@ -812,7 +811,6 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
       <div className="ev-panel ev-date">
         <div className="ev-title">Benefit Burrow</div>
         <div className="ev-clock">{clock.date} · {clock.label} {clock.night ? "☾" : "☀"}</div>
-        {next && <div className="ev-sub">Next to wilt: {shortTitle(next.title).split(" ").slice(0, 3).join(" ")}… in {next.daysLeft}d</div>}
       </div>
       <div className="ev-topright">
         <button className="ev-panel ev-stat" onClick={onExchange} title="Open the Acorn Exchange">
@@ -892,9 +890,12 @@ function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }
           <span className="l2">Burrow</span>
         </div>
       </div>
-      <p className="ev-tagline">Americans lose <b>$100B+ a year</b> in money they never claim.<br />AI agents find it, fill your claims and shop your perks. You just approve.</p>
-      <div className="ev-poster-chips">
-        {["Track every benefit", "AI agents shop & fill forms", "User has final approval"].map((c) => <span key={c} className="ev-panel">{c}</span>)}
+      <div className="ev-panel ev-poster-card">
+        <div className="ev-poster-stat"><b>$100B+</b><span>in benefits Americans<br />lose every year</span></div>
+        <p>AI agents find it, fill your claims and shop your perks. You just approve.</p>
+        <div className="ev-poster-chips">
+          {["Track every benefit", "AI agents shop & fill forms", "User has final approval"].map((c) => <span key={c}>{c}</span>)}
+        </div>
       </div>
     </div>
   );

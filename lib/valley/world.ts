@@ -46,24 +46,25 @@ export const ELDER: [number, number, number] = [-4.5, 0, -6];
 export const FOUNTAIN = { x: 0, z: 1.2 };
 export const POND = { x: -18, z: -20, r: 6 };
 
-// Dirt roads (segments with a width) and paved zones.
+// Stone roads (straight segments with a width) and the paved zones. Kept narrow, with grass
+// yards in front of every shop, so the town reads as green with stone paths through it.
+const DOOR_PATHS = ["pharmacy", "clinic", "dental", "bank", "store", "market"].map((id) => BUILDINGS.find((b) => b.id === id)!.x);
 export const ROADS: { a: [number, number]; b: [number, number]; w: number }[] = [
-  { a: [0, 6], b: [0, 66], w: 3 },
-  ...FARM_ROWS.map((z) => ({ a: [-13, z] as [number, number], b: [13, z] as [number, number], w: 2 })),
-  // Every road runs straight along the grid and meets the paving square-on.
-  { a: [-7, -9.2], b: [-12.5, -9.2], w: 2 }, { a: [-12.5, -9.2], b: [-12.5, -13], w: 2 }, // to the pond dock
-  { a: [7, -9.2], b: [12, -9.2], w: 2 },       // to the Dining Commons deck
-  { a: [-6, -10.5], b: [-6, -23.4], w: 2 },    // up to the north bluff stairs
-  { a: [-30, 10.2], b: [30, 10.2], w: 2 },     // cottage lane
-  { a: [24.5, -13], b: [29, -13], w: 2 },      // to the inn
+  { a: [-31, 0], b: [-7.2, 0], w: 2.6 }, { a: [7.2, 0], b: [31, 0], w: 2.6 }, // main street, lined up with the square's paths
+  ...DOOR_PATHS.map((x) => ({ a: [x, -2.9] as [number, number], b: [x, -1.3] as [number, number], w: 1.4 })), // up to each shop door
+  { a: [0, 7.2], b: [0, 66], w: 2.4 }, // the farm road
+  ...FARM_ROWS.map((z) => ({ a: [-13, z] as [number, number], b: [13, z] as [number, number], w: 1.6 })),
+  { a: [0, -6.9], b: [0, -9.1], w: 2.4 },        // square to the Benefits Office
+  { a: [-12.5, -9.1], b: [12, -9.1], w: 1.8 },   // back lane past the Benefits Office
+  { a: [12, -9.1], b: [12, -10.2], w: 1.8 },     // to the Dining Commons deck
+  { a: [-12.5, -9.1], b: [-12.5, -13], w: 1.8 }, // to the pond dock
+  { a: [-6, -9.1], b: [-6, -23.4], w: 1.8 },     // up to the north bluff stairs
+  { a: [-30, 10.2], b: [30, 10.2], w: 1.6 },     // cottage lane
+  { a: [24.5, -13], b: [29, -13], w: 1.6 },      // to the inn
 ];
 export type Zone = { kind: "plaza" | "slab" | "health" | "credit" | "deck"; rect?: [number, number, number, number]; circle?: [number, number, number] };
 export const ZONES: Zone[] = [
-  { kind: "health", rect: [-31, -3.6, -6, 3.4] },
-  { kind: "credit", rect: [6, -3.6, 31, 3.4] },
   { kind: "deck", rect: [10, -16, 24.5, -10] },
-  { kind: "slab", rect: [-7.5, -10.5, 7.5, -5] },
-  { kind: "slab", rect: [-7.5, -5, 7.5, 3.4] }, // joins the square to both district streets, no grass slivers
   { kind: "plaza", circle: [0, 0, 7.5] },
 ];
 
@@ -219,7 +220,7 @@ const FIXED: Decor[] = [
   { kind: "stall", x: 4.4, z: -2, color: "#E04848", v: 1 },
   // festival: a second market stall and festival banners around the square
   { kind: "stall", x: -4.4, z: -2, color: "#3E8ED0", v: 2 },
-  { kind: "banner", x: -6.2, z: 0.6, color: "#F2B33D", icon: "coin" }, { kind: "banner", x: 6.2, z: 0.6, color: "#E07BB0", icon: "food" },
+  { kind: "banner", x: -6.4, z: -2, color: "#F2B33D", icon: "coin" }, { kind: "banner", x: 6.4, z: -2, color: "#E07BB0", icon: "food" },
   { kind: "topiary", x: -2.4, z: -4.4 }, { kind: "topiary", x: 2.4, z: -4.4 },
   // gardens around every building: bushes at the corners and wildflowers along the sides
   ...BUILDINGS.flatMap((b, i) => [
@@ -255,7 +256,7 @@ const FIXED: Decor[] = [
   { kind: "crystal", x: -8.2, z: -10.6, color: "lilac" }, { kind: "crystal", x: 8.2, z: -10.4, color: "aqua" },
   { kind: "crystal", x: -24.6, z: -21, color: "rose" }, { kind: "crystal", x: -11, z: -24.5, color: "aqua" }, { kind: "crystal", x: -21.5, z: -12.8, color: "lilac" },
   { kind: "crystal", x: 4.2, z: 11, color: "rose" }, { kind: "crystal", x: -4.6, z: 22.5, color: "lilac" },
-  { kind: "mushrooms", x: -6.5, z: 9.5, color: "#4FC3E8" }, { kind: "mushrooms", x: 6, z: 22.6, color: "#F06C8B" },
+  { kind: "mushrooms", x: -6.5, z: 12.8, color: "#4FC3E8" }, { kind: "mushrooms", x: 6, z: 22.6, color: "#F06C8B" },
   { kind: "mushrooms", x: -27, z: -9, color: "#B48CF0" }, { kind: "mushrooms", x: 27, z: -8.5, color: "#4FC3E8" },
   { kind: "mushrooms", x: 3.5, z: 35.6, color: "#B48CF0" }, { kind: "mushrooms", x: -24, z: 7.5, color: "#F06C8B" },
 ];
