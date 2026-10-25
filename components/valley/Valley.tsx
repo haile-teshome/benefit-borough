@@ -15,8 +15,9 @@ import { AVATARS, portrait } from "@/lib/valley/pixel/animals";
 import { BUILDINGS, DISTRICTS, NPCS } from "@/lib/valley/world";
 import { LiveBoard } from "./LiveBoard";
 import { PushBack, RuthAsks, RuthRecord } from "./Ruth";
+import { TalkBox } from "./Talk";
 import World2D, { type Burst, type Emote, type Mood, type Near, type WorldApi } from "./World2D";
-import { KEEPERS } from "@/lib/valley/people";
+import { KEEPERS, RUTH_VOICE } from "@/lib/valley/people";
 
 const DB = "expire-valley";
 // Convex holds saved state and the ledger; its live queries drive the valley leaderboard.
@@ -277,7 +278,7 @@ function Valley() {
     if (r.verdict.verdict === "reject") sound.refuse(); else sound.coins();
     setRuthMood({ kind: r.verdict.verdict === "reject" ? "reject" : "approve", at: performance.now() });
     setModal({ kind: "elder", step: "verdict", verdict: r.verdict });
-    void speak(`${r.verdict.verdict === "approve" ? "Fine." : "No."} ${r.verdict.reason}`);
+    void speak(`${r.verdict.verdict === "approve" ? "Fine." : "No."} ${r.verdict.reason}`, RUTH_VOICE);
   }
 
   async function answerRuth(tileId: string, reply: "go" | "keep") {
@@ -310,8 +311,8 @@ function Valley() {
     if (near.kind === "place") worldApi.enter?.(near.id);
     if (near.kind === "exit") worldApi.exit?.();
     if (near.kind === "claim") setModal({ kind: "crop", tileId: near.tileId });
-    if (near.kind === "keeper") { setModal({ kind: "keeper", id: near.id }); void speak(KEEPERS[near.id]?.hello ?? ""); }
-    if (near.kind === "npc") { const n = NPCS.find((x) => x.id === near.id); setModal({ kind: "npc", id: near.id, line: 0 }); if (n) void speak(n.talk[0]); }
+    if (near.kind === "keeper") { const k = KEEPERS[near.id]; setModal({ kind: "keeper", id: near.id }); if (k) void speak(k.hello, k.persona.voice); }
+    if (near.kind === "npc") { const n = NPCS.find((x) => x.id === near.id); setModal({ kind: "npc", id: near.id, line: 0 }); if (n) void speak(n.talk[0], n.persona.voice); }
   }
 
   // Keyboard: E to interact, Esc to close, Enter to chat.
@@ -422,8 +423,10 @@ function Valley() {
         const n = NPCS.find((x) => x.id === modal.id)!;
         return (
           <Dialogue speaker={n.name} onClose={() => setModal(null)}
-            actions={n.talk.length > 1 ? <button className="ev-btn ghost" onClick={() => { const i = (modal.line + 1) % n.talk.length; setModal({ ...modal, line: i }); void speak(n.talk[i]); }}>Tell me more</button> : null}>
+            actions={n.talk.length > 1 ? <button className="ev-btn ghost" onClick={() => { const i = (modal.line + 1) % n.talk.length; setModal({ ...modal, line: i }); void speak(n.talk[i], n.persona.voice); }}>Tell me more</button> : null}>
             <p className="ev-lead">{n.talk[modal.line]}</p>
+            <p className="ev-sub ev-quirk">{n.persona.quirk}</p>
+            <TalkBox key={n.id} pid={pid} who={n.id} name={n.name} voice={n.persona.voice} />
           </Dialogue>
         );
       })()}
@@ -450,6 +453,7 @@ function Valley() {
                 </ul>
               </>
             ) : <p className="ev-sub">Nothing of yours expires here. Come back anytime.</p>}
+            <TalkBox key={modal.id} pid={pid} who={modal.id} name={k.name} voice={k.persona.voice} />
           </Dialogue>
         );
       })()}

@@ -198,7 +198,8 @@ export default function World2D(props: Props) {
     };
 
     // ---------- villagers ----------
-    const folk = new Map(NPCS.map((n) => [n.id, { x: n.x, z: n.z, dir: "down" as Dir, walk: 0, seg: 0, pauseUntil: 0 }]));
+    const folk = new Map(NPCS.map((n) => [n.id, { x: n.x, z: n.z, dir: "down" as Dir, walk: 0, seg: 0, pauseUntil: 0, idleAt: performance.now() + 2000 + Math.random() * 6000 }]));
+    const icons = new Map<string, Sprite>();
     const bubbles = new Map<string, { text: string; until: number }>();
     let chat: { lines: [string, string][]; i: number; next: number } | null = null;
     let nextChat = performance.now() + 2500;
@@ -271,7 +272,12 @@ export default function World2D(props: Props) {
       if (keeper) {
         setAnchor("keeper", r.keeper.x, 1.8, r.keeper.z);
         const look: Dir = Math.abs(here.x - r.keeper.x) > 2 ? (here.x < r.keeper.x ? "left" : "right") : "down";
-        list.push({ z: r.keeper.z, sh: [r.keeper.x, r.keeper.z, 6], draw: () => { const fr = animalFrames(keeper.species, keeper.outfit)[look]; blit(fr[0], r.keeper.x, r.keeper.z, Math.round(Math.max(0, Math.sin(t * 2)) * 0.8)); } });
+        const habit = t % 7 < 1.7 ? keeper.persona.idle : null;
+        list.push({ z: r.keeper.z, sh: [r.keeper.x, r.keeper.z, 6], draw: () => {
+          const fr = animalFrames(keeper.species, keeper.outfit)[look];
+          blit(fr[0], r.keeper.x, r.keeper.z, Math.round(Math.max(0, Math.sin(t * 2)) * 0.8));
+          if (habit) blit(memo(icons, habit, () => P.idleIcon(habit)), r.keeper.x + 0.35, r.keeper.z, 30 + Math.round((t % 7) * 4) % 6);
+        } });
       }
       // Claims on display: every balance this shop handles, richest first.
       const cats = BUILDINGS.find((b) => b.id === r.id)?.place?.categories ?? [];
@@ -467,7 +473,16 @@ export default function World2D(props: Props) {
         const b = bubbles.get(n.id);
         if (b && now < b.until) setAnchor(`say:${n.id}`, f.x, 2.45, f.z); else anchors.delete(`say:${n.id}`);
         const look: Dir = n.route ? f.dir : f.dir !== "down" && now < f.pauseUntil ? f.dir : Math.sin(t * 0.3 + n.x) > 0.6 ? (n.x > 0 ? "left" : "right") : "down";
-        list.push({ z: f.z, draw: () => drawAnimal(n.species, n.outfit as Outfit, f.x, f.z, look, f.walk, f.walk ? 0 : Math.round(Math.max(0, Math.sin(t * 2 + n.x)) * 0.8)), sh: [f.x, f.z, 6] });
+        // Their habit: every few seconds, unless they're talking, their quirk icon pops up.
+        const talking = b && now < b.until;
+        if (now > f.idleAt + 1800) f.idleAt = now + 3500 + Math.random() * 6000;
+        const habit = !talking && now > f.idleAt ? n.persona.idle : null;
+        const dozing = n.persona.idle === "zzz" && habit;
+        const lift = f.walk ? 0 : dozing ? 0 : n.persona.idle === "alert" && habit ? Math.round(Math.abs(Math.sin(t * 9)) * 3) : Math.round(Math.max(0, Math.sin(t * 2 + n.x)) * 0.8);
+        list.push({ z: f.z, draw: () => {
+          drawAnimal(n.species, n.outfit as Outfit, f.x, f.z, dozing ? "down" : look, f.walk, lift);
+          if (habit) blit(memo(icons, habit, () => P.idleIcon(habit)), f.x + 0.35, f.z, 30 + Math.round((now - f.idleAt) / 120) % 6);
+        }, sh: [f.x, f.z, 6] });
       }
       // Small talk: start a conversation between two villagers standing near each other, near you.
       if (!chat && now > nextChat) {

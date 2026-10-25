@@ -220,3 +220,13 @@ body { margin: 0; overflow: hidden; background: #8fc4e8; }
 .ev-claims button.done { background: #d6e8a9; }
 .ev-claims b { color: var(--ok); white-space: nowrap; }
 .ev-who[hidden] { display: none; }
+
+/* talking with villagers */
+.ev-quirk { font-style: italic; margin-top: -2px; }
+.ev-talk { margin-top: 10px; display: grid; gap: 6px; }
+.ev-talk form { display: flex; gap: 8px; }
+.ev-talk input { flex: 1; font: 500 15px var(--pixel); padding: 6px 8px; border: 3px solid var(--wood-dark); background: #fff8e2; color: var(--ink); }
+.ev-talk-log { display: grid; gap: 4px; max-height: 180px; overflow: auto; }
+.ev-talk-log p { margin: 0; padding: 5px 9px; font-size: 15px; }
+.ev-talk-log p.you { background: #e6f1d2; justify-self: end; max-width: 85%; }
+.ev-talk-log p.them { background: var(--parchment-2); max-width: 90%; }

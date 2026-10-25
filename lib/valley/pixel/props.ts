@@ -579,3 +579,24 @@ export function well(): Sprite {
   g.ellipse(14, 24.5, 8, 3.2, "#3F7FB0");
   return g.outline().sprite(14, 31);
 }
+
+// Little habit icons that float over a villager's head (Bertie's Zzz, Granny's humming, Mo's coins).
+export function idleIcon(kind: string): Sprite {
+  const g = new Grid(13, 13);
+  const pal: Record<string, string> = { b: "#7CB8E8", k: "#3A2A50", y: "#FFD45A", Y: "#FFF6B0", r: "#E04848", w: "#FFFFFF", p: "#F06C8B", g: "#4E9D45", o: "#E9A93A", s: "#C9CDD6", n: "#8E5BD0" };
+  const rows: Record<string, string[]> = {
+    zzz: ["......bbbb...", "........b....", ".......b.....", "......bbbb...", "...bbb.......", ".....b.......", "....b........", "...bbb.......", "bb...........", ".b...........", "bb..........."],
+    note: ["....nnnn.", "....n..n.", "....n..n.", "....n..n.", ".nnnn.nnn", "nnnnnnnnn", ".nn...nn."],
+    alert: ["..yy..", "..yy..", "..yy..", "..yy..", "......", "..yy..", "..yy.."],
+    speech: ["....y....", "...yYy...", "yyyyYyyyy", ".yyYYYyy.", "..yYYYy..", ".yy...yy.", "y.......y"],
+    sweat: ["...b...", "..bbb..", ".bbwbb.", ".bbbbb.", "..bbb.."],
+    flower: ["..p.p..", ".ppppp.", "..pyp..", ".ppppp.", "..p.p..", "...g...", "..ggg.."],
+    book: ["kkkk.kkkk", "kwwwkwwwk", "kwkwkwkwk", "kwwwkwwwk", "kwkwkwkwk", "kwwwkwwwk", ".kkkkkkk."],
+    steam: [".s...s...", "s...s...s", ".s...s...", "..s...s..", ".s...s...", "s...s...s"],
+    sparkle: ["....w....", "....w....", "...wYw...", "wwwYyYwww", "...wYw...", "....w....", "....w...."],
+  };
+  if (kind === "heart") return heart();
+  if (kind === "coin") return coin();
+  g.stamp(1, 1, rows[kind] ?? rows.alert, pal);
+  return g.outline(0.55).sprite(6, 12);
+}
