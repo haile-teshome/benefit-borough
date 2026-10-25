@@ -50,6 +50,7 @@ export function RuthRecord({ state, pid, integrations, live, onClose }: { state:
     ["Ruth's voice and booking calls", Boolean(integrations.cartesia), integrations.cartesia ? "Cartesia text-to-speech" : "Text only"],
     ["Saved games and the valley ledger", Boolean(integrations.convex), integrations.convex ? "Convex, live queries" : "Local file"],
     ["Multiplayer farms, gifts, chat", true, "SpacetimeDB"],
+    ["Store prices for price matches", Boolean(integrations.apify), integrations.apify ? "Read live from the store's page with Apify" : "Price from the sample statement"],
     ["Dining-dollar transfers", Boolean(integrations.nessie), integrations.nessie ? "Posted as a Nessie transfer" : "Simulated x402 payment"],
     ["Phone calls to offices", false, "Voice is real; the other side of the call is scripted"],
     ["Forms, chats and app taps (refunds, disputes, cancels)", false, "Scripted: each provider's API is the next step"],

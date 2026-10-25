@@ -453,6 +453,18 @@ function uploadTiles(ex: Extraction): Tile[] {
       candidates: [{ id: "act", label: "Submit the receipt to your FSA or HSA", costToUser: 0, detail: "Only if you have one and the expense is eligible." }],
       headline: `${usd(b.amount)} at ${what} went on a regular card. If you have an FSA or HSA, get it back tax-free.`, tradeoff: "Eligibility depends on the item; keep the itemized receipt.",
       doNothing: `The ${usd(b.amount)} you already paid stays out of pocket (your FSA balance itself isn't forfeiting); most FSAs stop taking ${+b.deadline.slice(0, 4) - 1} claims around ${by}.`, action: steps(`Submit the ${what} receipt`, "your FSA/HSA portal", [`Uploading the ${what} receipt (${usd(b.amount)})`, "Claim submitted; reimbursement to your bank"], "FSA") }];
+    if (b.category === "price_adjust") {
+      const now = ex.facts[`price_now:${b.id}`];
+      if (now == null || now >= b.amount) return []; // no drop (or no live price): nothing to claim yet
+      const diff = round2(b.amount - now);
+      const store = b.label.match(/ at (.+)$/)?.[1] ?? "the store";
+      return [{ ...common, atStake: diff, doNothingCost: diff, id: `tile_${b.id}`, category: "price_adjust", title: `Price dropped: ${what}`,
+        candidates: [{ id: "act", label: `Request ${store}'s price match`, costToUser: 0, detail: `Paid ${usd(b.amount)}; ${store} lists it at ${usd(now)} right now (checked live via Apify).` }],
+        headline: `You paid ${usd(b.amount)}; ${store} sells it for ${usd(now)} today. Ask for ${usd(diff)} back by ${by}.`,
+        tradeoff: "Same item you already own; nothing to return. The price was read live from the store's page.",
+        doNothing: `${usd(diff)} stays with ${store}; the price-match window closes ${by}.`,
+        action: request(`Request a ${store} price adjustment`, diff, { title: `Chatting with ${store}`, to: `${store} guest services`, steps: [`Expire: Hi, I bought ${what.replace(/ at .*/, "")} for ${usd(b.amount)}. It's ${usd(now)} on your site today. Could you match it?`, `${store}: Yes, that's within our price-match window. Refund of ${usd(diff)} issued.`], confirmation: `PM-${b.id.slice(-4).toUpperCase()}` }) }];
+    }
     return [];
   });
 }

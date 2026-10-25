@@ -4,6 +4,7 @@ import { optimize } from "./engine/optimize";
 import { defend, review } from "./engine/reviewer";
 import { usd } from "./engine/spans";
 import { bookingCall } from "./integrations/cartesia";
+import { livePrices } from "./integrations/apify";
 import { requestAction } from "./integrations/request";
 import { peerTransfer } from "./integrations/transfer";
 import { hydrate, load, log, save } from "./store";
@@ -17,6 +18,17 @@ export async function scan(docs: SourceDoc[], pid?: string | null): Promise<AppS
   const s = load(pid);
   s.docs = docs;
   const ex = await extract(docs);
+  // Price watches: ask Apify for the store's live price of each watched purchase.
+  const watched = ex.balances.filter((b) => b.id.startsWith("up_") && b.category === "price_adjust");
+  if (watched.length) {
+    const urlOf = (ruleText: string) => ruleText.match(/Live price: (\S+)/)?.[1] ?? "";
+    const prices = await livePrices(watched.map((b) => urlOf(b.ruleText)).filter(Boolean));
+    for (const b of watched) {
+      const p = prices[urlOf(b.ruleText)];
+      if (p != null) ex.facts[`price_now:${b.id}`] = p;
+      log(s, "price", `${b.label}: paid $${b.amount}, live price ${p != null ? `$${p}` : "unavailable"} (Apify)`);
+    }
+  }
   s.extraction = ex;
   log(s, "extract", `${ex.balances.length} balances, ${ex.careItems.length} care items (${ex.engine})${ex.dropped.length ? `; dropped ${ex.dropped.length} ungrounded` : ""}`);
   s.tiles = await optimize(ex);

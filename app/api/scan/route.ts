@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { SAMPLE_DOCS, type SourceDoc } from "@/lib/documents";
 import { NESSIE_COVERS, nessieEnabled, nessieStatement } from "@/lib/integrations/nessie";
+import { apifyEnabled } from "@/lib/integrations/apify";
 import { scan } from "@/lib/pipeline";
 
 // With Nessie configured, checking and card activity comes from the live sandbox bank; the sample
@@ -9,7 +10,8 @@ async function defaultDocs(): Promise<SourceDoc[]> {
   if (!nessieEnabled()) return SAMPLE_DOCS;
   try {
     const live = await nessieStatement();
-    const terms = SAMPLE_DOCS.map((d) => (d.id === "statements" ? { ...d, text: d.text.split("\n").filter((l) => !NESSIE_COVERS.some((re) => re.test(l))).join("\n") } : d));
+    const covers = apifyEnabled() ? [...NESSIE_COVERS, /AirPods/i] : NESSIE_COVERS;
+    const terms = SAMPLE_DOCS.map((d) => (d.id === "statements" ? { ...d, text: d.text.split("\n").filter((l) => !covers.some((re) => re.test(l))).join("\n") } : d));
     return [...terms, live];
   } catch (err) {
     console.warn("[nessie] couldn't read accounts, using the sample statement", err);

@@ -1,5 +1,6 @@
 import type { Category } from "../types";
 import type { Txn } from "./parse";
+import { watchFor } from "./products";
 
 // Deterministic findings from a real statement. Each one quotes the transaction line it came from,
 // so the extraction grounding step can verify it like any other balance.
@@ -48,6 +49,12 @@ export function detect(txns: Txn[], docId: string, today: string): Finding[] {
   }
 
   for (const t of charges) {
+    const w = watchFor(t.description);
+    if (w) {
+      out.push({ id: id("price_adjust"), category: "price_adjust", label: `Price watch: ${w.name} at ${w.store}`, amount: t.amount, deadline: addDays(t.date, w.matchDays), span: t.raw,
+        rule: `${w.policy} Live price: ${w.url}` });
+      continue;
+    }
     if (ANNUAL.test(t.description)) {
       out.push({ id: id("annual_fee"), category: "annual_fee", label: `Annual fee: ${prettyMerchant(t.description)}`, amount: t.amount, deadline: addDays(t.date, 30), span: t.raw,
         rule: "Most issuers refund the annual fee if you downgrade or cancel within about 30 days of it posting. Check your card's terms." });
