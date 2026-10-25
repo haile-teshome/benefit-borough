@@ -58,7 +58,7 @@ export function save(s: AppState, pid?: string | null) {
   // Uploaded statements are personal; their text stays on this machine and only findings sync.
   const shared = { ...s, docs: s.docs.map((d) => (d.id.startsWith("upload_") ? { ...d, text: "" } : d)) };
   const ledger = s.ledger.map(({ id: entry, tileId, amount, description, confirmation, at }) => ({ id: entry, tileId, amount, description, confirmation, at }));
-  void c.mutation(anyApi.states.put, { pid: id, data: JSON.stringify(shared), ledger }).catch((err: unknown) => console.warn("[convex] write failed; local state is saved", err));
+  void c.mutation(anyApi.states.put, { pid: id, data: JSON.stringify(shared), ledger, audit: s.audit.slice(0, 60) }).catch((err: unknown) => console.warn("[convex] write failed; local state is saved", err));
 }
 
 export function reset(pid?: string | null): AppState {

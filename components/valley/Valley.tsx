@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { SpacetimeDBProvider, useSpacetimeDB, useTable } from "spacetimedb/react";
 import { DbConnection, tables } from "@/lib/valley_bindings";
 import type { Player, Plot } from "@/lib/valley_bindings/types";
@@ -12,9 +13,12 @@ import { clockLabel, gameHour, setHour } from "@/lib/valley/clock";
 import { anchors, registerLabel, setAnchor } from "@/lib/valley/labels";
 import { AVATARS, portrait } from "@/lib/valley/pixel/animals";
 import { DISTRICTS, NPCS } from "@/lib/valley/world";
+import { LiveBoard } from "./LiveBoard";
 import World2D, { type Burst, type Emote, type Mood, type Near } from "./World2D";
 
 const DB = "expire-valley";
+// Convex holds saved state and the ledger; its live queries drive the valley leaderboard.
+const convex = process.env.NEXT_PUBLIC_CONVEX_URL ? new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL) : null;
 
 // ?farmer=2 in the URL gives a second identity in the same browser (a second player for demos).
 function slotKey() {
@@ -53,11 +57,12 @@ export default function ValleyApp() {
   }, [token]);
   if (failed) return <div className="ev-loading">{failed}</div>;
   if (!builder) return <div className="ev-loading">Walking into the valley…</div>;
-  return (
+  const game = (
     <SpacetimeDBProvider connectionBuilder={builder}>
       <Valley />
     </SpacetimeDBProvider>
   );
+  return convex ? <ConvexProvider client={convex}>{game}</ConvexProvider> : game;
 }
 
 
@@ -373,6 +378,7 @@ function Valley() {
         <Hud me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} />
       )}
 
+      {convex && !title && <LiveBoard players={players} myPid={pid} />}
       {near && !modal && !title && (
         <button className="ev-prompt" onClick={interact}><kbd>E</kbd> {near.label}</button>
       )}

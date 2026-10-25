@@ -7,4 +7,6 @@ export default defineSchema({
   ledger: defineTable({
     pid: v.string(), entryId: v.string(), tileId: v.string(), amount: v.number(), description: v.string(), confirmation: v.string(), at: v.string(),
   }).index("by_pid", ["pid", "entryId"]),
+  // Ruth's record of work: every extraction, review, dispatch and ledger move, per farmer.
+  audit: defineTable({ pid: v.string(), at: v.string(), type: v.string(), detail: v.string() }).index("by_pid", ["pid", "at"]),
 });

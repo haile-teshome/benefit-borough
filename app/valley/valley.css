@@ -163,3 +163,20 @@ body { margin: 0; overflow: hidden; background: #8fc4e8; }
 .ev-name.npc { font-size: 11px; background: #fff8e2; color: var(--ink); border-width: 2px; opacity: 0.9; }
 .ev-avatars img.icon { width: 64px; height: 76px; image-rendering: pixelated; }
 .ev-upload { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+
+/* Convex live ledger */
+.ev-live { position: absolute; left: 16px; bottom: 44px; width: 270px; font-size: 13px; display: grid; gap: 6px; }
+.ev-live-head { font: 700 15px var(--pixel); display: flex; align-items: center; gap: 6px; }
+.ev-live-head small { font: 500 11px var(--pixel); color: var(--ink-2); margin-left: auto; }
+.ev-live-head .dot { width: 8px; height: 8px; background: #e2574c; box-shadow: 0 0 0 2px #7a1f16; animation: ev-blink 1.2s steps(2) infinite; }
+@keyframes ev-blink { 50% { opacity: 0.3; } }
+.ev-board { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.ev-board li { display: flex; gap: 6px; padding: 2px 6px; background: var(--parchment-2); }
+.ev-board li.me { background: #d6e8a9; }
+.ev-board b { width: 14px; }
+.ev-board em { margin-left: auto; font-style: normal; font-weight: 700; color: var(--ok); }
+.ev-feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; color: var(--ink-2); }
+.ev-feed li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev-feed em { font-style: normal; font-weight: 700; color: var(--ok); }
+.ev-feed li.new { background: #ffe58a; animation: ev-in 0.25s steps(3); }
+@media (max-width: 700px) { .ev-live { display: none; } }
