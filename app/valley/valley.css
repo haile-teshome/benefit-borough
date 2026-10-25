@@ -36,9 +36,33 @@ body { margin: 0; overflow: hidden; background: #8fc4e8; }
 
 .ev-date { position: absolute; top: 16px; left: 16px; min-width: 220px; }
 .ev-clock { font: 500 15px var(--read); }
-.ev-gold { position: absolute; top: 16px; right: 16px; display: flex; gap: 12px; align-items: center; }
-.ev-gold .ev-title { font: 700 26px var(--read); color: var(--ink); }
-.ev-gold .coin { width: 28px; height: 28px; background: var(--gold); box-shadow: inset -4px -4px 0 #b9821e, inset 4px 4px 0 #ffe58a, 0 0 0 3px var(--wood-dark); }
+/* Top right: acorns, money rescued and the menu button, all one height. */
+.ev-topright { position: absolute; top: 16px; right: 16px; display: flex; gap: 10px; align-items: stretch; z-index: 40; }
+.ev-stat { display: flex; gap: 10px; align-items: center; padding: 8px 14px; font: inherit; color: var(--ink); text-align: left; }
+button.ev-stat { cursor: pointer; }
+.ev-stat .ev-title { font: 700 24px var(--read); color: var(--ink); line-height: 1.1; }
+.ev-stat .ev-sub { font-size: 13px; }
+.ev-acorn-icon { width: 26px; height: 26px; background: #a0522d; border-radius: 50% 50% 46% 46%; box-shadow: inset -4px -4px 0 #6e3414, inset 3px 3px 0 #c97a46, 0 0 0 3px var(--wood-dark); position: relative; }
+.ev-acorn-icon::before { content: ""; position: absolute; left: -3px; right: -3px; top: -4px; height: 10px; background: #6e4428; box-shadow: inset 0 -3px 0 #4e2f18; border-radius: 6px 6px 2px 2px; }
+.ev-menu-btn { position: relative; width: 62px; display: grid; place-items: center; cursor: pointer; padding: 0; }
+.ev-menu-btn .bars { display: grid; gap: 5px; }
+.ev-menu-btn .bars i { display: block; width: 24px; height: 4px; background: var(--wood-dark); }
+.ev-menu-btn[aria-expanded="true"] { background: var(--parchment-2); }
+.ev-menu-btn .badge { position: absolute; top: -8px; right: -8px; min-width: 20px; height: 20px; padding: 0 5px; background: #e2574c; color: #fff; font: 700 12px/20px var(--read); box-shadow: 0 0 0 2px var(--wood-dark); }
+.ev-menu { position: absolute; top: 96px; right: 16px; width: 290px; max-height: calc(100vh - 150px); overflow: auto; display: grid; gap: 10px; z-index: 41; }
+.ev-menu-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ev-menu-head .who { display: flex; gap: 8px; align-items: center; font-weight: 700; }
+.ev-menu-head i { width: 12px; height: 12px; display: inline-block; box-shadow: 0 0 0 2px var(--wood-dark); }
+.ev-menu section { display: grid; gap: 3px; border-top: 2px dashed #d9c7a4; padding-top: 8px; }
+.ev-menu h4 { margin: 0 0 2px; font: 700 12px var(--read); text-transform: uppercase; letter-spacing: 0.06em; color: #8a4f22; }
+.ev-menu .ev-link { text-align: left; }
+.ev-progress .ev-bar { height: 10px; background: var(--parchment-2); box-shadow: 0 0 0 2px var(--wood-dark); }
+.ev-progress .ev-bar i { display: block; height: 100%; background: var(--ok); }
+.ev-progress-row { display: flex; justify-content: space-between; font-size: 13.5px; }
+.ev-progress-row b { color: var(--ok); }
+.ev-progress-row b.open { color: #b9821e; }
+.ev-progress-latest { font-size: 12.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev-gold .coin, .ev-stat .coin { width: 28px; height: 28px; background: var(--gold); box-shadow: inset -4px -4px 0 #b9821e, inset 4px 4px 0 #ffe58a, 0 0 0 3px var(--wood-dark); }
 .ev-who { position: absolute; top: 100px; right: 16px; min-width: 200px; max-width: 260px; display: grid; gap: 4px; }
 .ev-who .ev-more { font-weight: 700; text-decoration: none; opacity: 0.8; }
 .ev-anchor.away { opacity: 0; transition: opacity 0.25s; }
@@ -423,3 +447,5 @@ a.ev-btn { text-decoration: none; display: inline-block; }
 body:has(.ev-poster) nextjs-portal { display: none !important; }
 .ev-poster-chips { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 18px; }
 .ev-poster-chips span { font: 700 clamp(14px, 1.4vw, 20px) var(--read); padding: 8px 16px; }
+.ev-menu-btn[hidden] { display: none; }
+@media (max-width: 700px) { .ev-topright .ev-stat .ev-title { font-size: 18px; } .ev-menu { top: 84px; } }

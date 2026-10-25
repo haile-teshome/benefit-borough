@@ -13,7 +13,7 @@ import { clockLabel, dateLabel, gameHour, setHour } from "@/lib/valley/clock";
 import { anchors, registerLabel, setAnchor } from "@/lib/valley/labels";
 import { AVATARS, portrait } from "@/lib/valley/pixel/animals";
 import { BUILDINGS, DISTRICTS, NPCS } from "@/lib/valley/world";
-import { LiveBoard } from "./LiveBoard";
+import { Progress } from "./Progress";
 import { PushBack, RuthAsks, RuthRecord } from "./Ruth";
 import { TalkBox } from "./Talk";
 import { Library } from "./Library";
@@ -539,11 +539,11 @@ function Valley() {
       {title ? (
         <Title onPlay={play} connected={isActive} />
       ) : (
-        <Hud inside={Boolean(inside)} me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} onLibrary={() => setModal({ kind: "library" })} onAlmanac={() => setModal({ kind: "almanac" })} onClaims={() => setModal({ kind: "claims" })} onExchange={() => setModal({ kind: "exchange" })} acorns={rewards.acorns} streak={rewards.streak}
+        <Hud inside={Boolean(inside)} me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} onLibrary={() => setModal({ kind: "library" })} onClaims={() => setModal({ kind: "claims" })} onExchange={() => setModal({ kind: "exchange" })} acorns={rewards.acorns} streak={rewards.streak}
           onOutbox={() => setModal({ kind: "outbox" })} onAutopilot={() => setModal({ kind: "autopilot" })} onVoice={() => setModal({ kind: "voice" })} onHousehold={convex ? () => setModal({ kind: "household" }) : undefined} onBazaar={() => setModal({ kind: "bazaar" })} onCheckout={() => setModal({ kind: "checkout" })} onSwap={() => setModal({ kind: "swap" })} onTerms={() => setModal({ kind: "terms" })} />
       )}
 
-      {convex && !title && !inside && <div className="ev-live-wrap" onClick={() => setModal({ kind: "almanac" })} title="Open the Burrow Almanac"><LiveBoard players={players} myPid={pid} /></div>}
+      {!title && !inside && state && <div className="ev-live-wrap" onClick={() => setModal({ kind: "claims" })} title="Open my claims"><Progress state={state} /></div>}
       {near && !modal && !title && (
         <button className="ev-prompt" onClick={interact}><kbd>E</kbd> {near.label}</button>
       )}
@@ -795,12 +795,18 @@ function UploadButton({ busy, onUpload, className, label }: { busy: boolean; onU
   );
 }
 
-function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord, onLibrary, onAlmanac, onClaims, onExchange, acorns, streak, onOutbox, onCheckout, onSwap, onTerms, onAutopilot, onVoice, onHousehold, onBazaar }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean; onLibrary: () => void; onAlmanac: () => void; onClaims: () => void; onExchange: () => void; acorns: number; streak: number; onOutbox: () => void; onCheckout: () => void; onSwap: () => void; onTerms: () => void; onAutopilot: () => void; onVoice: () => void; onHousehold?: () => void; onBazaar: () => void }) {
+function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord, onLibrary, onClaims, onExchange, acorns, streak, onOutbox, onCheckout, onSwap, onTerms, onAutopilot, onVoice, onHousehold, onBazaar }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean; onLibrary: () => void; onClaims: () => void; onExchange: () => void; acorns: number; streak: number; onOutbox: () => void; onCheckout: () => void; onSwap: () => void; onTerms: () => void; onAutopilot: () => void; onVoice: () => void; onHousehold?: () => void; onBazaar: () => void }) {
   const waiting = (state?.packets ?? []).filter((p) => p.status !== "submitted");
   const next = state?.tiles.filter((t) => !state.done.includes(t.id) && t.atStake > 0).sort((a, b) => a.daysLeft - b.daysLeft)[0];
   const clock = useClock();
-  const [more, setMore] = useState(false);
-  useEffect(() => { try { setMore(localStorage.getItem("ev-menu") === "1"); } catch {} }, []);
+  const [open, setOpen] = useState(false);
+  const needYou = waiting.filter((p) => p.status !== "ready").length;
+  useEffect(() => {
+    if (!open) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [open]);
   return (
     <>
       <div className="ev-panel ev-date">
@@ -808,41 +814,62 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
         <div className="ev-clock">{clock.date} · {clock.label} {clock.night ? "☾" : "☀"}</div>
         {next && <div className="ev-sub">Next to wilt: {shortTitle(next.title).split(" ").slice(0, 3).join(" ")}… in {next.daysLeft}d</div>}
       </div>
-      <button className="ev-panel ev-acorns" onClick={onExchange} title="Open the Acorn Exchange">
-        <b>🌰 {acorns.toLocaleString("en-US")}</b><span>{streak > 1 ? `🔥 ${streak}-day streak` : "acorns"}</span>
-      </button>
-      <div className="ev-panel ev-gold">
-        <span className="coin" />
-        <div>
-          <div key={me?.rescued ?? 0} className="ev-title ev-pop">{usd(me?.rescued ?? 0)}</div>
-          <div className="ev-sub">rescued</div>
+      <div className="ev-topright">
+        <button className="ev-panel ev-stat" onClick={onExchange} title="Open the Acorn Exchange">
+          <span className="ev-acorn-icon" />
+          <div>
+            <div className="ev-title">{acorns.toLocaleString("en-US")}</div>
+            <div className="ev-sub">{streak > 1 ? `${streak}-day streak` : "acorns"}</div>
+          </div>
+        </button>
+        <div className="ev-panel ev-stat">
+          <span className="coin" />
+          <div>
+            <div key={me?.rescued ?? 0} className="ev-title ev-pop">{usd(me?.rescued ?? 0)}</div>
+            <div className="ev-sub">rescued</div>
+          </div>
         </div>
+        <button className="ev-panel ev-menu-btn" hidden={inside} aria-expanded={open} aria-label="Menu and settings" title="Menu and settings" onClick={() => setOpen((o) => !o)}>
+          <span className="bars"><i /><i /><i /></span>
+          {needYou > 0 && <b className="badge">{needYou}</b>}
+        </button>
       </div>
-      <div className="ev-panel ev-who" hidden={inside}>
-        <div className="ev-sub">{isActive ? `${others.length + (me ? 1 : 0)} in the burrow` : "Connecting…"}</div>
-        {me && <div className="who"><i style={{ background: me.color }} />{me.name} (you)</div>}
-        {others.map((p) => <div key={p.identity.toHexString()} className="who"><i style={{ background: p.color }} />{p.name}</div>)}
-        <button className="ev-link strong" onClick={onClaims}>My claims (list) · L</button>
-        <button className="ev-link strong" onClick={onOutbox}>Ruth's outbox{waiting.length ? ` (${waiting.filter((p) => p.status === "ready").length} ready, ${waiting.length - waiting.filter((p) => p.status === "ready").length} need you)` : ""}</button>
-        <button className="ev-link strong" onClick={onAutopilot}>Ruth's Autopilot {state?.autopilot?.mandate.on ? `(on, ${state.autopilot.mandate.hour % 12 || 12}${state.autopilot.mandate.hour < 12 ? "am" : "pm"})` : "(off)"}</button>
-        <button className="ev-link ev-more" aria-expanded={more} onClick={() => setMore((m) => { try { localStorage.setItem("ev-menu", m ? "0" : "1"); } catch {} return !m; })}>{more ? "Less ▴" : "More ▾"}</button>
-        {more && <>
-        <button className="ev-link" onClick={onVoice}>Talk to Ruth (voice check-in)</button>
-        <button className="ev-link strong" onClick={onBazaar}>Benefit Bazaar (agents shop for you)</button>
-        <button className="ev-link" onClick={onCheckout}>Before you buy (which card?)</button>
-        <button className="ev-link" onClick={onSwap}>Swap Market (trade leftovers)</button>
-        {onHousehold && <button className="ev-link" onClick={onHousehold}>Household (share with family)</button>}
-        <button className="ev-link" onClick={onTerms}>Burrow Gazette (fine-print news)</button>
-        <button className="ev-link" onClick={onExchange}>Acorn Exchange (rewards)</button>
-        <button className="ev-link" onClick={onAlmanac}>Burrow Almanac (leaderboard)</button>
-        <button className="ev-link" onClick={onLibrary}>Find my plans (plan library)</button>
-        <button className="ev-link" onClick={onRecord}>Ruth's record (audit trail)</button>
-        <UploadButton busy={busy} onUpload={onUpload} className="ev-link" label="Plant a bank statement (CSV/PDF)" />
-        <button className="ev-link" disabled={busy} onClick={onReplant}>{busy ? "Replanting…" : "Replant (reset demo)"}</button>
-        <button className="ev-link" onClick={onAvatar}>Change avatar</button>
-        <button className="ev-link" onClick={onMute}>{muted ? "Sound off · M" : "Sound on · M"}</button>
-        </>}
-      </div>
+      {open && !inside && (
+        <div className="ev-panel ev-menu" onClick={(e) => { if ((e.target as HTMLElement).closest("button")) setOpen(false); }}>
+          <div className="ev-menu-head">
+            {me && <div className="who"><i style={{ background: me.color }} />{me.name}</div>}
+            <span className="ev-sub">{isActive ? `${others.length + (me ? 1 : 0)} in the burrow` : "Connecting…"}</span>
+          </div>
+          <section>
+            <h4>Your claims</h4>
+            <button className="ev-link" onClick={onClaims}>My claims · L</button>
+            <button className="ev-link" onClick={onOutbox}>Ruth's outbox{waiting.length ? ` (${waiting.length - needYou} ready, ${needYou} need you)` : ""}</button>
+            <button className="ev-link" onClick={onAutopilot}>Ruth's Autopilot {state?.autopilot?.mandate.on ? `(on, ${state.autopilot.mandate.hour % 12 || 12}${state.autopilot.mandate.hour < 12 ? "am" : "pm"})` : "(off)"}</button>
+            <button className="ev-link" onClick={onVoice}>Talk to Ruth (voice check-in)</button>
+            <button className="ev-link" onClick={onRecord}>Ruth's record (audit trail)</button>
+          </section>
+          <section>
+            <h4>Shop and trade</h4>
+            <button className="ev-link" onClick={onBazaar}>Benefit Bazaar (agents shop for you)</button>
+            <button className="ev-link" onClick={onCheckout}>Before you buy (which card?)</button>
+            <button className="ev-link" onClick={onSwap}>Swap Market (trade leftovers)</button>
+            <button className="ev-link" onClick={onExchange}>Acorn Exchange (rewards)</button>
+          </section>
+          <section>
+            <h4>Your benefits</h4>
+            <button className="ev-link" onClick={onLibrary}>Find my plans (plan library)</button>
+            <UploadButton busy={busy} onUpload={onUpload} className="ev-link" label="Plant a bank statement (CSV/PDF)" />
+            {onHousehold && <button className="ev-link" onClick={onHousehold}>Household (share with family)</button>}
+            <button className="ev-link" onClick={onTerms}>Burrow Gazette (fine-print news)</button>
+          </section>
+          <section>
+            <h4>Settings</h4>
+            <button className="ev-link" onClick={onAvatar}>Change avatar</button>
+            <button className="ev-link" onClick={onMute}>{muted ? "Sound: off · M" : "Sound: on · M"}</button>
+            <button className="ev-link" disabled={busy} onClick={onReplant}>{busy ? "Replanting…" : "Replant (reset demo)"}</button>
+          </section>
+        </div>
+      )}
     </>
   );
 }
@@ -879,7 +906,7 @@ function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }
           <span className="l2">Burrow</span>
         </div>
       </div>
-      <p className="ev-tagline">Every benefit you’re about to lose grows here. Harvest it before it wilts.</p>
+      <p className="ev-tagline">Track every benefit before it expires. AI agents find it and fill the claims; you approve.</p>
       {how ? (
         <div className="ev-panel ev-how">
           <p><b>Walk</b> with WASD or by clicking the ground. <b>E</b> to inspect a crop, talk, or open your mailbox. <b>Enter</b> to chat. <b>M</b> to mute.</p>
