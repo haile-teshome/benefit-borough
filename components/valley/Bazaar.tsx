@@ -77,8 +77,13 @@ export function Bazaar({ state, preset, quest: shown, searching, keeper, onSearc
 const money = (n: number) => "$" + (n % 1 ? n.toFixed(2) : n.toFixed(0));
 
 // The finds, as shop cards: a picture, the price tag, what your benefit pays, and Ruth's tag.
+// Only what Ruth approved is shown up front; what she turned down (not covered, not a fit, over
+// budget) is one click away, so the shelf is never full of things your benefit won't pay for.
 function Results({ quest, fresh }: { quest: Quest; fresh: boolean }) {
-  const offers = [...quest.offers].sort((a, b) => Number(b.verdict.ok) - Number(a.verdict.ok) || b.score - a.score);
+  const [showAll, setShowAll] = useState(false);
+  const sorted = [...quest.offers].sort((a, b) => Number(b.verdict.ok) - Number(a.verdict.ok) || b.score - a.score);
+  const approved = sorted.filter((o) => o.verdict.ok), turnedDown = sorted.length - approved.length;
+  const offers = showAll || !approved.length ? sorted : approved;
   const total = quest.agents.reduce((n, a) => n + a.offers, 0);
   return (
     <>
@@ -118,6 +123,7 @@ function Results({ quest, fresh }: { quest: Quest; fresh: boolean }) {
           );
         })}
       </ul>
+      {turnedDown > 0 && approved.length > 0 && <button className="ev-link" onClick={() => setShowAll((v) => !v)}>{showAll ? "Hide what Ruth turned down" : `Show ${turnedDown} Ruth turned down (not covered, not a fit or over budget)`}</button>}
       {quest.notes.map((n) => <p key={n} className={card.empty}>{n}</p>)}
       <p className={card.empty}>Ruth never buys anything. Open the one you like and check out with your benefit.</p>
     </>

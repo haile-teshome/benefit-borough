@@ -15,7 +15,7 @@ import { structured } from "../engine/llm";
 
 // What the benefit covers, in plain words the agents and Ruth both use.
 function coverage(b: Balance): string {
-  if (b.category === "fsa" || b.category === "hsa") return "Only IRS-eligible medical items (IRS Publication 502): prescriptions, first aid, contact lens supplies, sunscreen SPF 15+, and items labeled HSA/FSA eligible. No cosmetics, vitamins or general wellness.";
+  if (b.category === "fsa" || b.category === "hsa") return "Only IRS-eligible medical items (IRS Publication 502; since the 2020 CARES Act, over-the-counter medicines and menstrual products need no prescription). Eligible: prescriptions, OTC medicines (pain relievers, allergy, cold and flu), first aid and bandages, medical thermometers, blood pressure monitors, pulse oximeters, contact lens solution and supplies, reading glasses, broad-spectrum sunscreen SPF 15+, menstrual products, pregnancy and ovulation tests, condoms, hearing aids and batteries, heating pads, braces and supports, and anything labeled HSA/FSA eligible. A product in one of these categories is eligible even without a label. Not eligible: cosmetics, toiletries, vitamins and supplements, general wellness or fitness gear, kitchen or non-medical devices.";
   if (b.category === "card_credit") return `Only purchases that trigger this card credit: ${b.label}. ${b.ruleText}`;
   if (b.category === "stipend") return `Only what this stipend program covers: ${b.label} (e.g. fitness, classes, books, home office, per the program).`;
   if (b.category === "vision") return "Glasses or contact lenses from an in-network provider, up to the allowance.";

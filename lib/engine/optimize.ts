@@ -476,9 +476,9 @@ function libraryTiles(ex: Extraction): Tile[] {
       candidates: [{ id: "act", label: "Book your free cleaning", costToUser: 0, detail: "Exams and cleanings are $0, twice per plan year." }],
       headline: `You have ${usd(b.amount)} of dental benefit and ${fact("cleanings")} free cleaning${fact("cleanings") === 1 ? "" : "s"} left until ${by}.`, tradeoff: "Only care you need; unused benefit doesn't carry over.",
       doNothing: `Unused dental benefit resets after ${by}.`, action: { kind: "none", summary: "Informational", savings: 0, payload: {} } }];
-    if (kind === "vision") return [{ ...base, id: `tile_${b.id}`, category: "vision", title: "If you need glasses or contacts: use your $150 allowance", live: true, atStake: 115, doNothingCost: 115, ask: "Do you need new glasses or contacts this year?",
+    if (kind === "vision") return [{ ...base, id: `tile_${b.id}`, category: "vision", title: "If you need glasses or contacts: use your $150 allowance", live: true, atStake: 115, doNothingCost: 115, ask: "Were you already planning an eye exam and new glasses or contacts this year?",
       candidates: [{ id: "act", label: "Book a VSP eye exam ($10) and use the allowance", costToUser: 35, detail: "$10 exam copay + $25 materials copay; the plan covers up to $150." }],
-      headline: `If you need glasses or contacts, your plan covers up to $150 before ${by}: about $115 back after the $35 in copays.`, tradeoff: "Only if you actually need them; skipping an allowance you don't need costs nothing. Ruth asks first.",
+      headline: `If you need glasses or contacts, your plan covers up to $150 before ${by}: about $115 back after the $35 in copays.`, tradeoff: "Only for glasses or an exam you already planned; Ruth asks first. Skipping an allowance you don't need costs nothing, and this isn't a reason to get new care.",
       doNothing: `If you need them and wait past ${by}, you pay about $115 more yourself.`, action: req("Book a VSP eye exam", "a VSP eye doctor", ["Finding an in-network VSP eye doctor", "Booking an eye exam ($10 copay)", "Your $150 allowance applies to the glasses or contacts you choose"], 115) }];
     if (kind === "dining") {
       const s = diningSurplus(b.amount, fact("weekly") ?? 30, daysLeft);
@@ -527,13 +527,13 @@ function libraryTiles(ex: Extraction): Tile[] {
       candidates: [{ id: "wait", label: `Option: time a move after ${by}`, costToUser: 0, detail: "Vesting is all-or-nothing on a cliff schedule." }, { id: "go", label: "Option: leave anyway", costToUser: b.amount, detail: "Sometimes the new job is worth more." }],
       headline: `Options, not advice: leaving before ${by} forfeits ${usd(b.amount)} of employer 401(k) money.`, tradeoff: "A start date a few weeks later can be worth asking for.",
       doNothing: `Leaving before ${by} forfeits ${usd(b.amount)}.`, action: { kind: "none", summary: "Options only", savings: 0, payload: {} } }];
-    if (kind === "espp") return [{ ...base, id: `tile_${b.id}`, category: "espp", title: `ESPP window opens ${by}`, live: false, atStake: 0, doNothingCost: 0,
+    if (kind === "espp") return [{ ...base, id: `tile_${b.id}`, category: "espp", title: `ESPP window opens ${by}`, live: false, atStake: 0, doNothingCost: b.amount,
       candidates: [{ id: "join", label: `Option: enroll at ${fact("discount")}% off`, costToUser: 0, detail: `Contributing ${usd(fact("contrib"))} a year buys about ${usd(b.amount)} more stock than it costs, before taxes and price moves.` }, { id: "skip", label: "Option: skip", costToUser: 0, detail: "Keeps the cash; no stock risk." }],
       headline: `Options, not advice: your ESPP enrollment window opens ${by}. At a ${fact("discount")}% discount, ${usd(fact("contrib"))} a year buys about ${usd(b.amount)} of extra value.`, tradeoff: "Stock can fall; many people sell at purchase to lock in the discount. Taxes apply.",
-      doNothing: `You'll wait for the next window to join.`, action: { kind: "none", summary: "Options only", savings: 0, payload: {} } }];
+      doNothing: `Skipping this window gives up about ${usd(b.amount)} of discount value until the next one (and keeps the cash free of stock risk).`, action: { kind: "none", summary: "Options only", savings: 0, payload: {} } }];
     if (kind === "credit") {
       const name = b.label;
-      return [{ ...base, id: `tile_${b.id}`, category: "card_credit", title: `Use your ${usd(b.amount)} ${name.replace(/^(American Express|Chase|Citi|Capital One) /, "")}`, live: true, atStake: b.amount, doNothingCost: b.amount, ask: "Will you use it on something you'd buy anyway?",
+      return [{ ...base, id: `tile_${b.id}`, category: "card_credit", title: `Use your ${usd(b.amount)} ${name.replace(/^(American Express|Chase|Citi|Capital One) /, "")}`, live: true, atStake: b.amount, doNothingCost: b.amount, ask: `Would you use ${name.replace(/^(American Express|Chase|Citi|Capital One) /, "").replace(/ credits?$/i, "")} anyway before ${by}?`,
         candidates: [{ id: "act", label: "Use it on something you already planned", costToUser: 0, detail: b.ruleText }],
         headline: `${name}: ${usd(b.amount)} unused, and it resets after ${by}.`, tradeoff: "Only on something you'd buy anyway. A credit isn't a reason to spend.",
         doNothing: `${usd(b.amount)} lapses after ${by}.`, action: req(`Use the ${name}`, name.split(" ")[0] === "Venture" ? "Capital One Travel" : name, ["Checking the credit is enrolled and the card is set as the payment method", `You'll use it on your next planned purchase before ${by}`, "Statement credit posts after the purchase"]) }];
@@ -600,7 +600,9 @@ const NarrationSchema = z.object({
 
 // Claude picks among calculator candidates and writes the copy. It cannot change a number.
 async function narrate(tiles: Tile[]): Promise<Tile[]> {
-  const live = tiles.filter((t) => t.live);
+  // Library claims already carry hand-written copy from their sourced terms; only the rest is narrated.
+  const live = tiles.filter((t) => t.live && !t.balanceIds.every((id) => id.startsWith("lib_")));
+  if (!live.length) return tiles;
   const out = await structured("optimize", {
     system: `You are the Optimize step of Expire, which rescues expiring money. For each tile, pick the best candidate id and write a one-sentence headline and a one-sentence tradeoff for a stressed student.
 Use only the dollar figures given; never compute new ones. Never recommend new care or new purchases. Plain words, no exclamation marks.`,

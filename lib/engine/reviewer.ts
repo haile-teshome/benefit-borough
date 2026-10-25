@@ -3,6 +3,20 @@ import type { AppState, Extraction, ReviewSubject, Verdict } from "../types";
 import { claudeEnabled } from "./claude";
 import { usd } from "./spans";
 import { structured } from "./llm";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+
+// Verdicts are cached by exactly what Ruth saw (the proposal, the documents, the model), so the
+// same claim on the same terms is never reviewed twice. Any change to either means a fresh review.
+const CACHE = path.join(process.cwd(), ".data", "review-cache.json");
+let cache: Record<string, Verdict> | null = null;
+const readCache = () => (cache ??= (() => { try { return JSON.parse(fs.readFileSync(CACHE, "utf8")); } catch { return {}; } })());
+function remember(key: string, v: Verdict) {
+  const c = readCache(); c[key] = v;
+  const keys = Object.keys(c); if (keys.length > 2000) for (const k of keys.slice(0, keys.length - 2000)) delete c[k];
+  try { fs.mkdirSync(path.dirname(CACHE), { recursive: true }); fs.writeFileSync(CACHE, JSON.stringify(c)); } catch { /* cache is best-effort */ }
+}
 
 export const RULES = [
   "Reject any care action not present in the uploaded treatment plan, EOB history, or preventive schedule. No new care, ever.",
@@ -52,23 +66,29 @@ export function ruleCheck(subject: ReviewSubject, ex: Extraction, docsText: stri
   return verdict({ verdict: "approve", rule_cited: null, reason: t.action.kind === "none" ? "Informational tile; nothing to dispatch." : "Uses only what's already in your documents, with the do-nothing cost shown." });
 }
 
-export async function review(subject: ReviewSubject, ex: Extraction, docsText: string): Promise<Verdict> {
+export async function review(subject: ReviewSubject, ex: Extraction, docsText: string, opts: { terms?: boolean } = {}): Promise<Verdict> {
   const rules = ruleCheck(subject, ex, docsText);
   if (rules.verdict === "reject" || !claudeEnabled()) return rules;
-  const out = await structured("review", {
+  const task = opts.terms ? "review_terms" : "review";
+  const shown = subject.kind === "cart" ? { balance: subject.balance, items: subject.items } : { title: subject.tile.title, headline: subject.tile.headline, waits_for_user_answer: subject.tile.ask ?? null, candidates: subject.tile.candidates, tradeoff: subject.tile.tradeoff, action: subject.tile.action, do_nothing: subject.tile.doNothing, do_nothing_cost: subject.tile.doNothingCost };
+  const effort = opts.terms ? (process.env.REVIEW_TERMS_EFFORT as "low" | "medium" | undefined) ?? "medium" : "medium";
+  const key = crypto.createHash("sha256").update(JSON.stringify([task, effort, RULES, docsText, shown])).digest("hex").slice(0, 32);
+  const hit = readCache()[key];
+  if (hit) return { ...hit, at: now() };
+  const out = await structured(task, {
     system: `You are the Reviewer for Expire. You gate every action before the user can tap it. Your job is to protect the user's money, not to help them spend it.
 Rules (cite by number):
 ${RULES.map((r, i) => `${i + 1}. ${r}`).join("\n")}
 How Expire works: you review a proposal before the user taps it. "savings" is what the ledger will record only if the action later confirms, so a proposal never books money by itself (rule 6 is enforced at dispatch, not here). payload.steps is the planned script, including the reply we expect; it is not evidence that anything happened. "Rescued" money includes forfeiting value the user chooses to send to someone else. Options tiles list their choices in candidates. If waits_for_user_answer is set, nothing happens until the user answers that question yes; a yes is their stated need, so judge the proposal as if they said yes.
 Approve only if every rule holds. Reasons are one or two short sentences, readable at a glance.`,
-    user: `Documents:\n${docsText}\n\nProposed ${subject.kind === "cart" ? "purchase" : "action"}:\n${JSON.stringify(
-      subject.kind === "cart" ? { balance: subject.balance, items: subject.items } : { title: subject.tile.title, headline: subject.tile.headline, waits_for_user_answer: subject.tile.ask ?? null, candidates: subject.tile.candidates, tradeoff: subject.tile.tradeoff, action: subject.tile.action, do_nothing: subject.tile.doNothing, do_nothing_cost: subject.tile.doNothingCost },
-    )}`,
+    user: `Documents:\n${docsText}\n\nProposed ${subject.kind === "cart" ? "purchase" : "action"}:\n${JSON.stringify(shown)}`,
     schema: VerdictSchema,
-    effort: "medium",
+    effort,
   });
   if (!out) return rules;
-  return { ...out, modified_action: out.modified_action, engine: "claude", at: now() };
+  const v: Verdict = { ...out, modified_action: out.modified_action, engine: "claude", at: now() };
+  remember(key, v);
+  return v;
 }
 
 const DefenseSchema = z.object({

@@ -24,14 +24,26 @@ export const OfferSchema = z.object({
 });
 export type RawOffer = z.infer<typeof OfferSchema>["offers"][number];
 
+// The store a card credit pays at, from its name: "American Express lululemon credit" → "lululemon".
+export const creditStore = (benefit: string) =>
+  benefit.replace(/\(.*?\)/g, "").replace(/^(American Express|Amex|Chase|Citi|Capital One)\s+/i, "").replace(/\s+credits?\b.*$/i, "").trim().split(/\s+/)[0]?.toLowerCase().replace(/[^a-z0-9]/g, "") || null;
+
 export type QuoteRequest = { agent: AgentId; need: string; benefit: string; constraint: string; maxPrice: number };
 
 export async function quote(q: QuoteRequest, attempt = 1): Promise<{ offers: RawOffer[]; searches: number }> {
   const a = AGENTS[q.agent];
   // With a multi-store price feed connected, the bargain and quality agents shop real listings
   // from many retailers; the coverage specialist still searches the web for eligibility.
+  // The feed is searched the way the benefit spends: FSA/HSA money looks for eligible items, and a
+  // card credit that only works at one store shops only that store. If nothing fits, the agent
+  // falls back to searching the web.
   if (q.agent !== "specialist" && feedEnabled() && attempt === 1) {
-    const picked = pickFrom(await marketFeed(q.need, q.maxPrice).catch(() => []), q.agent);
+    const medical = /IRS-eligible medical|HSA\/FSA/i.test(q.constraint);
+    const store = /trigger this card credit/i.test(q.constraint) ? creditStore(q.benefit) : null;
+    const query = medical ? `${q.need} FSA HSA eligible` : store ? `${store} ${q.need}` : q.need;
+    let feed = await marketFeed(query, q.maxPrice).catch(() => []);
+    if (store) feed = feed.filter((o) => `${o.merchant} ${o.title}`.toLowerCase().includes(store));
+    const picked = pickFrom(feed, q.agent);
     if (picked.length) return { offers: picked.map(({ source: _s, ...o }) => o), searches: 0 };
   }
   const r = await searchStructured({

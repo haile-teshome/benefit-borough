@@ -65,7 +65,12 @@ export async function scan(docs: SourceDoc[], pid?: string | null, opts: { payFo
   log(s, "extract", `${ex.balances.length} balances, ${ex.careItems.length} care items (${ex.engine})${ex.dropped.length ? `; dropped ${ex.dropped.length} ungrounded` : ""}`);
   s.tiles = await optimize(ex);
   log(s, "optimize", `${s.tiles.length} tiles`);
-  const verdicts = await Promise.all(s.tiles.map((tile) => review({ kind: "tile", tile }, ex, docsText(s))));
+  // Health care stays on the strongest reviewer: "never push new care" is the judgment that matters most.
+  const CARE = new Set(["vision", "dental", "deductible"]);
+  // Each claim is reviewed against the documents it cites (all of them if it cites none), in
+  // parallel; claims built from the plan library use the faster terms route.
+  const cited = (t: (typeof s.tiles)[number]) => { const ids = new Set(t.sources.map((x) => x.doc)); const own = s.docs.filter((d) => ids.has(d.id)); return own.length ? own.map((d) => `[${d.name}]\n${d.text}`).join("\n\n") : docsText(s); };
+  const verdicts = await Promise.all(s.tiles.map((tile) => review({ kind: "tile", tile }, ex, cited(tile), { terms: tile.balanceIds.every((id) => id.startsWith("lib_")) && !CARE.has(tile.category) })));
   s.tiles.forEach((t, i) => {
     s.reviews[t.id] = verdicts[i];
     log(s, "review", `${t.id}: ${verdicts[i].verdict}${verdicts[i].rule_cited ? ` (rule ${verdicts[i].rule_cited})` : ""}`);

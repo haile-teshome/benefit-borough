@@ -8,13 +8,16 @@ import { callStructured, claudeEnabled, MODEL } from "./claude";
 //
 // Override any route with an env var, e.g. LLM_CHAT=ollama:qwen2.5:7b or LLM_POLISH=claude:claude-haiku-5-5
 
-export type Task = "extract" | "review" | "defend" | "optimize" | "checkin" | "polish" | "chat" | "advise" | "rank";
+export type Task = "extract" | "review" | "review_terms" | "defend" | "optimize" | "checkin" | "polish" | "chat" | "advise" | "rank";
 type Route = { provider: "claude" | "ollama"; model: string };
 
 const OPUS = MODEL, SONNET = "claude-sonnet-5-5", HAIKU = "claude-haiku-5-5", LOCAL = process.env.LLM_LOCAL_MODEL ?? "qwen3.5:4b";
 const DEFAULTS: Record<Task, Route> = {
   extract: { provider: "claude", model: OPUS }, // exact figures with a quoted source line
   review: { provider: "claude", model: OPUS }, // Ruth's safety check
+  // Ruth checking a claim built from the plan library: the terms are already sourced and the math
+  // is computed, so a faster model reviews it (same rules, same strictness; see scripts/e2e-benefits.ts).
+  review_terms: { provider: "claude", model: SONNET },
   defend: { provider: "claude", model: OPUS }, // Ruth answering a pushback
   optimize: { provider: "claude", model: SONNET }, // one-line headlines over computed numbers
   rank: { provider: "claude", model: SONNET }, // Ruth's shopping review
