@@ -275,3 +275,31 @@ body { margin: 0; overflow: hidden; background: #8fc4e8; }
 .ev-lib-credits em { font-style: normal; color: #6b4a2a; font-size: 12.5px; }
 .ev-lib-src { font-size: 12.5px; color: #6b4a2a; margin: 0; }
 .ev-lib-src a { color: var(--wood); margin-left: 6px; }
+
+/* Valley Almanac (green = rescued, purple = ahead of you; validated for color-blind readers) */
+.ev-almanac { width: min(820px, 100%); }
+.ev-almanac-body { max-height: 58vh; overflow: auto; }
+.ev-live-wrap { cursor: pointer; }
+.ev-board.big li { font-size: 16px; padding: 5px 10px; }
+.ev-years { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.ev-year { display: grid; gap: 2px; background: var(--parchment-2); padding: 8px 12px; min-width: 180px; }
+.ev-year b { font-size: 18px; }
+.ev-year .ok { color: #2f6e22; font-weight: 700; }
+.ev-year .no { color: var(--stamp); font-weight: 700; }
+.ev-year .due { color: #5e44a0; font-weight: 700; }
+.ev-bars { display: grid; gap: 4px; margin: 8px 0; }
+.ev-legend { display: flex; gap: 14px; font-size: 14px; }
+.ev-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -1px; }
+.ev-legend i.a, .ev-bar-row .seg.a { background: #3f8a2e; }
+.ev-legend i.b, .ev-bar-row .seg.b { background: #7a5cc0; }
+.ev-bar-row { display: grid; grid-template-columns: 74px 1fr 76px; gap: 8px; align-items: center; font-size: 14px; }
+.ev-bar-row .q { color: #5a3d22; font-weight: 700; }
+.ev-bar-row .track { display: flex; gap: 2px; height: 14px; }
+.ev-bar-row .seg { height: 100%; border-radius: 0 4px 4px 0; min-width: 3px; }
+.ev-bar-row b { text-align: right; }
+.ev-whatif { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.ev-whatif li { display: flex; justify-content: space-between; gap: 10px; align-items: center; background: var(--parchment-2); padding: 6px 10px; }
+.ev-whatif label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+.ev-whatif em { display: block; font-style: normal; font-size: 13px; color: #6b4a2a; }
+.ev-use { display: grid; gap: 4px; margin: 6px 0; font-size: 15px; }
+.ev-use input { width: 100%; }

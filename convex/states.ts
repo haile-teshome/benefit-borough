@@ -50,3 +50,13 @@ export const totals = query({
     return [...sums].map(([pid, total]) => ({ pid, total })).sort((a, b) => b.total - a.total);
   },
 });
+
+// Rescued totals per farmer since a date (ISO), for the Almanac's quarter/year leaderboards.
+export const board = query({
+  args: { since: v.optional(v.string()) },
+  handler: async (ctx, { since }) => {
+    const sums = new Map<string, number>();
+    for (const r of await ctx.db.query("ledger").collect()) if (!since || r.at >= since) sums.set(r.pid, (sums.get(r.pid) ?? 0) + r.amount);
+    return [...sums].map(([pid, total]) => ({ pid, total })).sort((a, b) => b.total - a.total);
+  },
+});
