@@ -46,7 +46,11 @@ function stones(px: number, py: number, palette: string[], size = 7, wear = 0, m
     const d = Math.hypot((px - sx) * 1.08, py - sy);
     if (d < d1) { d2 = d1; d1 = d; cx = sx; cy = sy; id = hash(cxi * 7.1, cyi * 3.3); } else if (d < d2) d2 = d;
   }
-  if (d2 - d1 < 1.15) return d2 - d1 < 0.55 ? mortar[0] : mortar[1]; // mortar, softer at its edge
+  if (d2 - d1 < 1.15) {
+    const h = hash(px * 1.3, py * 2.1);
+    if (h > 0.992) return h > 0.997 ? "#F7A8C4" : "#8CC65E"; // a tiny flower or moss in the cracks
+    return d2 - d1 < 0.55 ? mortar[0] : mortar[1]; // mortar, softer at its edge
+  }
   let c = palette[Math.floor(id * palette.length) % palette.length];
   c = shade(c, wear * 0.18);
   const dx = (px - cx) / size, dy = (py - cy) / size;
@@ -56,28 +60,24 @@ function stones(px: number, py: number, palette: string[], size = 7, wear = 0, m
   return c;
 }
 
-const ROAD = ["#CDB08A", "#C4A57E", "#D6BC97", "#BC9C74", "#C9AD86"];
-const PLAZA = ["#D3CBBA", "#CCC3B1", "#D8D0BF", "#C8BFAD"];
-const CURB = ["#DCD2BE", "#D2C7B1", "#E4DBC8"];
+// One paving family for the whole town: soft, rounded sandstone with gentle mortar. Districts get
+// only a faint tint (mint for health, rose for finance, lavender for civic) so they read as areas
+// without clashing patterns.
+const SAND = ["#EAD7B4", "#E3CDA6", "#EFDDBE", "#DEC59D", "#E7D2AE"];
+const tint = (pal: string[], to: string, t: number) => pal.map((c) => mix(c, to, t));
+const ROAD = tint(SAND, "#C9A67C", 0.35);
+const PLAZA = SAND;
+const HEALTH = tint(SAND, "#CFEBDC", 0.38);
+const FINANCE = tint(SAND, "#F3C8BE", 0.38);
+const CIVIC = tint(SAND, "#DCD3F0", 0.4);
+const CURB = tint(SAND, "#FFF6E2", 0.45);
+const MORTAR: [string, string] = ["#B49773", "#C8AD88"];
 
 function paving(kind: string, px: number, py: number) {
-  if (kind === "plaza") return stones(px, py, PLAZA, 6, 0, ["#A79C8A", "#B7AD9B"], 0.55);
-  if (kind === "slab") {
-    const ix = px % 16, iy = py % 12;
-    if (ix === 15 || iy === 11) return "#9A9184";
-    return shade("#D6CEBD", (hash(Math.floor(px / 16), Math.floor(py / 12)) - 0.5) * 0.12 + (iy === 0 ? 0.1 : 0));
-  }
-  if (kind === "health") {
-    const ix = px % 8, iy = py % 8;
-    if (ix === 7 || iy === 7) return "#B9C9C2";
-    return (Math.floor(px / 8) + Math.floor(py / 8)) % 2 ? "#EEF3EF" : "#DCEAE3";
-  }
-  if (kind === "credit") {
-    // herringbone-ish brick
-    const row = Math.floor(py / 4), off = (row % 2) * 4;
-    if (py % 4 === 3 || (px + off) % 8 === 7) return "#7E3A2B";
-    return shade("#B65A43", (hash(Math.floor((px + off) / 8), row) - 0.5) * 0.2);
-  }
+  if (kind === "plaza") return stones(px, py, PLAZA, 8, 0, MORTAR, 0.6);
+  if (kind === "health") return stones(px, py, HEALTH, 8, 0, MORTAR, 0.6);
+  if (kind === "credit") return stones(px, py, FINANCE, 8, 0, MORTAR, 0.6);
+  if (kind === "slab") return stones(px, py, CIVIC, 8, 0, MORTAR, 0.6);
   // deck
   const plank = Math.floor(py / 4);
   if (py % 4 === 3 || (px + plank * 11) % 30 === 0) return "#7A4E2D";
@@ -102,9 +102,9 @@ export function bakeGround(): Ground {
       const jitter = (vnoise(px / 6, py / 6) - 0.5) * 0.12;
       const rd = roadAt(x, z) + jitter;
       const tuft = hash(px, py * 1.7) > 0.72 && vnoise(px / 3, py / 3) > 0.5;
-      if (rd < -0.2) c = stones(px, py, ROAD, 7, Math.min(1, (-rd - 0.2) / 1.1));
-      else if (rd < -0.04) c = tuft && rd > -0.1 ? GRASS[2] : stones(px + 3, py + 1, CURB, 4);
-      else if (rd < 0.02) c = "#6B5440";
+      if (rd < -0.22) c = stones(px, py, ROAD, 8, Math.min(1, (-rd - 0.22) / 1.2) * 0.6, MORTAR, 0.6);
+      else if (rd < -0.04) c = tuft && rd > -0.1 ? GRASS[2] : stones(px + 3, py + 1, CURB, 5, 0, MORTAR, 0.5);
+      else if (rd < 0.02) c = "#9C7F5E";
       else if (rd < 0.14) c = shade(c, -0.14);
       const zk = zoneAt(x, z);
       if (zk) c = paving(zk, px, py);

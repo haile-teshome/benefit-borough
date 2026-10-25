@@ -412,7 +412,7 @@ a.ev-btn { text-decoration: none; display: inline-block; }
 .ev-shelf-grid span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Poster mode (?poster=1): the title screen as a project thumbnail. */
-.ev-poster .ev-tagline { font-size: clamp(18px, 2.1vw, 30px); line-height: 1.35; max-width: 1000px; text-align: center; }
+.ev-poster .ev-tagline { font-size: clamp(18px, 2.1vw, 30px); line-height: 1.35; max-width: 1000px; text-align: center; color: #fffaf0; text-shadow: -2px -2px 0 #3b2412, 2px -2px 0 #3b2412, -2px 2px 0 #3b2412, 2px 2px 0 #3b2412, 0 -2px 0 #3b2412, 0 2px 0 #3b2412, -2px 0 0 #3b2412, 2px 0 0 #3b2412, 0 5px 0 rgba(43, 26, 12, 0.45); }
 .ev-poster .ev-tagline b { font-weight: inherit; }
 body:has(.ev-poster) nextjs-portal { display: none !important; }
 .ev-poster-chips { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 18px; }

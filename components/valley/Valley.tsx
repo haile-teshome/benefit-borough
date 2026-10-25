@@ -852,7 +852,6 @@ function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }
         <div className="ev-sign-board">
           <span className="l1">Benefit</span>
           <span className="l2">Burrow</span>
-          <span className="denom">GROW YOUR PAPERWORK · HARVEST YOUR MONEY</span>
         </div>
       </div>
       <p className="ev-tagline">Americans lose <b>$100B+ a year</b> in money they never claim.<br />AI agents find it, fill your claims and shop your perks. You just approve.</p>
@@ -867,7 +866,6 @@ function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }
         <div className="ev-sign-board">
           <span className="l1">Benefit</span>
           <span className="l2">Burrow</span>
-          <span className="denom">GROW YOUR PAPERWORK · HARVEST YOUR MONEY</span>
         </div>
       </div>
       <p className="ev-tagline">Every benefit you’re about to lose grows here. Harvest it before it wilts.</p>
