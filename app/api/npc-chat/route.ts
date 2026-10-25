@@ -5,7 +5,7 @@ import { usd } from "@/lib/engine/spans";
 import { hydrate, load } from "@/lib/store";
 import { KEEPERS, NPCS } from "@/lib/valley/people";
 import { BUILDINGS } from "@/lib/valley/world";
-import { structured } from "@/lib/engine/llm";
+import { structuredWithEngine } from "@/lib/engine/llm";
 
 // Talk freely with a villager or shopkeeper. Claude plays the character from their personality
 // sheet, using only facts from the game: the valley, and this player's claims. Real decisions
@@ -34,15 +34,15 @@ export async function POST(req: Request) {
   const claims = s.tiles.filter((t) => !cats || cats.includes(t.category)).filter((t) => !s.done.includes(t.id)).sort((a, b) => b.atStake - a.atStake).slice(0, keeper ? 8 : 3);
   const rescued = s.ledger.reduce((sum, l) => sum + l.amount, 0);
   const p = person.persona;
-  const out = await structured("chat", {
+  const { data: out, engine } = await structuredWithEngine("chat", {
     system: `You are ${person.name}, a resident of Benefit Burrow, a cozy pixel-art farming game.
 ${VALLEY} It is now ${today()}.
 Your personality: ${p.quirk} You talk like this: ${p.style} Catchphrase (use it sometimes, not every time): "${p.catchphrase}". You love ${p.loves}. Pet peeve: ${p.peeve}.
-Things you'd typically say: ${person.lines.map((l) => `"${l}"`).join(" ")}
-Rules: stay in character and keep it short (1-3 sentences, spoken aloud, no stage directions, no emoji). Be kind and funny. Only mention dollar amounts and dates that appear in the player's claims below; never invent numbers. You can point the player to a claim, a shop or Ruth, but you never take actions or promise money: harvesting happens through the crop cards, and Ruth reviews every one. If asked for personal financial or medical advice beyond the game, say in character that you'd ask Ruth or a professional.`,
+For the feel of your voice only (never repeat these or reuse their wording): ${person.lines.map((l) => `"${l}"`).join(" ")}
+Rules: answer what the player just said, in fresh words. Don't greet them or introduce yourself or your shop unless they greet you first, and never say the same thing twice in a conversation. Stay in character and keep it short (1-3 sentences, spoken aloud, no stage directions, no emoji). Be kind and funny. Only mention dollar amounts and dates that appear in the player's claims below; never invent numbers. You can point the player to a claim, a shop or Ruth, but you never take actions or promise money: harvesting happens through the crop cards, and Ruth reviews every one. If asked for personal financial or medical advice beyond the game, say in character that you'd ask Ruth or a professional.`,
     user: `The player has rescued ${usd(rescued)} so far.\n${keeper ? "Claims at your shop" : "Their biggest open claims"}: ${claims.length ? claims.map((t) => `${t.title} (${t.atStake ? usd(t.atStake) : "options"}, ${t.daysLeft} days left)`).join("; ") : "none right now"}.\n\nConversation so far:\n${history.slice(-6).map((h) => `${h.from === "you" ? "Player" : person.name}: ${h.text}`).join("\n")}\nPlayer: ${message.slice(0, 300)}`,
     schema: Reply,
     effort: "low",
   });
-  return NextResponse.json(out ? { reply: out.reply, engine: "claude" } : { reply: fallback, engine: "script" });
+  return NextResponse.json(out ? { reply: out.reply, engine } : { reply: fallback, engine: "script" });
 }

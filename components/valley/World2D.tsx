@@ -16,7 +16,7 @@ import { blockedInside, doorSpot, INTERIORS, type Interior } from "@/lib/valley/
 import { CHATTER, KEEPERS } from "@/lib/valley/people";
 import type { Tile } from "@/lib/types";
 import {
-  BOUNDS, BUILDINGS, blocked, DECOR, doorOf, FARM_MEADOW, farmLayout, farmRects, type Rect, FOUNTAIN, GLOWS, NPCS, SOLID_DECOR, STRINGS, TREE_KINDS, type Place,
+  BOUNDS, BUILDINGS, blocked, DECOR, doorOf, FARM_MEADOW, farmLayout, farmRects, type Rect, FOUNTAIN, GLOWS, NPCS, SOLID_DECOR, STRINGS, BUNTING, TREE_KINDS, type Place,
 } from "@/lib/valley/world";
 
 const T = 16;
@@ -109,6 +109,7 @@ function dirOf(dx: number, dz: number, prev: Dir): Dir {
 type Particle = { x: number; z: number; y: number; vx: number; vz: number; vy: number; born: number; life: number; kind: "coin" | "heart" | "spark"; color?: string };
 
 const SPARK = ["#FFF6B0", "#FFC8EC", "#B8F4FF", "#D8C4FF"];
+const FLAGS = ["#E2574C", "#F2B33D", "#3E8ED0", "#3FA66B", "#E07BB0", "#FFFFFF"];
 const BULBS = ["#FFD45A", "#F49AC8", "#7FE3E0", "#C8A8F0"];
 
 // Ambient magic that lives in world space around the camera.
@@ -651,6 +652,22 @@ export default function World2D(props: Props) {
         }
       }
       for (const [x, y, c] of bulbs) { ctx.fillStyle = c; ctx.fillRect(x, y, 2, 2); }
+      // festival bunting: little triangle pennants that sway in the breeze
+      for (const [x0, z0, x1, z1] of BUNTING) {
+        const ax = x0 * T - camLeft, ay = z0 * T - camTop - 30, bx = x1 * T - camLeft, by = z1 * T - camTop - 30;
+        if (Math.max(ax, bx) < -10 || Math.min(ax, bx) > cw + 10 || Math.max(ay, by) < -30 || Math.min(ay, by) > ch + 30) continue;
+        const len = Math.hypot(bx - ax, by - ay), steps = Math.max(2, Math.round(len / 2));
+        for (let i = 0; i <= steps; i++) {
+          const u = i / steps, sag = Math.sin(u * Math.PI) * Math.min(18, len * 0.1);
+          const x = Math.round(ax + (bx - ax) * u), y = Math.round(ay + (by - ay) * u + sag);
+          ctx.fillStyle = "#5A4A3E"; ctx.fillRect(x, y, 1, 1);
+          if (i % 5 === 0 && i > 0 && i < steps) {
+            const sway = Math.round(Math.sin(t * 2.2 + i) * 1);
+            ctx.fillStyle = FLAGS[(i / 5) % FLAGS.length];
+            for (let k = 0; k < 5; k++) ctx.fillRect(x - 2 + Math.ceil(k / 2) + sway * (k > 2 ? 1 : 0), y + 1 + k, Math.max(1, 5 - k * 1.2 | 0), 1);
+          }
+        }
+      }
 
       // ---------- day and night ----------
       const n = p.attract ? 0.15 : nightAmount();

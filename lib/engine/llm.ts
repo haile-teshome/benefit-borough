@@ -11,17 +11,20 @@ import { callStructured, claudeEnabled, MODEL } from "./claude";
 export type Task = "extract" | "review" | "defend" | "optimize" | "checkin" | "polish" | "chat" | "advise" | "rank";
 type Route = { provider: "claude" | "ollama"; model: string };
 
-const OPUS = MODEL, SONNET = "claude-sonnet-5-5", HAIKU = "claude-haiku-5-5";
+const OPUS = MODEL, SONNET = "claude-sonnet-5-5", HAIKU = "claude-haiku-5-5", LOCAL = process.env.LLM_LOCAL_MODEL ?? "qwen3.5:4b";
 const DEFAULTS: Record<Task, Route> = {
   extract: { provider: "claude", model: OPUS }, // exact figures with a quoted source line
   review: { provider: "claude", model: OPUS }, // Ruth's safety check
   defend: { provider: "claude", model: OPUS }, // Ruth answering a pushback
   optimize: { provider: "claude", model: SONNET }, // one-line headlines over computed numbers
   rank: { provider: "claude", model: SONNET }, // Ruth's shopping review
-  checkin: { provider: "claude", model: SONNET },
-  advise: { provider: "claude", model: HAIKU },
-  polish: { provider: "claude", model: HAIKU },
+  // One small local model handles light jobs it proved reliable on (scripts/bench-models.ts); if
+  // Ollama isn't running they fall back to Claude. NPC chat stays on Haiku: with the real character
+  // prompt the 4B model kept repeating the character's example line.
+  checkin: { provider: "ollama", model: LOCAL },
+  polish: { provider: "ollama", model: LOCAL },
   chat: { provider: "claude", model: HAIKU },
+  advise: { provider: "claude", model: HAIKU },
 };
 
 export function routeFor(task: Task): Route {
@@ -65,6 +68,6 @@ export async function structuredWithEngine<S extends z.ZodType>(task: Task, opts
     console.warn(`[llm] ${task}: ${r.model} failed or returned invalid JSON; falling back to Claude`);
   }
   if (!claudeEnabled()) return { data: null, engine: "none" };
-  const model = r.provider === "claude" ? r.model : DEFAULTS[task].provider === "claude" ? DEFAULTS[task].model : HAIKU;
+  const model = r.provider === "claude" ? r.model : task === "checkin" ? SONNET : HAIKU;
   return { data: await callStructured({ ...opts, model }), engine: `claude:${model}` };
 }

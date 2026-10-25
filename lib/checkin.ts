@@ -50,6 +50,7 @@ export async function understand(said: string, s: AppState): Promise<{ updates: 
     if (q.kind === "used" && !Array.isArray(u.value)) continue;
     if (["money", "number", "percent"].includes(q.kind) && typeof u.value !== "number") continue;
     if (q.kind === "choice" && !q.options.includes(String(u.value))) continue;
+    if (JSON.stringify(u.value) === JSON.stringify((p.doc.meta!.answers as Answers)[u.key])) continue; // unchanged, not an update
     (updates[u.plan] ??= {})[u.key] = u.value;
     changes.push(`${p.plan.title}: ${q.ask.replace(/:$/, "")} → ${Array.isArray(u.value) ? u.value.join(", ") : u.value}`);
   }

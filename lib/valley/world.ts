@@ -50,10 +50,12 @@ export const POND = { x: -18, z: -20, r: 6 };
 export const ROADS: { a: [number, number]; b: [number, number]; w: number }[] = [
   { a: [0, 6], b: [0, 66], w: 3 },
   ...FARM_ROWS.map((z) => ({ a: [-13, z] as [number, number], b: [13, z] as [number, number], w: 2 })),
-  { a: [-6, -5], b: [-13, -13], w: 2 },
-  { a: [5, -5], b: [11, -10], w: 2 },
-  { a: [-30, 10.2], b: [30, 10.2], w: 1.8 }, // cottage lane
-  { a: [24.5, -13], b: [29, -13], w: 1.6 },   // to the inn
+  // Every road runs straight along the grid and meets the paving square-on.
+  { a: [-7, -9.2], b: [-12.5, -9.2], w: 2 }, { a: [-12.5, -9.2], b: [-12.5, -13], w: 2 }, // to the pond dock
+  { a: [7, -9.2], b: [12, -9.2], w: 2 },       // to the Dining Commons deck
+  { a: [-6, -10.5], b: [-6, -23.4], w: 2 },    // up to the north bluff stairs
+  { a: [-30, 10.2], b: [30, 10.2], w: 2 },     // cottage lane
+  { a: [24.5, -13], b: [29, -13], w: 2 },      // to the inn
 ];
 export type Zone = { kind: "plaza" | "slab" | "health" | "credit" | "deck"; rect?: [number, number, number, number]; circle?: [number, number, number] };
 export const ZONES: Zone[] = [
@@ -63,6 +65,49 @@ export const ZONES: Zone[] = [
   { kind: "slab", rect: [-7, -10.5, 7, -5] },
   { kind: "plaza", circle: [0, 0, 7.5] },
 ];
+
+// ---------- terrain ----------
+// Animal Crossing-style tiers: a wooded bluff along the north (its cliff drops into the pond as a
+// waterfall), hills on the west and east borders, and two raised meadows beside the farms. Stone
+// stairs climb each cliff. Tier 0 is the valley floor.
+const bump = (v: number, c: number, w: number) => Math.max(0, 1 - ((v - c) / w) ** 2);
+export const northEdge = (x: number) => -23.8 + 0.7 * Math.sin(x * 0.31 + 0.5) + 0.4 * Math.sin(x * 0.83) - 1.8 * bump(x, -18, 7);
+const blob = (x: number, z: number, cx: number, cz: number, a: number, b: number) => ((x - cx) / a) ** 4 + ((z - cz) / b) ** 4 < 1 + 0.12 * Math.sin(x * 1.3 + z * 0.7);
+export function tierAt(x: number, z: number) {
+  let t = 0;
+  if (z < northEdge(x)) t = 1;
+  if (z < -29.8 + 0.6 * Math.sin(x * 0.5 + 1.2)) t = 2;
+  if (x < -33.2 + 0.6 * Math.sin(z * 0.4) && z < 4 + 1.5 * Math.sin(x)) t = Math.max(t, 1);
+  if (x > 33.4 + 0.6 * Math.sin(z * 0.37 + 2) && z < -3.5) t = Math.max(t, 1);
+  if (blob(x, z, 27.5, 26, 5.5, 5) || blob(x, z, -27.5, 44, 5.5, 5)) t = Math.max(t, 1);
+  return t;
+}
+export const FACE = 1; // how tall a cliff face looks, in tiles (it sits just south of the edge)
+export const STAIRS = [
+  { x: -6, w: 2, z: northEdge(-6) },
+  { x: 27.5, w: 1.8, z: 31 },
+  { x: -27.5, w: 1.8, z: 49 },
+];
+export const WATERFALL = { x0: -19.1, x1: -16.9 };
+// Depth into a cliff face (0 to FACE), or 0 if (x, z) isn't on one.
+export function faceAt(x: number, z: number) {
+  const t = tierAt(x, z);
+  for (let k = 0.0625; k <= FACE; k += 0.0625) if (tierAt(x, z - k) > t) return k;
+  return 0;
+}
+export const onStairs = (x: number, z: number) => STAIRS.some((s) => Math.abs(x - s.x) < s.w / 2 && z > s.z - 0.6 && z < s.z + FACE + 0.3);
+// Walking: cliff faces and tier edges are walls, except on the stairs.
+function cliffBlocks(x: number, z: number) {
+  if (onStairs(x, z)) return false;
+  if (faceAt(x, z)) return true;
+  const t = tierAt(x, z);
+  return tierAt(x - 0.3, z) !== t || tierAt(x + 0.3, z) !== t || tierAt(x, z + 0.3) > t;
+}
+const nearCliff = (x: number, z: number) => {
+  const t = tierAt(x, z);
+  for (const [dx, dz] of [[-1.3, 0], [1.3, 0], [0, -2.2], [0, 1.3], [-1, -1.6], [1, -1.6]]) if (tierAt(x + dx, z + dz) !== t) return true;
+  return false;
+};
 
 function segDist(px: number, pz: number, a: [number, number], b: [number, number]) {
   const dx = b[0] - a[0], dz = b[1] - a[1];
@@ -156,12 +201,26 @@ const FIXED: Decor[] = [
   // District signposts (their names are DOM labels)
   ...DISTRICTS.map((d) => ({ kind: "sign", x: d.x, z: d.z })),
   { kind: "sign", x: 31.6, z: -12.2 },
+  // lookouts at the top of each set of stairs
+  { kind: "bench", x: -3.6, z: -25.4 }, { kind: "sign", x: -8.4, z: -25.2 }, { kind: "lamp", x: -7.8, z: -25.2 },
+  { kind: "bench", x: 27.5, z: 24.5 }, { kind: "tree", x: 30.5, z: 23.5, v: 7 }, { kind: "wildflowers", x: 25, z: 27, v: 2 },
+  { kind: "bench", x: -27.5, z: 42.5 }, { kind: "tree", x: -30.5, z: 41.5, v: 3 }, { kind: "wildflowers", x: -25, z: 45, v: 4 },
   // Pond dock
   { kind: "rock", x: -12, z: -22 }, { kind: "rock", x: -23, z: -15 },
   // Plaza: flower beds ring the square, a well and a market stall
   ...[0.55, 1.0, 2.15, 2.6, 3.7, 4.15, 5.25, 5.7].map((a, i) => ({ kind: "flowerbed", x: Math.cos(a) * 6.6, z: Math.sin(a) * 6.6 + 0.4, v: i })),
   { kind: "stall", x: 4.4, z: -2, color: "#E04848", v: 1 },
+  // festival: a second market stall and festival banners around the square
+  { kind: "stall", x: -4.4, z: -2, color: "#3E8ED0", v: 2 },
+  { kind: "banner", x: -6.2, z: 0.6, color: "#F2B33D", icon: "coin" }, { kind: "banner", x: 6.2, z: 0.6, color: "#E07BB0", icon: "food" },
   { kind: "topiary", x: -2.4, z: -4.4 }, { kind: "topiary", x: 2.4, z: -4.4 },
+  // gardens around every building: bushes at the corners and wildflowers along the sides
+  ...BUILDINGS.flatMap((b, i) => [
+    { kind: "bush", x: b.x - b.w / 2 - 0.7, z: b.z - 0.7, v: i % 3 }, { kind: "bush", x: b.x + b.w / 2 + 0.7, z: b.z - 0.7, v: (i + 1) % 3 },
+    { kind: "wildflowers", x: b.x - b.w / 2 - 0.5, z: b.z + 0.35, v: i % 6 }, { kind: "wildflowers", x: b.x + b.w / 2 + 0.5, z: b.z + 0.35, v: (i + 3) % 6 },
+  ]),
+  // the garden plaza: blooms in each lawn
+  ...[[2.6, 2.6], [-2.6, 2.6], [2.9, -2.4], [-2.9, -2.4]].map(([x, z], i) => ({ kind: "wildflowers", x: x * 1.45, z: z * 1.45 + 0.4, v: i + 2 })),
   // planters flank every shop door
   ...BUILDINGS.flatMap((b) => [{ kind: "planter", x: b.x - 1.25, z: b.z + 0.25, v: 1 }, { kind: "planter", x: b.x + 1.25, z: b.z + 0.25, v: 2 }]),
   // flower beds along both district streets
@@ -196,6 +255,7 @@ const FIXED: Decor[] = [
 
 const clearOf = (x: number, z: number) => {
   if (roadAt(x, z) < 1.4) return false;
+  if (nearCliff(x, z) || onStairs(x, z) || onStairs(x, z + 1)) return false;
   if (zoneAt(x, z)) return false;
   for (const zn of ZONES) if (zn.rect && x > zn.rect[0] - 1.5 && x < zn.rect[2] + 1.5 && z > zn.rect[1] - 1.5 && z < zn.rect[3] + 1.5) return false;
   if (Math.hypot(x - POND.x, z - POND.z) < POND.r + 1.8) return false;
@@ -216,12 +276,14 @@ export const DECOR: Decor[] = (() => {
       const edge = jx < WALK.x0 + 1 || jx > WALK.x1 - 1 || jz < WALK.z0 + 1 || jz > WALK.z1 - 1;
       const roll = r();
       if (!clearOf(jx, jz)) continue;
-      if (roll < (edge ? 0.9 : 0.12)) out.push({ kind: "tree", x: jx, z: jz, v: Math.floor(r() * TREE_KINDS.length) });
-      else if (roll < (edge ? 0.95 : 0.22)) out.push({ kind: "bush", x: jx, z: jz, v: Math.floor(r() * 3) });
-      else if (roll < (edge ? 0.96 : 0.24)) out.push({ kind: "rock", x: jx, z: jz });
-      else if (roll < 0.26) out.push({ kind: r() < 0.5 ? "stump" : "log", x: jx, z: jz });
-      else if (roll < 0.58) out.push({ kind: "wildflowers", x: jx + 0.6, z: jz + 0.4, v: Math.floor(r() * 6) });
-      else if (roll < 0.82) out.push({ kind: "tallgrass", x: jx - 0.5, z: jz + 0.7 });
+      if (roll < (edge ? 0.9 : 0.16)) out.push({ kind: "tree", x: jx, z: jz, v: Math.floor(r() * TREE_KINDS.length) });
+      else if (roll < (edge ? 0.95 : 0.32)) out.push({ kind: "bush", x: jx, z: jz, v: Math.floor(r() * 3) });
+      else if (roll < (edge ? 0.96 : 0.35)) out.push({ kind: "rock", x: jx, z: jz });
+      else if (roll < 0.38) out.push({ kind: r() < 0.5 ? "stump" : "log", x: jx, z: jz });
+      else if (roll < 0.74) out.push({ kind: "wildflowers", x: jx + 0.6, z: jz + 0.4, v: Math.floor(r() * 6) });
+      else if (roll < 0.95) out.push({ kind: "tallgrass", x: jx - 0.5, z: jz + 0.7 });
+      // a second clump of flowers beside most things, so lawns feel planted rather than empty
+      if (roll < 0.74 && r() < 0.55) out.push({ kind: "wildflowers", x: jx - 0.7, z: jz + 0.9, v: Math.floor(r() * 6) });
     }
   return out;
 })();
@@ -234,6 +296,8 @@ export const STRINGS: [number, number, number, number][] = [
   ...[8, 23, 37, 51, 64].map((z) => [-2.2, z, 2.2, z] as [number, number, number, number]),
   [-25, 11.4, -18, 11.4], [-18, 11.4, -11, 11.4], [11, 11.4, 18, 11.4], [18, 11.4, 25, 11.4],
 ];
+// Festival bunting: pennant flags strung across the town square.
+export const BUNTING: [number, number, number, number][] = [[-5, -4.6, 5, 5.2], [5, -4.6, -5, 5.2], [-5, 0.3, 5, 0.3]];
 export const GLOWS: Record<string, string> = { lilac: "180, 140, 240", aqua: "111, 224, 224", rose: "244, 154, 200", "#4FC3E8": "79, 195, 232", "#F06C8B": "240, 108, 139", "#B48CF0": "180, 140, 240" };
 
 // Unclaimed farm plots stay pretty: a wildflower meadow, a few bushes and a sign until a farmer joins.
@@ -287,6 +351,8 @@ const PAD = 0.28; // the farmer's half-width
 export function blocked(x: number, z: number, others: { x: number; z: number; r: number }[] = [], rects: Rect[] = []) {
   if (x < WALK.x0 || x > WALK.x1 || z < WALK.z0 || z > WALK.z1) return true;
   if (Math.hypot(x - POND.x, z - POND.z) < POND.r - 0.4 && !(x > -13.4 && x < -11.6 && z > -16.5)) return true;
+  if (cliffBlocks(x, z)) return true;
+  if (z < northEdge(x) && x > WATERFALL.x0 && x < WATERFALL.x1) return true; // the stream above the falls
   for (const r of BUILDING_RECTS) if (x > r.x0 - PAD && x < r.x1 + PAD && z > r.z0 && z < r.z1) return true;
   for (const r of SOLID_RECTS) if (x > r.x0 - PAD && x < r.x1 + PAD && z > r.z0 && z < r.z1 + 0.1) return true;
   for (const r of rects) if (x > r.x0 - PAD && x < r.x1 + PAD && z > r.z0 && z < r.z1 + 0.1) return true;
