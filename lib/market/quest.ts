@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { callStructured, claudeEnabled } from "../engine/claude";
+import { claudeEnabled } from "../engine/claude";
 import { livePrices, apifyEnabled } from "../integrations/apify";
 import { MARKET, buy, txUrl } from "../integrations/x402";
 import { addSpend, canSpend } from "../pipeline";
@@ -7,6 +7,7 @@ import { hydrate, load, log, save } from "../store";
 import type { Balance, Quest, QuestOffer } from "../types";
 import { AGENTS, quote, type AgentId, type RawOffer } from "./agents";
 import { shoppable } from "./shoppable";
+import { structured } from "../engine/llm";
 
 // A shopping quest. Ruth asks every shopkeeper agent for a quote (paying each over x402), checks
 // live prices with Apify, then reviews each offer: does it fit the need, does the benefit cover it,
@@ -67,7 +68,7 @@ export async function runQuest(pid: string, req: { benefitId: string; need: stri
   if (apifyEnabled() && pool.length && !Object.keys(live).length) notes.push("Live price check took too long, so prices are the agents' quotes.");
 
   // 4. Ruth reviews each offer: fits the need, covered by the benefit, quality for the money.
-  const rv = claudeEnabled() && pool.length ? await callStructured({
+  const rv = claudeEnabled() && pool.length ? await structured("rank", {
     system: "You are Ruth, a strict reviewer. For each offer decide: does it fit the stated need (not an upsell, not 'use it up' junk); is it covered by the benefit's rule; quality 0-10 from reviews, brand and specs. Be conservative: if coverage is unclear, eligible=false. Note: at most 7 words, written like a handwritten shop tag, e.g. 'Firm, well loved, great price' or 'Too big for what you need'. No dashes, no semicolons, no hedging words.",
     user: `Need: ${need}\nBenefit: ${b.label}\nCoverage rule: ${rule}\nOffers:\n${pool.map((o, i) => `${i}. ${o.title} | ${o.merchant} | $${o.price} | ${o.rating ?? "?"}★ (${o.reviews ?? "?"} reviews) | ${o.why}`).join("\n")}`,
     schema: Review, effort: "low",

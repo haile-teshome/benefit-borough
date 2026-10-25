@@ -1,11 +1,12 @@
 import { z } from "zod";
-import { callStructured, claudeEnabled } from "./engine/claude";
+import { claudeEnabled } from "./engine/claude";
 import { buildDoc, type Answers } from "./library/build";
 import { LIBRARY } from "./library/catalog";
 import { scan } from "./pipeline";
 import { hydrate, load, log, save } from "./store";
 import { fresh, record } from "./rewards";
 import type { AppState } from "./types";
+import { structured } from "./engine/llm";
 
 // The weekly check-in, by form or by voice: update the answers behind your planted library plans
 // and rescan, so the farm matches your week. Harvests already confirmed stay confirmed.
@@ -34,7 +35,7 @@ export async function understand(said: string, s: AppState): Promise<{ updates: 
     plan: plan.id, title: plan.title,
     questions: plan.questions.map((q) => ({ key: q.key, ask: q.ask, kind: q.kind, ...(q.kind === "choice" ? { options: q.options } : {}), ...(q.kind === "used" ? { items: (plan.credits ?? []).map((c) => ({ key: c.key, name: c.name })) } : {}), current: (doc.meta!.answers as Answers)[q.key] ?? null })),
   }));
-  const out = await callStructured({
+  const out = await structured("checkin", {
     system: "You are Ruth, the careful reviewer in a benefits app. Turn what the person said into updates to their check-in answers. Only use plans and question keys from the catalog. Money and numbers as plain numbers. For 'used' questions return the full list of used credit keys (current ones plus new). For 'dental_used'-style running totals, add the new amount to the current value. If something is ambiguous, don't guess: leave it out and ask about it in the reply. Reply in one or two short, warm sentences, saying exactly what you changed.",
     user: `Catalog:\n${JSON.stringify(catalog)}\n\nThey said: "${said.slice(0, 600)}"`,
     schema: z.object({ updates: z.array(z.object({ plan: z.string(), key: z.string(), value: z.union([z.number(), z.string(), z.array(z.string())]), why: z.string() })), reply: z.string() }),

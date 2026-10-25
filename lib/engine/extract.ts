@@ -1,12 +1,13 @@
 import { z } from "zod";
 import type { SourceDoc } from "../documents";
 import type { Balance, CareItem, Category, Extraction, SpendPattern } from "../types";
-import { callStructured, claudeEnabled } from "./claude";
+import { claudeEnabled } from "./claude";
 import { DEMO_TODAY } from "../documents";
 import { parseCsv, parseLines, statementYear } from "../statement/parse";
 import { detect } from "../statement/detect";
 import { libraryFindings } from "../library/build";
 import { findSpan } from "./spans";
+import { structured } from "./llm";
 
 const CATEGORIES = [
   "fsa", "dental", "deductible", "dining", "card_credit", "tax_window",
@@ -97,7 +98,7 @@ function statementFindings(d: SourceDoc) {
 async function extractDocs(docs: SourceDoc[], all: SourceDoc[]): Promise<Extraction> {
   if (claudeEnabled()) {
     const user = docs.map((d) => `<document id="${d.id}" name="${d.name}">\n${d.text}\n</document>`).join("\n\n");
-    const out = await callStructured({ system: SYSTEM, user, schema: ExtractionSchema, effort: "medium" });
+    const out = await structured("extract", { system: SYSTEM, user, schema: ExtractionSchema, effort: "medium" });
     if (out) return ground(all, out, "claude");
   }
   // The mock knows the sample documents; skip any that were replaced (e.g. by an uploaded statement).

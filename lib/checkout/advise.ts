@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { callStructured, claudeEnabled } from "../engine/claude";
+import { claudeEnabled } from "../engine/claude";
 import type { AppState, Balance, Category } from "../types";
+import { structured } from "../engine/llm";
 
 // "Pay with what's expiring": before you buy, rank the ways to pay by how much expiring money the
 // purchase rescues. Every number comes from the rules table below and the user's own balances;
@@ -166,7 +167,7 @@ export async function advise(cart: Cart, state: AppState): Promise<Advice> {
   const unmatched = clean.items.map((it, i) => ({ ...it, i })).filter((it) => !options.some((o) => o.items?.includes(it.name)));
   if (claudeEnabled() && (unmatched.length || options.length)) {
     const kinds = RULES.map((r) => `${r.kind}: ${r.merchant?.source ?? ""} ${r.kind === "medical" ? "FSA/HSA-eligible medical care (IRS Pub 502)" : r.item?.source ?? ""}`.trim()).join("\n");
-    const res = await callStructured({
+    const res = await structured("advise", {
       system: "You help someone pick how to pay for a purchase using benefits that are about to expire. Classify each listed cart item into one benefit kind, or none if unsure. Then, for each option given, rewrite its 'why' as one short, plain sentence in Ruth's voice: friendly and direct, no metaphors, no dates or dollar amounts (the app shows those). Say what triggers the benefit and any condition the user must meet. Never mention a benefit or number not in the input.",
       user: `Merchant: ${clean.merchant}\nItems to classify:\n${unmatched.map((u) => `${u.i}. ${u.name} ($${u.price})`).join("\n") || "(none)"}\n\nKinds:\n${kinds}\n\nOptions to explain:\n${JSON.stringify(options.map((o) => ({ benefitId: o.benefitId, payWith: o.payWith, rescued: o.rescued, deadline: o.deadline, why: o.why, items: o.items })))}`,
       schema: ClassifySchema,

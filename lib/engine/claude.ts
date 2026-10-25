@@ -15,11 +15,12 @@ export async function callStructured<S extends z.ZodType>(opts: {
   user: string;
   schema: S;
   effort?: "low" | "medium" | "high";
+  model?: string;
 }): Promise<z.infer<S> | null> {
   client ??= new Anthropic();
   try {
     const res = await client.beta.messages.parse({
-      model: MODEL,
+      model: opts.model ?? MODEL,
       max_tokens: 16000,
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
@@ -46,6 +47,7 @@ export async function searchStructured<S extends z.ZodType>(opts: {
   schema: S;
   maxSearches?: number;
   effort?: "low" | "medium" | "high";
+  model?: string;
 }): Promise<{ data: z.infer<S> | null; searches: number }> {
   client ??= new Anthropic();
   const messages: Anthropic.Beta.Messages.BetaMessageParam[] = [{ role: "user", content: opts.user }];
@@ -53,7 +55,7 @@ export async function searchStructured<S extends z.ZodType>(opts: {
   try {
     for (let turn = 0; turn < 4; turn++) {
       const res = await client.beta.messages.parse({
-        model: MODEL,
+        model: opts.model ?? MODEL,
         max_tokens: 16000,
         betas: ["server-side-fallback-2026-07-01"],
         fallbacks: "default",

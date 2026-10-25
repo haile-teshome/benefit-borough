@@ -1,7 +1,8 @@
 import { z } from "zod";
 import type { AppState, Extraction, ReviewSubject, Verdict } from "../types";
-import { callStructured, claudeEnabled } from "./claude";
+import { claudeEnabled } from "./claude";
 import { usd } from "./spans";
+import { structured } from "./llm";
 
 export const RULES = [
   "Reject any care action not present in the uploaded treatment plan, EOB history, or preventive schedule. No new care, ever.",
@@ -54,7 +55,7 @@ export function ruleCheck(subject: ReviewSubject, ex: Extraction, docsText: stri
 export async function review(subject: ReviewSubject, ex: Extraction, docsText: string): Promise<Verdict> {
   const rules = ruleCheck(subject, ex, docsText);
   if (rules.verdict === "reject" || !claudeEnabled()) return rules;
-  const out = await callStructured({
+  const out = await structured("review", {
     system: `You are the Reviewer for Expire. You gate every action before the user can tap it. Your job is to protect the user's money, not to help them spend it.
 Rules (cite by number):
 ${RULES.map((r, i) => `${i + 1}. ${r}`).join("\n")}
@@ -86,7 +87,7 @@ export async function defend(key: string, v: Verdict, message: string, s: AppSta
   };
   if (!claudeEnabled()) return fallback;
   const tile = s.tiles.find((t) => t.id === key);
-  const out = await callStructured({
+  const out = await structured("defend", {
     system: `You are Ruth, the Reviewer in Benefit Burrow. You protect people's money, not merchants'. A user is pushing back on one of your verdicts.
 Rules (cite by number):
 ${RULES.map((r, i) => `${i + 1}. ${r}`).join("\n")}

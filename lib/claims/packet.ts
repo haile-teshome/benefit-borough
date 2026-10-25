@@ -1,8 +1,9 @@
 import crypto from "node:crypto";
 import { z } from "zod";
-import { callStructured, claudeEnabled } from "../engine/claude";
+import { claudeEnabled } from "../engine/claude";
 import type { AppState, Packet, Profile, Tile } from "../types";
 import { draftFor, parseLine } from "./forms";
+import { structured } from "../engine/llm";
 
 // Ruth prepares; you submit. A packet is everything a claim needs (the filled form, the proof,
 // the message), checked against Ruth's rules. Submitting requires your approval of the exact
@@ -40,7 +41,7 @@ function finish(d: Omit<Packet, "check" | "status" | "hash">, tile: Tile, s: App
 // Ruth writes the message in her own words, from the packet's facts only. Numbers never change.
 async function polish(message: string, tile: Tile, provider: string): Promise<string | null> {
   if (!claudeEnabled() || !message) return null;
-  const out = await callStructured({
+  const out = await structured("polish", {
     system: "You rewrite a short claim message a person will send to a company. Keep every number, date, name and placeholder in [brackets] exactly as given. Polite, plain, under 90 words. No new claims, no threats, no legal language.",
     user: `Company: ${provider}\nClaim: ${tile.title}\nDraft:\n${message}`,
     schema: z.object({ message: z.string() }),

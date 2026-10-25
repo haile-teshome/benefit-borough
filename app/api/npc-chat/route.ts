@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { callStructured, claudeEnabled } from "@/lib/engine/claude";
+import { claudeEnabled } from "@/lib/engine/claude";
 import { usd } from "@/lib/engine/spans";
 import { hydrate, load } from "@/lib/store";
 import { KEEPERS, NPCS } from "@/lib/valley/people";
 import { BUILDINGS } from "@/lib/valley/world";
+import { structured } from "@/lib/engine/llm";
 
 // Talk freely with a villager or shopkeeper. Claude plays the character from their personality
 // sheet, using only facts from the game: the valley, and this player's claims. Real decisions
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
   const claims = s.tiles.filter((t) => !cats || cats.includes(t.category)).filter((t) => !s.done.includes(t.id)).sort((a, b) => b.atStake - a.atStake).slice(0, keeper ? 8 : 3);
   const rescued = s.ledger.reduce((sum, l) => sum + l.amount, 0);
   const p = person.persona;
-  const out = await callStructured({
+  const out = await structured("chat", {
     system: `You are ${person.name}, a resident of Benefit Burrow, a cozy pixel-art farming game.
 ${VALLEY} It is now ${today()}.
 Your personality: ${p.quirk} You talk like this: ${p.style} Catchphrase (use it sometimes, not every time): "${p.catchphrase}". You love ${p.loves}. Pet peeve: ${p.peeve}.

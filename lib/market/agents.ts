@@ -30,7 +30,7 @@ export async function quote(q: QuoteRequest, attempt = 1): Promise<{ offers: Raw
   const r = await searchStructured({
     system: `${a.prompt} Search the web for real products for sale right now. Use real product page URLs from major US retailers. Never invent a product, price or URL. Return up to 3 offers.`,
     user: `Need: ${q.need}\nPaying with: ${q.benefit}\nCoverage rule: ${q.constraint}\nBudget: up to $${q.maxPrice.toFixed(2)}`,
-    schema: OfferSchema, maxSearches: 4,
+    schema: OfferSchema, maxSearches: 4, model: process.env.LLM_AGENT_MODEL ?? "claude-sonnet-5-5",
   });
   const offers = (r.data?.offers ?? []).filter((o) => /^https?:\/\//.test(o.url) && o.price > 0);
   // A search that comes back empty gets one more try before the agent sits this one out.

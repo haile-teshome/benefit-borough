@@ -2,8 +2,9 @@ import { z } from "zod";
 import { eduTile } from "../library/education";
 import { DEMO_TODAY } from "../documents";
 import type { Balance, Candidate, CareItem, Extraction, Span, Tile } from "../types";
-import { callStructured, claudeEnabled } from "./claude";
+import { claudeEnabled } from "./claude";
 import { daysBetween, usd } from "./spans";
+import { structured } from "./llm";
 
 // Calculators do the arithmetic; Claude (when configured) only chooses among candidates and
 // writes the explanation. The numbers on screen never come from a model.
@@ -568,7 +569,7 @@ const NarrationSchema = z.object({
 // Claude picks among calculator candidates and writes the copy. It cannot change a number.
 async function narrate(tiles: Tile[]): Promise<Tile[]> {
   const live = tiles.filter((t) => t.live);
-  const out = await callStructured({
+  const out = await structured("optimize", {
     system: `You are the Optimize step of Expire, which rescues expiring money. For each tile, pick the best candidate id and write a one-sentence headline and a one-sentence tradeoff for a stressed student.
 Use only the dollar figures given; never compute new ones. Never recommend new care or new purchases. Plain words, no exclamation marks.`,
     user: JSON.stringify(live.map((t) => ({ tile_id: t.id, title: t.title, candidates: t.candidates, do_nothing: t.doNothing }))),
