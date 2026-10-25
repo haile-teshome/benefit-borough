@@ -846,6 +846,12 @@ function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }
   const [how, setHow] = useState(false);
   // ?poster=1 shows the title as a clean poster (for the project thumbnail).
   const poster = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("poster");
+  // Center the camera on the town square for the poster, wherever the farmer last stood.
+  useEffect(() => {
+    if (!poster) return;
+    const t = setInterval(() => (window as unknown as { __tp?: (x: number, z: number) => void }).__tp?.(0, -2.6), 300);
+    return () => clearInterval(t);
+  }, [poster]);
   if (poster) return (
     <div className="ev-title-screen ev-poster">
       <div className="ev-sign">
