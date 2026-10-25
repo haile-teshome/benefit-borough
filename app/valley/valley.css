@@ -235,8 +235,12 @@ body { margin: 0; overflow: hidden; background: #8fc4e8; }
 
 
 /* Readability pass: the pixel face only where it's decorative and short. */
-.ev-title, .ev-speaker, .ev-stamp, .ev-sign, .ev-sign-board, .ev-sign-board span, .ev-btn, .ev-prompt kbd, .ev-name, .ev-district,
-.ev-tag b, .ev-burst, .ev-live-head, .ev-tabs button, .ev-trail .t, .ev-real b, .ev-ask .who, .ev-loading { font-family: var(--pixel); }
+/* One typeface everywhere; only the logo on the title sign keeps the pixel face. */
+.ev-sign-board .l1, .ev-sign-board .l2 { font-family: var(--pixel); }
+.ev-title, .ev-speaker, .ev-btn, .ev-name, .ev-district, .ev-tag b, .ev-burst, .ev-live-head, .ev-tabs button, .ev-stamp { font-family: var(--read); letter-spacing: 0; }
+.ev-title { font-weight: 700; }
+.ev-speaker, .ev-btn, .ev-name, .ev-district, .ev-tag b, .ev-live-head { font-weight: 700; }
+.ev-stamp { font-weight: 700; letter-spacing: 2px; }
 .ev-sub { font-size: 15px; color: #5a3d22; }
 .ev-body p, .ev-lead { line-height: 1.45; }
 .ev-lead { font-size: 20px; font-weight: 700; }

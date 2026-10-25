@@ -63,6 +63,7 @@ export function blockedInside(r: Interior, x: number, z: number) {
   if (x < 0.6 || x > r.w - 0.6 || z < WALL_H + 0.35 || z > r.h - 0.2) return true;
   if (Math.abs(x - r.keeper.x) < 0.5 && Math.abs(z - r.keeper.z) < 0.4) return true;
   for (const s of r.solids) if (x > s.x0 - 0.25 && x < s.x1 + 0.25 && z > s.z0 && z < s.z1 + 0.25) return true;
-  for (const p of r.spots) if (Math.hypot(x - p.x, (z - p.z) * 1.4) < 0.5) return true;
+  // Claim stands are solid over the whole plant, so nobody hides behind one.
+  for (const p of r.spots) if (Math.abs(x - p.x) < 0.85 && z > p.z - 1.5 && z < p.z + 0.25) return true;
   return false;
 }

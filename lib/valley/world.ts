@@ -241,19 +241,45 @@ export const FARM_MEADOW: Decor[][] = Array.from({ length: 8 }, (_, f) => {
 export { NPCS, type Npc } from "./people";
 
 // ---------- collision ----------
-export function blocked(x: number, z: number, others: { x: number; z: number; r: number }[] = []) {
+// Solid shapes. Everything you can see is solid over its whole drawn area (roofs and tree crowns
+// included), so you walk around things and never disappear behind them.
+export type Rect = { x0: number; z0: number; x1: number; z1: number };
+const FOOT: Record<string, [number, number]> = { // [width, depth behind the base], in tiles
+  tree: [1.7, 2.4], bush: [1.2, 0.8], rock: [0.9, 0.55], lamp: [0.45, 0.5], bench: [1.35, 0.7], hedge: [2.0, 0.8], banner: [0.45, 0.5], sign: [1.4, 0.8],
+  desk: [2.0, 1.1], picnic: [2.0, 1.1], cart: [1.8, 1.8], atm: [0.85, 1.1], flowerbed: [2.0, 0.65], planter: [0.65, 0.6], topiary: [0.85, 1.2], barrel: [0.75, 0.7],
+  stall: [2.1, 1.9], arch: [2.2, 2.0], well: [1.7, 1.9], stump: [0.85, 0.6], log: [1.5, 0.6], crystal: [1.0, 1.2], mushrooms: [1.1, 0.55],
+  picket: [1.1, 0.4], post: [0.35, 0.4], crate: [0.85, 0.75], hay: [1.1, 0.7], scarecrow: [1.1, 1.7], mailbox: [0.7, 1.0], fountain: [3.1, 2.1],
+};
+export const footprint = (kind: string, x: number, z: number): Rect | null => {
+  const f = FOOT[kind];
+  return f ? { x0: x - f[0] / 2, z0: z - f[1], x1: x + f[0] / 2, z1: z + 0.12 } : null;
+};
+// A building's whole sprite: front wall, roof and (for the Benefits Office) its tower.
+export const buildingRect = (x: number, z: number, w: number, tall = false): Rect => {
+  const h = (w * 16 * 0.26 + 12 + (tall ? 40 : 31)) / 16;
+  return { x0: x - w / 2 - 0.25, z0: z - h - 0.3, x1: x + w / 2 + 0.25, z1: z - 0.05 };
+};
+const TALL = new Set(["clinic", "bank", "store", "hall", "library", "inn"]);
+export const BUILDING_RECTS = BUILDINGS.map((b) => buildingRect(b.x, b.z, b.w, TALL.has(b.kind)));
+
+// The farm pieces that are solid: the house, mailbox, decor and fences of a claimed farm, or the
+// meadow's trees and bushes when nobody has claimed it yet.
+export function farmRects(farm: number, claimed: boolean): Rect[] {
+  if (!claimed) return FARM_MEADOW[farm].flatMap((d) => (d.kind === "wildflowers" || d.kind === "tallgrass" ? [] : [footprint(d.kind, d.x, d.z)!].filter(Boolean)));
+  const L = farmLayout(farm);
+  return [buildingRect(L.house.x, L.house.z, 5), footprint("mailbox", L.mailbox.x, L.mailbox.z)!, ...L.decor.map((d) => footprint(d.kind, d.x, d.z)).filter((r): r is Rect => Boolean(r))];
+}
+
+const PAD = 0.28; // the farmer's half-width
+export function blocked(x: number, z: number, others: { x: number; z: number; r: number }[] = [], rects: Rect[] = []) {
   if (x < WALK.x0 || x > WALK.x1 || z < WALK.z0 || z > WALK.z1) return true;
   if (Math.hypot(x - POND.x, z - POND.z) < POND.r - 0.4 && !(x > -13.4 && x < -11.6 && z > -16.5)) return true;
-  for (const b of BUILDINGS) if (Math.abs(x - b.x) < b.w / 2 - 0.1 && z > b.z - 3.4 && z < b.z - 0.15) return true;
-  if (Math.hypot(x - FOUNTAIN.x, (z - FOUNTAIN.z) * 1.6) < 1.7) return true;
+  for (const r of BUILDING_RECTS) if (x > r.x0 - PAD && x < r.x1 + PAD && z > r.z0 && z < r.z1) return true;
+  for (const r of SOLID_RECTS) if (x > r.x0 - PAD && x < r.x1 + PAD && z > r.z0 && z < r.z1 + 0.1) return true;
+  for (const r of rects) if (x > r.x0 - PAD && x < r.x1 + PAD && z > r.z0 && z < r.z1 + 0.1) return true;
   for (const o of others) if (Math.hypot(x - o.x, z - o.z) < o.r) return true;
   return false;
 }
 
-export const SOLID_DECOR = DECOR.flatMap((d) =>
-  d.kind === "tree" ? [{ x: d.x, z: d.z, r: 0.55 }]
-  : d.kind === "rock" || d.kind === "crystal" || d.kind === "atm" || d.kind === "lamp" || d.kind === "banner" || d.kind === "sign" ? [{ x: d.x, z: d.z, r: 0.4 }]
-  : d.kind === "desk" || d.kind === "picnic" || d.kind === "cart" || d.kind === "stall" || d.kind === "well" ? [{ x: d.x, z: d.z - 0.2, r: 1 }]
-  : d.kind === "barrel" || d.kind === "stump" || d.kind === "topiary" ? [{ x: d.x, z: d.z, r: 0.4 }]
-  : [],
-);
+export const SOLID_RECTS: Rect[] = DECOR.map((d) => footprint(d.kind, d.x, d.z)).filter((r): r is Rect => Boolean(r));
+export const SOLID_DECOR: { x: number; z: number; r: number }[] = [];

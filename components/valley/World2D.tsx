@@ -16,7 +16,7 @@ import { blockedInside, doorSpot, INTERIORS, type Interior } from "@/lib/valley/
 import { CHATTER, KEEPERS } from "@/lib/valley/people";
 import type { Tile } from "@/lib/types";
 import {
-  BOUNDS, BUILDINGS, blocked, DECOR, doorOf, FARM_MEADOW, farmLayout, FOUNTAIN, GLOWS, NPCS, SOLID_DECOR, STRINGS, TREE_KINDS, type Place,
+  BOUNDS, BUILDINGS, blocked, DECOR, doorOf, FARM_MEADOW, farmLayout, farmRects, type Rect, FOUNTAIN, GLOWS, NPCS, SOLID_DECOR, STRINGS, TREE_KINDS, type Place,
 } from "@/lib/valley/world";
 
 const T = 16;
@@ -324,6 +324,7 @@ export default function World2D(props: Props) {
       if (id !== nearKey) { nearKey = id; p.onNear(best); }
     };
 
+    let farmSolids: Rect[] = [], farmKey = "-";
     let raf = 0, last = performance.now();
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
@@ -332,6 +333,14 @@ export default function World2D(props: Props) {
       const t = now / 1000;
       const p = live.current;
       const me = p.me;
+
+      // Farms change as farmers join, so their solid pieces are rebuilt when the set of claimed farms does.
+      const claimedKey = [...new Set(p.players.map((pl) => pl.farm))].sort().join(",");
+      if (claimedKey !== farmKey) {
+        farmKey = claimedKey;
+        const claimed = new Set(p.players.map((pl) => pl.farm));
+        farmSolids = Array.from({ length: 8 }, (_, f) => farmRects(f, claimed.has(f))).flat();
+      }
 
       // ---------- movement ----------
       let moving = false;
@@ -355,7 +364,7 @@ export default function World2D(props: Props) {
           const step = SPEED * dt;
           const nx = pos.x + dx * step, nz = pos.z + dz * step;
           const before = { ...pos };
-          const stop = (x: number, z: number) => (inside ? blockedInside(inside, x, z) : blocked(x, z, solids));
+          const stop = (x: number, z: number) => (inside ? blockedInside(inside, x, z) : blocked(x, z, solids, farmSolids));
           if (!stop(nx, pos.z)) pos.x = nx;
           if (!stop(pos.x, nz)) pos.z = nz;
           moving = Math.hypot(pos.x - before.x, pos.z - before.z) > step * 0.2;
