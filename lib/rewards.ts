@@ -17,6 +17,7 @@ export type Rewards = {
   redemptions: Redemption[];
   firstPlant?: boolean;
   fish?: import("./fishing").FishLog; // pond catches and today's fishing acorns
+  minigames?: import("./minigames").MinigameLog; // balloons and bug catching
 };
 
 export const DAILY_CAP = 300;

@@ -33,6 +33,8 @@ export type Near =
   | { kind: "claim"; tileId: string; label: string }
   | { kind: "exit"; label: string }
   | { kind: "fish"; label: string }
+  | { kind: "balloons"; label: string }
+  | { kind: "bugs"; label: string }
   | null;
 export type WorldApi = { enter?: (buildingId: string) => void; exit?: () => void; home?: () => void };
 export type Emote = { clip: "Cheer" | "Interact"; at: number } | null;
@@ -760,6 +762,9 @@ export default function World2D(props: Props) {
       if (Math.hypot(pos.x - ELDER_POS[0], pos.z - (ELDER_POS[2] + 1.6)) < REACH + 0.3) { id = "elder"; best = { kind: "elder", label: "Talk to Ruth, the Reviewer" }; }
       // the end of the pond dock is a fishing spot
       if (pos.x > -13.6 && pos.x < -11.4 && pos.z < -14.6 && pos.z > -17.4) { id = "fish"; best = { kind: "fish", label: "Go fishing" }; }
+      // the north bluff lookout: slingshot balloons; the east meadow: bug catching
+      if (Math.hypot(pos.x + 4.6, pos.z + 25.8) < 2.2) { id = "balloons"; best = { kind: "balloons", label: "Shoot gift balloons" }; }
+      if (Math.hypot(pos.x - 27.5, pos.z - 26) < 3) { id = "bugs"; best = { kind: "bugs", label: "Catch bugs" }; }
       const [mx, , mz] = mailboxPosition(me.farm);
       if (p.myGiftCount > 0 && Math.hypot(pos.x - mx, pos.z - mz) < REACH) { id = "mailbox"; best = { kind: "mailbox", label: "Open your letter" }; }
       if (id !== nearKey) { nearKey = id; p.onNear(best); }

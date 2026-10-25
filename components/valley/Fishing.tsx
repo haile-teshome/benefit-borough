@@ -55,18 +55,19 @@ export function Fishing({ pid, onClose, onRewards }: { pid: string; onClose: () 
 
   useEffect(() => { void fetch(`/api/fishing?pid=${encodeURIComponent(pid)}`).then((r) => r.json()).then((j) => setJournal(j.journal)).catch(() => {}); }, [pid]);
 
+  const rewardsCb = useRef(onRewards); rewardsCb.current = onRewards; // a new callback must not restart the game loop
   const finish = useCallback(async (caught: boolean, note: string) => {
     go("result");
     try {
       const res = await fetch("/api/fishing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pid, action: "land", caught }) });
       const j = (await res.json()) as { fish?: Fish; acorns?: number; first?: boolean; rewards?: Rewards; journal?: Journal; error?: string };
-      if (j.rewards) onRewards(j.rewards);
+      if (j.rewards) rewardsCb.current(j.rewards);
       view.current.landed = { caught: caught && !j.error, at: performance.now(), colors: j.fish?.colors, boot: j.fish?.id === "boot" };
       if (j.journal) setJournal(j.journal);
       setResult({ fish: j.fish, acorns: j.acorns ?? 0, first: Boolean(j.first), caught: caught && !j.error, note: j.error ? "The line snapped. Try again." : note });
       if (caught && !j.error) sound.coins(); else sound.refuse();
     } catch { setResult({ acorns: 0, first: false, caught: false, note: "The line snapped. Try again." }); }
-  }, [pid, onRewards]);
+  }, [pid]);
 
   const castLine = useCallback(async () => {
     const s = g.current;

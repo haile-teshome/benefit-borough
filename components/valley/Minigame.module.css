@@ -1,0 +1,22 @@
+/* Extra pieces for the first-person minigames (the frame, panels and journal come from Fishing.module.css). */
+.cross { position: absolute; width: 34px; height: 34px; margin: -17px 0 0 -17px; pointer-events: none; z-index: 3; }
+.cross::before, .cross::after { content: ""; position: absolute; background: #fffaf0; box-shadow: 0 0 0 2px #3b2412; }
+.cross::before { left: 15px; top: 0; width: 4px; height: 34px; }
+.cross::after { top: 15px; left: 0; height: 4px; width: 34px; }
+.cross.hot::before, .cross.hot::after { background: #ffd23f; }
+
+.hud { position: absolute; left: 20px; top: 70px; display: grid; gap: 8px; z-index: 2; }
+.pill { font: 700 15px var(--read); padding: 6px 12px; background: var(--parchment); color: var(--ink); box-shadow: 0 0 0 3px var(--wood-dark), inset 0 0 0 2px var(--wood-hi); }
+.power { position: absolute; left: 50%; bottom: 150px; transform: translateX(-50%); width: min(320px, 60vw); height: 16px; background: var(--parchment-2); box-shadow: 0 0 0 4px var(--wood-dark); z-index: 2; }
+.power > div { height: 100%; background: linear-gradient(90deg, #3fa66b, #f2c94c 70%, #e2574c); }
+
+.toast { position: absolute; left: 50%; top: 84px; transform: translateX(-50%); z-index: 4; display: flex; gap: 12px; align-items: center; padding: 10px 16px; max-width: min(560px, calc(100vw - 32px)); background: var(--parchment); box-shadow: 0 0 0 4px var(--wood-dark), inset 0 0 0 3px var(--wood-hi), 0 8px 0 rgba(40, 20, 5, .35); animation: drop 0.35s steps(4); }
+.toast b { display: block; font: 700 17px var(--read); }
+.toast span { font-size: 14px; color: var(--ink-2); }
+.toast em { font-style: normal; font: 700 16px var(--read); color: #2f6e46; white-space: nowrap; }
+@keyframes drop { from { transform: translate(-50%, -20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+
+.list { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; max-height: 40vh; overflow: auto; }
+.list li { display: flex; justify-content: space-between; gap: 10px; font-size: 15px; padding: 4px 8px; background: var(--parchment-2); }
+.list li em { font-style: normal; font-weight: 700; color: #2f6e46; white-space: nowrap; }
+.keys { font-size: 13px; color: var(--ink-2); text-align: center; margin: 0; }

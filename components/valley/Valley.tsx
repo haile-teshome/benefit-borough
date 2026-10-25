@@ -19,6 +19,8 @@ import { TalkBox } from "./Talk";
 import { Library } from "./Library";
 import { Almanac } from "./Almanac";
 import { Fishing } from "./Fishing";
+import { Balloons } from "./Balloons";
+import { Bugs } from "./Bugs";
 import { FindingsReview, type LateFindings } from "./Findings";
 import { Claims } from "./Claims";
 import { Checkin } from "./Checkin";
@@ -116,6 +118,8 @@ type Modal =
   | { kind: "almanac" }
   | { kind: "fishing" }
   | { kind: "findings" }
+  | { kind: "balloons" }
+  | { kind: "bugs" }
   | { kind: "claims" }
   | { kind: "checkin" }
   | { kind: "exchange" }
@@ -477,6 +481,8 @@ function Valley() {
     if (near.kind === "elder") { setModal({ kind: "elder", step: "hello" }); void speak("I audit every harvest in this burrow. Show me what you want to buy with your FSA."); }
     if (near.kind === "mailbox") void openGifts();
     if (near.kind === "fish") setModal({ kind: "fishing" });
+    if (near.kind === "balloons") setModal({ kind: "balloons" });
+    if (near.kind === "bugs") setModal({ kind: "bugs" });
     if (near.kind === "place") worldApi.enter?.(near.id);
     if (near.kind === "exit") worldApi.exit?.();
     if (near.kind === "claim") setModal({ kind: "crop", tileId: near.tileId });
@@ -658,6 +664,8 @@ function Valley() {
       {modal?.kind === "exchange" && <Exchange pid={pid} rewards={rewards} tango={Boolean(integrations.tango)} onRewards={setRewards} onClose={() => setModal(null)}
         onWear={(color) => { if (conn && me) void conn.reducers.setProfile({ name: me.name, color, avatar: me.avatar }); setToast("Looking sharp."); setTimeout(() => setToast(""), 3000); }} />}
       {modal?.kind === "fishing" && <Fishing pid={pid} onClose={() => setModal(null)} onRewards={setRewards} />}
+      {modal?.kind === "balloons" && <Balloons pid={pid} onClose={() => setModal(null)} onRewards={setRewards} />}
+      {modal?.kind === "bugs" && <Bugs pid={pid} onClose={() => setModal(null)} onRewards={setRewards} />}
       {modal?.kind === "almanac" && <Almanac state={state} players={players} myPid={pid} live={Boolean(convex)} onClose={() => setModal(null)} />}
       {modal?.kind === "library" && <Library pid={pid} onPlanted={libraryPlanted} onClose={() => setModal(null)} />}
       {modal?.kind === "record" && <RuthRecord state={state} pid={pid} integrations={integrations} live={Boolean(convex)} onClose={() => setModal(null)} />}
