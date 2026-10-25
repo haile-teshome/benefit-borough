@@ -215,12 +215,44 @@ export default function World2D(props: Props) {
     // ---------- villagers ----------
     const folk = new Map(NPCS.map((n) => [n.id, { x: n.x, z: n.z, dir: "down" as Dir, walk: 0, seg: 0, pauseUntil: 0, idleAt: performance.now() + 2000 + Math.random() * 6000 }]));
     const icons = new Map<string, Sprite>();
+    const armColors = new Map<string, [string, string]>();
+    const confetti: { x: number; z: number; y: number; vx: number; vz: number; vy: number; c: string; born: number; spin: number }[] = [];
     const bubbles = new Map<string, { text: string; until: number }>();
     let chat: { lines: [string, string][]; i: number; next: number } | null = null;
     let nextChat = performance.now() + 2500;
 
+    // Trailer finale (dev only): every villager, Ruth included, hurries into the town square,
+    // lines up in front of the fountain, and on the beat everyone jumps and punches the air.
+    const PUNCH_AT = 4800;
+    type Gather = { sx: number; sz: number; tx: number; tz: number };
+    let finale: { at: number; who: Map<string, Gather>; confetti: boolean } | null = null;
+    const startFinale = () => {
+      // two gentle arcs in front of the fountain, Ruth front and center
+      const spots: [number, number][] = [];
+      for (let i = 0; i < 10; i++) { const x = -5.85 + i * 1.3; spots.push([x, 3.3 - 0.05 * x * x]); }
+      for (let i = 0; i < 9; i++) { const x = -5.2 + i * 1.3; spots.push([x, 5.1 - 0.04 * x * x]); }
+      const order = NPCS.map((n) => n.id);
+      order.splice(14, 0, "ruth");
+      const who = new Map<string, Gather>();
+      order.forEach((id, i) => {
+        const [tx, tz] = spots[i];
+        const a = Math.atan2(tz - 4, tx) + (Math.random() - 0.5) * 0.4, r = 11 + Math.random() * 3;
+        who.set(id, { sx: tx + Math.cos(a) * r, sz: 4 + Math.sin(a) * r * 0.75, tx, tz });
+      });
+      finale = { at: performance.now(), who, confetti: false };
+      chat = null; nextChat = Infinity; bubbles.clear();
+    };
+    // how high a gatherer is lifted and how far their arm is raised (0..1) right now
+    const cheer = (i: number, now: number) => {
+      if (!finale) return { lift: 0, arm: 0 };
+      const local = now - finale.at - PUNCH_AT - i * 35;
+      if (local < 0) return { lift: 0, arm: 0 };
+      if (local < 1950) { const ph = (local % 650) / 650; return { lift: Math.round(Math.sin(ph * Math.PI) * 9), arm: ph < 0.12 ? ph / 0.12 : ph > 0.85 ? 0.5 : 1 }; }
+      return { lift: Math.round(Math.max(0, Math.sin((local - 1950) / 260)) * 2), arm: 1 };
+    };
+
     // Dev hooks so tests can drive the farmer without synthesizing clicks.
-    if (process.env.NODE_ENV !== "production") Object.assign(window, { __walkTo: (x: number, z: number) => { target = { x, z }; }, __pos: () => pos && { ...pos }, __tp: (x: number, z: number) => { pos = { x, z }; cam = { x, z }; target = null; } });
+    if (process.env.NODE_ENV !== "production") Object.assign(window, { __walkTo: (x: number, z: number) => { target = { x, z }; }, __pos: () => pos && { ...pos }, __tp: (x: number, z: number) => { pos = { x, z }; cam = { x, z }; target = null; }, __finale: startFinale });
 
     const onDown = (e: PointerEvent) => {
       const p = live.current;
@@ -405,6 +437,7 @@ export default function World2D(props: Props) {
         const k = 1 - Math.pow(0.002, dt);
         cam.x += (pos.x - cam.x) * k; cam.z += (pos.z - 0.6 - cam.z) * k;
       }
+      if (finale) cam = { x: 0, z: 3.0 };
       camLeft = Math.round(Math.max(BOUNDS.x0 * T, Math.min(BOUNDS.x1 * T - cw, cam.x * T - cw / 2)));
       camTop = Math.round(Math.max(BOUNDS.z0 * T, Math.min(BOUNDS.z1 * T - ch, cam.z * T - ch / 2)));
 
@@ -484,10 +517,42 @@ export default function World2D(props: Props) {
         const fr = animalFrames(species, outfit)[dir];
         blit(fr[walk > 0 ? Math.floor(walk * 8) % 4 : 0], x, z, lift);
       };
+      // a raised arm with a fist, coloured from the character's own sprite
+      const armUp = (species: string, outfit: Outfit, x: number, z: number, lift: number, up: number) => {
+        if (up <= 0) return;
+        const s = animalFrames(species, outfit).down[0];
+        const [sleeve, fur] = memo(armColors, species + JSON.stringify(outfit), () => {
+          const c = s.img.getContext("2d")!;
+          const at = (fx: number, fy: number) => { const d = c.getImageData(Math.floor(s.w * fx), Math.floor(s.h * fy), 1, 1).data; return d[3] > 200 ? `rgb(${d[0]},${d[1]},${d[2]})` : ""; };
+          return [at(0.5, 0.72) || "#C98A4A", at(0.3, 0.32) || at(0.5, 0.2) || "#C98A4A"];
+        });
+        const sx = Math.round(x * T - camLeft - s.ax), sy = Math.round(z * T - camTop - s.ay - lift);
+        // a short arm from the shoulder, the fist just above the ear line
+        const ax = sx + Math.round(s.w * 0.74), base = sy + Math.round(s.h * 0.62);
+        const top = Math.round(base - 8 * up);
+        ctx.fillStyle = "#2B1A10"; ctx.fillRect(ax - 1, top, 4, base - top + 1);
+        ctx.fillStyle = sleeve; ctx.fillRect(ax, top + 1, 2, base - top - 1);
+        ctx.fillStyle = "#2B1A10"; ctx.fillRect(ax - 2, top - 5, 6, 6);
+        ctx.fillStyle = fur; ctx.fillRect(ax - 1, top - 4, 4, 4);
+        ctx.fillStyle = "#FFFFFF80"; ctx.fillRect(ax - 1, top - 4, 2, 1);
+      };
+      const gatherAt = (g: Gather, now: number) => {
+        const k = Math.min(1, (now - finale!.at) / 3400), e = 1 - Math.pow(1 - k, 2.2);
+        return { x: g.sx + (g.tx - g.sx) * e, z: g.sz + (g.tz - g.sz) * e, done: k >= 1 };
+      };
       const hop = (e: Emote | undefined) => (e && e.clip === "Cheer" && now - e.at < 1200 ? Math.round(Math.abs(Math.sin(((now - e.at) / 1000) * Math.PI * 3)) * 6) : 0);
       // Villagers: wanderers walk their routes, everyone pauses to chat when a conversation starts.
       for (const n of NPCS) {
         const f = folk.get(n.id)!;
+        const g = finale?.who.get(n.id);
+        if (g) {
+          const at = gatherAt(g, now);
+          f.dir = at.done ? "down" : dirOf(at.x - f.x, at.z - f.z, f.dir); f.walk = at.done ? 0 : f.walk + dt;
+          f.x = at.x; f.z = at.z;
+          const c = cheer(NPCS.indexOf(n), now);
+          list.push({ z: f.z, sh: [f.x, f.z, 6], draw: () => { drawAnimal(n.species, n.outfit as Outfit, f.x, f.z, f.dir, f.walk, c.lift); armUp(n.species, n.outfit as Outfit, f.x, f.z, c.lift, c.arm); } });
+          continue;
+        }
         if (n.route && now > f.pauseUntil) {
           const [tx, tz] = n.route[f.seg % n.route.length];
           const dx = tx - f.x, dz = tz - f.z, d = Math.hypot(dx, dz);
@@ -541,8 +606,14 @@ export default function World2D(props: Props) {
         const age = m ? now - m.at : 1e9;
         const shake = m?.kind === "reject" && age < 700 ? Math.round(Math.sin(age / 30) * 1.5) / T : 0;
         const lift = m?.kind === "approve" && age < 1000 ? Math.round(Math.abs(Math.sin((age / 1000) * Math.PI * 3)) * 5) : 0;
+        const g = finale?.who.get("ruth");
+        if (g) {
+          const at = gatherAt(g, now), c = cheer(NPCS.length, now), ro = { glasses: true, scarf: "#6A4C93" };
+          const dir = at.done ? "down" : dirOf(g.tx - g.sx, g.tz - g.sz, "down");
+          list.push({ z: at.z, sh: [at.x, at.z, 6], draw: () => { drawAnimal("alpaca", ro, at.x, at.z, dir, at.done ? 0 : now / 1000, c.lift); armUp("alpaca", ro, at.x, at.z, c.lift, c.arm); } });
+        }
         const [ex, , ez] = ELDER_POS;
-        list.push({ z: ez, sh: [ex, ez, 6], draw: () => {
+        if (!g) list.push({ z: ez, sh: [ex, ez, 6], draw: () => {
           drawAnimal("alpaca", { glasses: true, scarf: "#6A4C93" }, ex + shake, ez, "down", 0, lift);
           if (m?.kind === "thinking") blit(art.bubbles["..."], ex + 0.4, ez, 30);
           if (m?.kind === "reject" && age < 2500) blit(art.bubbles.x, ex + 0.4, ez, 30);
@@ -553,7 +624,7 @@ export default function World2D(props: Props) {
       for (const pl of p.players) {
         const h = hex(pl.identity);
         if (h === p.myHex) continue;
-        if (!pl.online) continue;
+        if (!pl.online || finale) continue;
         const r = memo(remotes, h, () => ({ x: pl.x, z: pl.z, dir: "down" as Dir, walk: 0 }));
         const dx = pl.x - r.x, dz = pl.z - r.z, d = Math.hypot(dx, dz);
         const k = 1 - Math.pow(0.0005, dt);
@@ -564,7 +635,7 @@ export default function World2D(props: Props) {
         const e = p.emotes[h];
         list.push({ z: r.z, sh: [r.x, r.z, 6], draw: () => drawAnimal(speciesOf(pl.avatar), { scarf: pl.color }, r.x, r.z, r.dir, r.walk, hop(e)) });
       }
-      if (me && pos) {
+      if (me && pos && !finale) {
         const here = pos;
         setAnchor(`player:${p.myHex}`, here.x, 1.75, here.z);
         const e = p.emotes[p.myHex];
@@ -596,6 +667,23 @@ export default function World2D(props: Props) {
       for (const d of list) if (d.sh) shadow(d.sh[0], d.sh[1], d.sh[2]);
       list.sort((a, b) => a.z - b.z);
       for (const d of list) d.draw();
+      if (finale && !finale.confetti && now - finale.at > PUNCH_AT) {
+        finale.confetti = true;
+        for (let i = 0; i < 260; i++) {
+          const a = Math.random() * Math.PI * 2, v = 2 + Math.random() * 5;
+          confetti.push({ x: (Math.random() - 0.5) * 1.2, z: 1.0, y: 2.6, vx: Math.cos(a) * v * 0.9, vz: Math.sin(a) * v * 0.35, vy: 5 + Math.random() * 6,
+            c: ["#FFD23F", "#E2574C", "#4FA3E3", "#7BC86C", "#E07BB0", "#FFFFFF", "#8E5BD0"][i % 7], born: now, spin: Math.random() * 6 });
+        }
+      }
+      for (let i = confetti.length - 1; i >= 0; i--) {
+        const c = confetti[i], age = (now - c.born) / 1000;
+        if (age > 6) { confetti.splice(i, 1); continue; }
+        // a floaty fall: gravity with lots of drag and a sideways flutter
+        const fall = Math.max(-1.6, c.vy - 9 * age);
+        c.x += (c.vx * Math.exp(-age * 1.6) + Math.sin(age * 5 + c.spin) * 0.25) * dt; c.z += c.vz * Math.exp(-age * 1.6) * dt;
+        c.y = Math.max(0, c.y + fall * dt);
+        ctx.fillStyle = c.c; ctx.fillRect(Math.round(c.x * T - camLeft), Math.round((c.z - c.y) * T - camTop), Math.sin(age * 9 + c.spin) > 0 ? 3 : 1, 3);
+      }
 
       const star = (sx: number, sy: number, c: string, big: boolean) => {
         ctx.fillStyle = c;
