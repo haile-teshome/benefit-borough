@@ -42,7 +42,7 @@ export function Claims({ state, pid, onOpen, onCheckin, onClose }: { state: AppS
       <div className="ev-panel ev-dialogue ev-claims-panel">
         <div className="ev-speaker">My claims</div>
         <div className="ev-claims-summary">
-          <div><b>{usd(openValue)}</b><span>open across {open.length} claims</span></div>
+          <div><b>{usd(openValue)}</b><span>open across {open.filter((t) => t.atStake > 0).length} claims{open.some((t) => !t.atStake) ? ` (+${open.filter((t) => !t.atStake).length} to know about)` : ""}</span></div>
           <div className={soon.length ? "warn" : ""}><b>{soon.length}</b><span>due in the next 14 days</span></div>
           <div className="ok"><b>{usd(rescued)}</b><span>rescued so far</span></div>
         </div>

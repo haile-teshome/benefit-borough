@@ -356,7 +356,8 @@ function Valley() {
     await plant(s);
     sound.sprout();
     setModal(null);
-    setToast(`${found} crop${found === 1 ? "" : "s"} planted from your plans. Walk to your farm, or visit the shops.`);
+    worldApi.home?.();
+    setToast(`${found} crop${found === 1 ? "" : "s"} planted. This is your farm: walk up to a crop and press E, or press L for the list.`);
     setTimeout(() => setToast(""), 6000);
   }
 
@@ -487,6 +488,7 @@ function Valley() {
       if (title) return;
       if (e.key === "m" || e.key === "M") toggleMute();
       if ((e.key === "l" || e.key === "L") && !modal) setModal({ kind: "claims" });
+      if ((e.key === "h" || e.key === "H") && !modal) worldApi.home?.();
       if (e.key === "e" || e.key === "E") interact();
       if (e.key === "Escape") setModal((m) => (m?.kind === "run" && !m.result ? m : null));
       if (e.key === "Enter" && !modal) { e.preventDefault(); setChatOpen(true); }
@@ -558,7 +560,7 @@ function Valley() {
       {title ? (
         <Title onPlay={play} connected={isActive} />
       ) : (
-        <Hud inside={Boolean(inside)} me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} onLibrary={() => setModal({ kind: "library" })} onClaims={() => setModal({ kind: "claims" })} onExchange={() => setModal({ kind: "exchange" })} acorns={rewards.acorns} streak={rewards.streak}
+        <Hud inside={Boolean(inside)} me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} onLibrary={() => setModal({ kind: "library" })} onClaims={() => setModal({ kind: "claims" })} onHome={() => worldApi.home?.()} onExchange={() => setModal({ kind: "exchange" })} acorns={rewards.acorns} streak={rewards.streak}
           onOutbox={() => setModal({ kind: "outbox" })} onAutopilot={() => setModal({ kind: "autopilot" })} onVoice={() => setModal({ kind: "voice" })} onHousehold={convex ? () => setModal({ kind: "household" }) : undefined} onBazaar={() => setModal({ kind: "bazaar" })} onCheckout={() => setModal({ kind: "checkout" })} onSwap={() => setModal({ kind: "swap" })} onTerms={() => setModal({ kind: "terms" })} />
       )}
 
@@ -568,7 +570,7 @@ function Valley() {
       )}
       {toast && <div className="ev-toast">{toast}</div>}
       {error && <div className="ev-toast bad" onClick={() => setError("")}>{error}</div>}
-      {!title && <div className="ev-help">{inside ? `Inside ${BUILDINGS.find((b) => b.id === inside)?.place?.name} · walk to the door mat to leave` : "WASD or click to walk · E to interact or enter shops · L for your list · Enter to chat · M to mute"}</div>}
+      {!title && <div className="ev-help">{inside ? `Inside ${BUILDINGS.find((b) => b.id === inside)?.place?.name} · walk to the door mat to leave` : "WASD or click to walk · E to interact · L your claims · H your farm · Enter to chat · M mute"}</div>}
 
       {chatOpen && (
         <form className="ev-chat" onSubmit={(e) => { e.preventDefault(); const v = (e.currentTarget.elements.namedItem("t") as HTMLInputElement).value; if (v.trim() && conn) void conn.reducers.say({ text: v }); setChatOpen(false); }}>
@@ -815,7 +817,7 @@ function UploadButton({ busy, onUpload, className, label }: { busy: boolean; onU
   );
 }
 
-function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord, onLibrary, onClaims, onExchange, acorns, streak, onOutbox, onCheckout, onSwap, onTerms, onAutopilot, onVoice, onHousehold, onBazaar }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean; onLibrary: () => void; onClaims: () => void; onExchange: () => void; acorns: number; streak: number; onOutbox: () => void; onCheckout: () => void; onSwap: () => void; onTerms: () => void; onAutopilot: () => void; onVoice: () => void; onHousehold?: () => void; onBazaar: () => void }) {
+function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord, onLibrary, onClaims, onHome, onExchange, acorns, streak, onOutbox, onCheckout, onSwap, onTerms, onAutopilot, onVoice, onHousehold, onBazaar }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean; onLibrary: () => void; onClaims: () => void; onHome: () => void; onExchange: () => void; acorns: number; streak: number; onOutbox: () => void; onCheckout: () => void; onSwap: () => void; onTerms: () => void; onAutopilot: () => void; onVoice: () => void; onHousehold?: () => void; onBazaar: () => void }) {
   const waiting = (state?.packets ?? []).filter((p) => p.status !== "submitted");
   const clock = useClock();
   const [open, setOpen] = useState(false);
@@ -861,6 +863,7 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
           <section>
             <h4>Your claims</h4>
             <button className="ev-link" onClick={onClaims}>My claims · L</button>
+            <button className="ev-link" onClick={onHome}>Go to my farm · H</button>
             <button className="ev-link" onClick={onOutbox}>Ruth's outbox{waiting.length ? ` (${waiting.length - needYou} ready, ${needYou} need you)` : ""}</button>
             <button className="ev-link" onClick={onAutopilot}>Ruth's Autopilot {state?.autopilot?.mandate.on ? `(on, ${state.autopilot.mandate.hour % 12 || 12}${state.autopilot.mandate.hour < 12 ? "am" : "pm"})` : "(off)"}</button>
             <button className="ev-link" onClick={onVoice}>Talk to Ruth (voice check-in)</button>
@@ -1033,7 +1036,7 @@ function CropCard({ tile, state, pid, onState, onAnswer, onClose, onHarvest, onP
       <p className="ev-lead">{tile.headline}</p>
       <ul className="ev-options">
         {tile.candidates.map((c) => (
-          <li key={c.id} className={c.id === tile.recommendation ? "rec" : ""}><span>{c.label}</span><b>{usd(c.costToUser)}</b></li>
+          <li key={c.id} className={c.id === tile.recommendation ? "rec" : ""}><span>{c.label}</span><b title="What this option costs you">{c.costToUser ? `you pay ${usd(c.costToUser)}` : "free"}</b></li>
         ))}
       </ul>
       <p className="ev-sub">If you do nothing: {tile.doNothing}</p>

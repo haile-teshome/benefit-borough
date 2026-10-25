@@ -107,13 +107,30 @@ export const onConnect = spacetimedb.clientConnected((ctx) => {
   if (existing) ctx.db.player.identity.update({ ...existing, online: true });
 });
 
+// The valley has eight farms. A newcomer gets one nobody online is using (the least crowded if
+// the valley is full), so no farm ever lands off the edge of the map.
+const FARMS = 8;
+function freeFarm(ctx: Ctx, except?: Ctx["sender"]) {
+  const players = [...ctx.db.player.iter()].filter((p) => !except || p.identity.toHexString() !== except.toHexString());
+  const load = (f: number) => players.filter((p) => p.farm === f).reduce((n, p) => n + (p.online ? 100 : 1), 0);
+  let best = 0;
+  for (let f = 1; f < FARMS; f++) if (load(f) < load(best)) best = f;
+  return best;
+}
+
 export const join = spacetimedb.reducer((ctx) => {
   const existing = ctx.db.player.identity.find(ctx.sender);
   if (existing) {
+    // Farmers who joined when farms were handed out without a limit move onto a real farm.
+    if (existing.farm >= FARMS) {
+      const farm = freeFarm(ctx, ctx.sender), o = farmOrigin(farm);
+      ctx.db.player.identity.update({ ...existing, farm, x: o.x, z: o.z, online: true });
+      return;
+    }
     if (!existing.online) ctx.db.player.identity.update({ ...existing, online: true });
     return;
   }
-  const farm = [...ctx.db.player.iter()].length;
+  const farm = freeFarm(ctx);
   const o = farmOrigin(farm);
   ctx.db.player.insert({
     identity: ctx.sender,

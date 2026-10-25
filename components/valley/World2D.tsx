@@ -34,7 +34,7 @@ export type Near =
   | { kind: "exit"; label: string }
   | { kind: "fish"; label: string }
   | null;
-export type WorldApi = { enter?: (buildingId: string) => void; exit?: () => void };
+export type WorldApi = { enter?: (buildingId: string) => void; exit?: () => void; home?: () => void };
 export type Emote = { clip: "Cheer" | "Interact"; at: number } | null;
 export type Mood = { kind: "approve" | "reject" | "thinking"; at: number } | null;
 export type Burst = { id: number; at: [number, number, number]; amount: number; born: number };
@@ -185,6 +185,17 @@ export default function World2D(props: Props) {
       myDir = "up"; target = null;
       sound.click();
       live.current.onScene(id);
+    };
+    // Walk me home: put the farmer on the lane in front of their own farm.
+    live.current.api.home = () => {
+      const me = live.current.me;
+      if (!me) return;
+      if (inside) live.current.api.exit?.();
+      const [mx, , mz] = mailboxPosition(me.farm);
+      pos = { x: mx, z: mz + 1.2 };
+      cam = { ...pos };
+      myDir = "down"; target = null;
+      nearKey = "";
     };
     live.current.api.exit = () => {
       if (!inside) return;

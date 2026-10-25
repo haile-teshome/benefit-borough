@@ -44,7 +44,7 @@ export function PacketReview({ pid, packet, onState, onSubmit, onClose }: {
         <div className="ev-speaker">{packet.form}</div>
         <div className={`ev-body ${styles.body}`}>
           <div className={styles.summary}>
-            <div><b>${packet.amount.toFixed(2)}</b><span>claimed</span></div>
+            <div><b>${packet.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b><span>claimed</span></div>
             <div><b>{filled}/{packet.fields.length}</b><span>fields filled by Ruth</span></div>
             <div><b>~{packet.minutes.you} min</b><span>for you, instead of ~{packet.minutes.without}</span></div>
           </div>
@@ -142,7 +142,7 @@ export function Outbox({ state, onOpen, onPaid, onClose }: { state: AppState; on
               <li key={p.id}>
                 <button onClick={() => onOpen(p)}>
                   <span><b>{p.form}</b><em>{p.provider} · {p.preparedBy === "autopilot" ? "prepared overnight" : "prepared by Ruth"}</em></span>
-                  <strong>${p.amount.toFixed(2)}</strong>
+                  <strong>${p.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                   <i className={p.status === "submitted" ? styles.ok : p.status === "ready" ? styles.ready : p.status === "waiting" ? "" : styles.issue}>{p.status === "submitted" ? "Done" : p.status === "ready" ? "Ready for you" : p.status === "waiting" ? `Filed, waiting on ${p.provider}` : `Needs you (${p.check.issues.length})`}</i>
                 </button>
                 {p.status === "waiting" && <button className="ev-btn" style={{ marginTop: 4 }} onClick={() => onPaid(p)}>Money arrived: count it</button>}

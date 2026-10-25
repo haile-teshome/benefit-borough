@@ -72,7 +72,7 @@ export async function searchStructured<S extends z.ZodType>(opts: {
       return { data: (res.parsed_output as z.infer<S> | null) ?? null, searches };
     }
   } catch (err) {
-    console.warn("[claude] search failed", err instanceof Anthropic.APIError ? err.status : err);
+    console.warn("[claude] search failed", err instanceof Anthropic.APIError ? `${err.status} ${err.message.slice(0, 300)}` : err);
   }
   return { data: null, searches };
 }

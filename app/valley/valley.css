@@ -451,3 +451,19 @@ body:has(.ev-poster) nextjs-portal { display: none !important; }
 .ev-menu-btn[hidden] { display: none; }
 @media (max-width: 700px) { .ev-topright .ev-stat .ev-title { font-size: 18px; } .ev-menu { top: 84px; } }
 
+
+/* Create your farmer: a step-by-step profile; the body scrolls, the buttons always stay visible. */
+.ev-onb { width: min(760px, 100%); max-height: min(86vh, 760px); }
+.ev-onb-body { overflow: auto; min-height: 0; flex: 1; display: grid; gap: 10px; align-content: start; padding-right: 4px; }
+.ev-onb-steps { list-style: none; margin: 0 0 10px; padding: 0; display: flex; gap: 6px; flex-wrap: wrap; }
+.ev-onb-steps li { font: 700 12px var(--read); padding: 3px 10px; background: var(--parchment-2); color: #8a6a4a; box-shadow: inset 0 0 0 2px #d9c7a4; }
+.ev-onb-steps li.done { color: #2f6e22; }
+.ev-onb-steps li.on { background: var(--wood-dark); color: var(--parchment); box-shadow: none; }
+.ev-onb .ev-lib-q input:not([type=checkbox]):not([type=file]), .ev-onb .ev-lib-q select { font: 400 16px var(--read); padding: 7px 9px; border: 3px solid var(--wood-dark); background: #fff8e2; color: var(--ink); max-width: 100%; }
+.ev-onb-chips { flex-wrap: wrap; }
+.ev-onb-found { background: #eef5dc; padding: 10px 12px; box-shadow: inset 0 0 0 2px #9cc27a; display: grid; gap: 6px; }
+.ev-onb-found ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.ev-onb-found li { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; font-size: 15px; }
+.ev-onb-found li a { font-size: 12.5px; color: #3e6e9e; white-space: nowrap; }
+.ev-onb-file input { font-size: 14px; }
+.ev-onb .ev-lib-list { overflow: visible; flex: none; } /* one scrollbar: the dialog body */

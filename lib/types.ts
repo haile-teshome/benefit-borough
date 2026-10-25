@@ -126,7 +126,7 @@ export type Packet = {
   preparedAt: string; preparedBy: "ruth" | "autopilot"; engine: "claude" | "rules";
   submittedAt?: string; confirmation?: string;
 };
-export type Profile = { fullName?: string; email?: string; phone?: string; address?: string; birthDate?: string; memberId?: string; employeeId?: string; employer?: string };
+export type Profile = { fullName?: string; email?: string; phone?: string; address?: string; birthDate?: string; memberId?: string; employeeId?: string; employer?: string; jobType?: string; insurer?: string; healthPlan?: string; school?: string; homeState?: string };
 
 export type AppState = {
   docs: { id: string; name: string; text: string; meta?: { plan: string; answers: Record<string, unknown> } }[];
