@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Benefit Burrow</title>
+<meta name="description" content="A cozy multiplayer farming town where your expiring benefits grow as crops, and AI agents find the money, fill your claims and shop your perks. Cal Hacks 13.0.">
+<meta property="og:title" content="Benefit Burrow">
+<meta property="og:description" content="$100B+ a year in earned benefits goes unclaimed. AI agents find it, fill your claims and shop your perks.">
+<meta property="og:image" content="media/og.jpg">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%238a4f22'/><rect x='2' y='2' width='12' height='12' fill='%23c9813f'/><text x='8' y='12.5' font-size='11' text-anchor='middle' fill='%23f7e6b8' font-family='monospace' font-weight='bold'>B</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Jersey+10&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --wood-dark: #4a2a12; --wood: #8a4f22; --wood-light: #c9813f; --wood-hi: #e3a35a;
+    --parchment: #f7e6b8; --parchment-2: #efd59a; --ink: #3b2412; --ink-2: #6b4a2a;
+    --grass: #5e9e3f; --grass-dark: #3b5e2b; --gold: #ffd23f; --leaf: #b9e57a;
+    --pixel: "Jersey 10", ui-monospace, monospace;
+    --read: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; color: var(--ink); font: 400 17px/1.55 var(--read);
+    background: var(--grass);
+    background-image: radial-gradient(#ffffff26 1px, transparent 1.6px), radial-gradient(#2f5a2033 1px, transparent 1.6px);
+    background-size: 24px 24px, 24px 24px; background-position: 0 0, 12px 12px;
+  }
+  a { color: inherit; }
+  img, video { display: block; max-width: 100%; }
+  .wrap { width: min(1120px, 100% - 32px); margin-inline: auto; }
+
+  /* wooden sign */
+  .sign { position: relative; display: inline-block; padding: 18px 44px 14px; border: 6px solid var(--wood-dark);
+    background: repeating-linear-gradient(180deg, var(--wood-light) 0 26px, var(--wood) 26px 30px);
+    box-shadow: inset 0 0 0 4px var(--wood-hi), 0 10px 0 rgba(40, 20, 5, .4); }
+  .sign span { display: block; text-align: center; font: 400 clamp(56px, 11vw, 112px)/0.9 var(--pixel); letter-spacing: 3px; color: var(--parchment); text-shadow: 5px 5px 0 var(--wood-dark); }
+  .sign span + span { color: var(--leaf); }
+  .posts { display: flex; justify-content: space-between; width: 62%; margin: -4px auto 0; height: 46px; }
+  .posts i { width: 16px; background: var(--wood); border: 4px solid var(--wood-dark); border-top: 0; }
+
+  /* parchment panels */
+  .panel { background: var(--parchment); border: 5px solid var(--wood-dark); box-shadow: inset 0 0 0 4px var(--wood-hi), 0 8px 0 rgba(40, 20, 5, .35); padding: 24px 26px; }
+  .label { display: inline-block; font: 700 14px var(--read); letter-spacing: .08em; text-transform: uppercase; color: var(--parchment); background: var(--wood); border: 3px solid var(--wood-dark); padding: 3px 12px; margin-bottom: 10px; }
+  h2 { font: 400 46px/1 var(--pixel); letter-spacing: 1.5px; margin: 0 0 6px; color: var(--ink); }
+  h3 { font: 700 20px/1.25 var(--read); margin: 0 0 6px; }
+  p { margin: 0 0 10px; }
+
+  /* hero */
+  header.hero { padding: 48px 0 20px; text-align: center; color: #fffaf0; }
+  .outline { text-shadow: -2px -2px 0 var(--ink), 2px -2px 0 var(--ink), -2px 2px 0 var(--ink), 2px 2px 0 var(--ink), 0 4px 0 rgba(43, 26, 12, .45); }
+  .tag { font: 700 clamp(20px, 2.6vw, 30px)/1.3 var(--read); margin: 20px auto 6px; max-width: 900px; }
+  .tag b { color: var(--gold); }
+  .sub { font: 700 clamp(16px, 1.8vw, 20px)/1.4 var(--read); margin: 0 auto 22px; max-width: 760px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 0 0 26px; }
+  .chip { font: 700 15px var(--read); padding: 7px 14px; background: var(--parchment); color: var(--ink); border: 4px solid var(--wood-dark); box-shadow: inset 0 0 0 3px var(--wood-hi); text-shadow: none; }
+  .btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn { display: inline-block; font: 700 17px var(--read); text-decoration: none; padding: 10px 20px; border: 4px solid var(--wood-dark); color: #fffaf0; background: var(--wood-light); box-shadow: inset 0 -4px 0 var(--wood), 0 5px 0 rgba(40, 20, 5, .4); text-shadow: 2px 2px 0 var(--wood-dark); }
+  .btn.green { background: #5fae4a; box-shadow: inset 0 -4px 0 #3b7a30, 0 5px 0 rgba(40, 20, 5, .4); }
+  .btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+  .btn:focus-visible, .shot:focus-visible { outline: 4px solid var(--gold); outline-offset: 3px; }
+
+  .trailer { margin: 26px auto 0; padding: 10px; background: var(--wood-dark); box-shadow: 0 10px 0 rgba(40, 20, 5, .4); }
+  .trailer video { width: 100%; aspect-ratio: 16 / 9; background: #000; }
+
+  section { margin: 46px auto; }
+  .intro { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .stat { text-align: center; }
+  .stat b { display: block; font: 400 54px/1 var(--pixel); color: var(--wood); }
+  .stat span { font-size: 15px; color: var(--ink-2); }
+
+  /* scenario chapters */
+  .chapter { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 22px; align-items: start; }
+  .chapter + .chapter { margin-top: 26px; }
+  .chapter .text ol { margin: 6px 0 0; padding-left: 20px; }
+  .chapter .text li { margin-bottom: 4px; }
+  .gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .gallery.one { grid-template-columns: 1fr; }
+  .shot { margin: 0; padding: 0; border: 4px solid var(--wood-dark); background: var(--wood-dark); cursor: zoom-in; display: grid; text-align: left; }
+  .shot img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+  .shot figcaption, .shot span { display: block; font: 700 14px/1.35 var(--read); color: var(--parchment); padding: 7px 10px; background: var(--wood-dark); }
+
+  .tech { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin-top: 10px; }
+  .tech div { background: var(--parchment-2); padding: 10px 12px; box-shadow: inset 0 0 0 2px #d9b874; }
+  .tech b { display: block; }
+  .tech span { font-size: 15px; color: var(--ink-2); }
+
+  footer { text-align: center; padding: 26px 0 50px; color: #fffaf0; font: 700 16px var(--read); }
+
+  dialog { border: 6px solid var(--wood-dark); padding: 0; background: var(--wood-dark); max-width: min(1400px, 96vw); }
+  dialog::backdrop { background: rgba(20, 12, 4, .8); }
+  dialog img { max-height: 84vh; width: auto; margin: auto; }
+  dialog p { color: var(--parchment); font: 700 16px var(--read); margin: 0; padding: 10px 14px; }
+  dialog button { position: absolute; top: 8px; right: 8px; font: 700 16px var(--read); background: var(--parchment); border: 3px solid var(--wood-dark); padding: 4px 10px; cursor: pointer; }
+
+  @media (max-width: 820px) {
+    .intro { grid-template-columns: 1fr; }
+    .chapter { grid-template-columns: 1fr; }
+    .gallery { grid-template-columns: 1fr; }
+    .panel { padding: 18px; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .btn:hover { transform: none; } }
+</style>
+</head>
+<body>
+<header class="hero wrap">
+  <div class="sign" role="img" aria-label="Benefit Burrow"><span>Benefit</span><span>Burrow</span></div>
+  <div class="posts" aria-hidden="true"><i></i><i></i></div>
+  <p class="tag outline"><b>$100B+ a year</b> in earned benefits goes unclaimed.</p>
+  <p class="sub outline">A cozy multiplayer farming town where every benefit you're about to lose grows as a crop, and AI agents find the money, fill your claims and shop your perks.</p>
+  <div class="chips"><span class="chip">Track every benefit</span><span class="chip">AI agents shop &amp; fill forms</span><span class="chip">You have the final say</span></div>
+  <div class="btns">
+    <a class="btn green" href="#trailer">▶ Watch the trailer</a>
+    <a class="btn" href="https://github.com/haile-teshome/benefit-burrow">View the code on GitHub</a>
+  </div>
+  <div class="trailer" id="trailer">
+    <video controls preload="metadata" poster="media/poster.jpg" playsinline>
+      <source src="media/trailer.mp4" type="video/mp4">
+      Your browser can't play this video. <a href="media/trailer.mp4">Download the trailer</a>.
+    </video>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="intro" aria-label="At a glance">
+    <div class="panel stat"><b>$100B+</b><span>in earned benefits unclaimed each year in the U.S. (sources in the repo)</span></div>
+    <div class="panel stat"><b>29</b><span>sourced plans: workplace, health, cards, travel and school</span></div>
+    <div class="panel stat"><b>0</b><span>claims sent or purchases made without your approval</span></div>
+  </section>
+
+  <section aria-labelledby="how">
+    <div class="panel">
+      <span class="label">How it works</span>
+      <h2 id="how">A walk through the burrow</h2>
+      <p>Every screenshot below is from one real playthrough: a new farmer who works at Salesforce, studies at UC Berkeley and is insured through Anthem. Click any picture to see it full size.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="ch1">
+    <div class="chapter">
+      <div class="panel text">
+        <span class="label">1 · Create your farmer</span>
+        <h2 id="ch1">Tell Ruth who you are</h2>
+        <p>Instead of picking a persona, you tell the game about your job, health plan, cards and school.</p>
+        <p>While you answer, <b>Ruth</b> (an alpaca in reading glasses and the town's AI reviewer) reads your employer's, insurer's and school's published benefit pages. Every fact she brings back links to its source and quote, and you untick anything that isn't true for you.</p>
+      </div>
+      <div class="gallery">
+        <button class="shot" data-src="shots/01-title.jpg"><img src="shots/01-title.jpg" alt="The Benefit Burrow title screen over the town square" loading="lazy"><span>The title screen</span></button>
+        <button class="shot" data-src="shots/02-create-farmer.jpg"><img src="shots/02-create-farmer.jpg" alt="Create your farmer: avatar, name, job and state" loading="lazy"><span>Create your farmer</span></button>
+        <button class="shot" data-src="shots/03-work.jpg"><img src="shots/03-work.jpg" alt="Employer, salary and workplace accounts" loading="lazy"><span>Your work benefits</span></button>
+        <button class="shot" data-src="shots/05-ruth-findings.jpg"><img src="shots/05-ruth-findings.jpg" alt="Ruth's findings with source links for each fact" loading="lazy"><span>Ruth's findings, each with its source</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="ch2">
+    <div class="chapter">
+      <div class="panel text">
+        <span class="label">2 · Your farm</span>
+        <h2 id="ch2">Every benefit grows as a crop</h2>
+        <p>Planting takes a few seconds. Each crop is a real benefit with a dollar value and a deadline, and it wilts as the deadline gets closer.</p>
+        <p>Press <b>L</b> for the list of every claim, sorted by what's due soonest or worth the most.</p>
+      </div>
+      <div class="gallery">
+        <button class="shot" data-src="shots/07-farm.jpg"><img src="shots/07-farm.jpg" alt="The farmer's field with crops tagged by dollar value" loading="lazy"><span>Your farm, priced crop by crop</span></button>
+        <button class="shot" data-src="shots/08-claims.jpg"><img src="shots/08-claims.jpg" alt="My claims list with deadlines, values and status" loading="lazy"><span>My claims: every deadline and dollar</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="ch3">
+    <div class="chapter">
+      <div class="panel text">
+        <span class="label">3 · Ruth fills the claim</span>
+        <h2 id="ch3">She does the paperwork. You decide.</h2>
+        <ol>
+          <li><b>Ruth reviews</b> every claim against written rules: no new care, no "spend it just to use it", tax moves shown as options.</li>
+          <li><b>She fills the form</b> from your profile and documents, attaches receipts, and flags only the fields you have to fill.</li>
+          <li><b>You press Submit</b> and the claim goes to the real place it's filed. Money counts as rescued only when it arrives.</li>
+        </ol>
+      </div>
+      <div class="gallery">
+        <button class="shot" data-src="shots/09-ruth-approved.jpg"><img src="shots/09-ruth-approved.jpg" alt="A tuition claim with Ruth's APPROVED stamp" loading="lazy"><span>Ruth approves the claim</span></button>
+        <button class="shot" data-src="shots/10-claim-form.jpg"><img src="shots/10-claim-form.jpg" alt="Ruth's filled tuition reimbursement form" loading="lazy"><span>The form, filled and checked</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="ch4">
+    <div class="chapter">
+      <div class="panel text">
+        <span class="label">4 · The Benefit Bazaar</span>
+        <h2 id="ch4">Agents shop your perks</h2>
+        <p>Name something you need and pick an unspent benefit. Three shopkeeper agents search live listings from many stores, Ruth checks each offer for coverage, fit and quality, and the shopkeeper <b>phones you</b> when the results are ready.</p>
+        <p>She ranks offers by quality for the money, so a pricier item has to be clearly better to win.</p>
+      </div>
+      <div class="gallery">
+        <button class="shot" data-src="shots/11-bazaar-ask.jpg"><img src="shots/11-bazaar-ask.jpg" alt="Asking the Bazaar for a yoga mat with a wellness stipend" loading="lazy"><span>Ask for what you need</span></button>
+        <button class="shot" data-src="shots/12-phone-call.jpg"><img src="shots/12-phone-call.jpg" alt="Dealer Fen is calling with results" loading="lazy"><span>The shopkeeper calls you back</span></button>
+        <button class="shot" data-src="shots/13-bazaar-results.jpg"><img src="shots/13-bazaar-results.jpg" alt="Three yoga mats with Ruth's pick and what the benefit pays" loading="lazy"><span>Ruth's pick and what your benefit pays</span></button>
+        <button class="shot" data-src="shots/14-villager-chat.jpg"><img src="shots/14-villager-chat.jpg" alt="Chatting with Mayor Maple, who gives advice in character" loading="lazy"><span>Villagers with personalities who remember you</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="ch5">
+    <div class="chapter">
+      <div class="panel text">
+        <span class="label">5 · A town worth coming back to</span>
+        <h2 id="ch5">Cozy by design</h2>
+        <p>The serious part comes wrapped in something people want to come back to: a hand-drawn town with hills and a two-tier waterfall, day and night, friends farming next door in real time, and a first-person fishing minigame that pays acorns.</p>
+      </div>
+      <div class="gallery">
+        <button class="shot" data-src="shots/15-town-square.jpg"><img src="shots/15-town-square.jpg" alt="The festival town square with lawns and a fountain" loading="lazy"><span>The town square</span></button>
+        <button class="shot" data-src="shots/16-waterfall.jpg"><img src="shots/16-waterfall.jpg" alt="The pond under a two-tier waterfall" loading="lazy"><span>The pond and waterfall</span></button>
+        <button class="shot" data-src="shots/17-night.jpg"><img src="shots/17-night.jpg" alt="The town square at night with fairy lights" loading="lazy"><span>The burrow at night</span></button>
+        <button class="shot" data-src="shots/18-fishing.jpg"><img src="shots/18-fishing.jpg" alt="First-person fishing view from the dock" loading="lazy"><span>Fishing from the dock</span></button>
+        <button class="shot" data-src="shots/19-reeling.jpg"><img src="shots/19-reeling.jpg" alt="Reeling in with the catch meter" loading="lazy"><span>Reel it in</span></button>
+        <button class="shot" data-src="shots/20-catch.jpg"><img src="shots/20-catch.jpg" alt="A caught fish leaping out of the pond" loading="lazy"><span>A catch for the journal</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="built">
+    <div class="panel">
+      <span class="label">Built with</span>
+      <h2 id="built">What powers the burrow</h2>
+      <div class="tech">
+        <div><b>Claude (Opus, Sonnet, Haiku)</b><span>Reads documents with sources, Ruth's reviews, shopping agents, benefit lookups, villagers</span></div>
+        <div><b>SpacetimeDB</b><span>Real-time multiplayer: farms, movement, harvests, gifts, chat</span></div>
+        <div><b>Convex</b><span>Saved games, households, Ruth's audit trail, overnight Autopilot</span></div>
+        <div><b>Apify</b><span>Live product listings and store prices for the shopping agents</span></div>
+        <div><b>x402 · Base Sepolia</b><span>Shopkeeper agents sell their quotes for testnet USDC</span></div>
+        <div><b>Cartesia</b><span>Villager voices and spoken check-ins</span></div>
+        <div><b>Capital One Nessie</b><span>Sandbox bank data and moving rescued money to savings</span></div>
+        <div><b>Next.js · Canvas · three.js</b><span>The game, the pixel-art town and the 3D fishing scene</span></div>
+        <div><b>Ollama (Qwen 3.5 4B)</b><span>A local model for light tasks, with a Claude fallback</span></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap outline">
+  Built at Cal Hacks 13.0 · <a href="https://github.com/haile-teshome/benefit-burrow">github.com/haile-teshome/benefit-burrow</a>
+</footer>
+
+<dialog id="zoom" aria-label="Screenshot">
+  <button type="button" aria-label="Close">✕</button>
+  <img alt="">
+  <p></p>
+</dialog>
+<script>
+  // Click a screenshot to see it full size.
+  const dlg = document.getElementById("zoom");
+  document.querySelectorAll(".shot").forEach((b) => b.addEventListener("click", () => {
+    const img = b.querySelector("img");
+    dlg.querySelector("img").src = b.dataset.src;
+    dlg.querySelector("img").alt = img.alt;
+    dlg.querySelector("p").textContent = b.querySelector("span").textContent;
+    dlg.showModal();
+  }));
+  dlg.querySelector("button").addEventListener("click", () => dlg.close());
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+</script>
+</body>
+</html>
