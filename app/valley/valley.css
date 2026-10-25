@@ -167,7 +167,7 @@ button.ev-stat { cursor: pointer; }
 @keyframes ev-pop { 0% { transform: scale(1); } 30% { transform: scale(1.35); color: #b9821e; } 100% { transform: scale(1); } }
 
 /* Screen UI sits above the projected labels. */
-.ev-date, .ev-gold, .ev-who, .ev-help, .ev-prompt, .ev-chat { z-index: 40; }
+.ev-date, .ev-gold, .ev-who, .ev-help, .ev-prompt, .ev-chat, .ev-live-wrap, .ev-live { z-index: 40; } /* the HUD sits above world labels (z 20) */
 .ev-toast { z-index: 60; }
 .ev-dialogue-wrap { z-index: 80; }
 .ev-title-screen { z-index: 90; }
@@ -443,20 +443,10 @@ a.ev-btn { text-decoration: none; display: inline-block; }
 
 /* Poster mode (?poster=1): the title screen as a project thumbnail. */
 .ev-poster .ev-tagline { font-size: clamp(18px, 2.1vw, 30px); line-height: 1.35; max-width: 1000px; text-align: center; color: #fffaf0; text-shadow: -2px -2px 0 #3b2412, 2px -2px 0 #3b2412, -2px 2px 0 #3b2412, 2px 2px 0 #3b2412, 0 -2px 0 #3b2412, 0 2px 0 #3b2412, -2px 0 0 #3b2412, 2px 0 0 #3b2412, 0 5px 0 rgba(43, 26, 12, 0.45); }
-.ev-poster .ev-tagline b { font-weight: inherit; }
+.ev-poster .ev-tagline b { font-weight: inherit; color: #ffd23f; } /* the headline number, in gold */
 body:has(.ev-poster) nextjs-portal { display: none !important; }
 .ev-poster-chips { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 18px; }
 .ev-poster-chips span { font: 700 clamp(14px, 1.4vw, 20px) var(--read); padding: 8px 16px; }
 .ev-menu-btn[hidden] { display: none; }
 @media (max-width: 700px) { .ev-topright .ev-stat .ev-title { font-size: 18px; } .ev-menu { top: 84px; } }
 
-/* Poster: the sign, then one card with the headline number, so nothing sits on top of the busy scene. */
-.ev-poster { gap: 26px; background: radial-gradient(ellipse at center, rgba(40, 20, 5, 0.18) 30%, rgba(40, 20, 5, 0.55)); }
-.ev-poster .ev-sign::before, .ev-poster .ev-sign::after { display: none; }
-.ev-poster-card { display: grid; gap: 14px; justify-items: center; padding: 22px 34px 24px; max-width: 900px; }
-.ev-poster-stat { display: flex; align-items: center; gap: 18px; }
-.ev-poster-stat b { font: 700 clamp(56px, 7vw, 96px)/1 var(--pixel); color: #f2c94c; text-shadow: 4px 4px 0 #8a4f22, -2px -2px 0 #3b2412, 2px -2px 0 #3b2412, -2px 2px 0 #3b2412, 2px 2px 0 #3b2412; letter-spacing: 2px; }
-.ev-poster-stat span { font: 700 clamp(18px, 2vw, 28px)/1.2 var(--read); color: var(--ink); text-align: left; }
-.ev-poster-card p { margin: 0; font: 600 clamp(16px, 1.6vw, 23px)/1.35 var(--read); color: var(--ink); text-align: center; }
-.ev-poster-card .ev-poster-chips { margin-top: 2px; }
-.ev-poster-card .ev-poster-chips span { font: 700 clamp(13px, 1.2vw, 17px) var(--read); padding: 6px 14px; background: var(--parchment-2); box-shadow: 0 0 0 3px var(--wood-dark); color: var(--ink); }

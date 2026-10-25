@@ -16,6 +16,7 @@ export type Rewards = {
   history: { at: string; amount: number; note: string }[];
   redemptions: Redemption[];
   firstPlant?: boolean;
+  fish?: import("./fishing").FishLog; // pond catches and today's fishing acorns
 };
 
 export const DAILY_CAP = 300;

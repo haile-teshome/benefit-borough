@@ -6,7 +6,7 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start",
-    "test": "tsx --test lib/**/*.test.ts",
+    "test": "tsx --test 'lib/**/*.test.ts'",
     "valley:server": "spacetime start --listen-addr 0.0.0.0:3100",
     "valley:publish": "cd valley-server && spacetime publish expire-valley --server valley --yes",
     "valley:reset": "cd valley-server && spacetime publish expire-valley --server valley --delete-data=always --yes && rm -f ../.data/state-*.json",

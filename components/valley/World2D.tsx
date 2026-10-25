@@ -32,6 +32,7 @@ export type Near =
   | { kind: "keeper"; id: string; label: string }
   | { kind: "claim"; tileId: string; label: string }
   | { kind: "exit"; label: string }
+  | { kind: "fish"; label: string }
   | null;
 export type WorldApi = { enter?: (buildingId: string) => void; exit?: () => void };
 export type Emote = { clip: "Cheer" | "Interact"; at: number } | null;
@@ -746,6 +747,8 @@ export default function World2D(props: Props) {
         if (d < Math.min(bestD, 1.5)) { bestD = d; id = `npc:${n.id}`; best = { kind: "npc", id: n.id, label: `Talk to ${n.name}` }; }
       }
       if (Math.hypot(pos.x - ELDER_POS[0], pos.z - (ELDER_POS[2] + 1.6)) < REACH + 0.3) { id = "elder"; best = { kind: "elder", label: "Talk to Ruth, the Reviewer" }; }
+      // the end of the pond dock is a fishing spot
+      if (pos.x > -13.6 && pos.x < -11.4 && pos.z < -14.6 && pos.z > -17.4) { id = "fish"; best = { kind: "fish", label: "Go fishing" }; }
       const [mx, , mz] = mailboxPosition(me.farm);
       if (p.myGiftCount > 0 && Math.hypot(pos.x - mx, pos.z - mz) < REACH) { id = "mailbox"; best = { kind: "mailbox", label: "Open your letter" }; }
       if (id !== nearKey) { nearKey = id; p.onNear(best); }

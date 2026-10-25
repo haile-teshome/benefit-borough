@@ -18,6 +18,7 @@ import { PushBack, RuthAsks, RuthRecord } from "./Ruth";
 import { TalkBox } from "./Talk";
 import { Library } from "./Library";
 import { Almanac } from "./Almanac";
+import { Fishing } from "./Fishing";
 import { Claims } from "./Claims";
 import { Checkin } from "./Checkin";
 import { Onboarding } from "./Onboarding";
@@ -112,6 +113,7 @@ type Modal =
   | { kind: "keeper"; id: string }
   | { kind: "library" }
   | { kind: "almanac" }
+  | { kind: "fishing" }
   | { kind: "claims" }
   | { kind: "checkin" }
   | { kind: "exchange" }
@@ -454,6 +456,7 @@ function Valley() {
     if (near.kind === "crop") { setModal({ kind: "crop", tileId: near.tileId }); setEmotes((e) => ({ ...e, [myHex]: { clip: "Interact", at: performance.now() } })); }
     if (near.kind === "elder") { setModal({ kind: "elder", step: "hello" }); void speak("I audit every harvest in this burrow. Show me what you want to buy with your FSA."); }
     if (near.kind === "mailbox") void openGifts();
+    if (near.kind === "fish") setModal({ kind: "fishing" });
     if (near.kind === "place") worldApi.enter?.(near.id);
     if (near.kind === "exit") worldApi.exit?.();
     if (near.kind === "claim") setModal({ kind: "crop", tileId: near.tileId });
@@ -630,6 +633,7 @@ function Valley() {
       {modal?.kind === "checkin" && state && <Checkin state={state} pid={pid} onDone={async (s) => { setState(s); await plant(s); setModal(null); setToast(`Check-in saved. Your farm is up to date.${s.rewards?.week.checkin ? " +50 🌰" : ""}`); setTimeout(() => setToast(""), 5000); }} onLibrary={() => setModal({ kind: "library" })} onClose={() => setModal(null)} />}
       {modal?.kind === "exchange" && <Exchange pid={pid} rewards={rewards} tango={Boolean(integrations.tango)} onRewards={setRewards} onClose={() => setModal(null)}
         onWear={(color) => { if (conn && me) void conn.reducers.setProfile({ name: me.name, color, avatar: me.avatar }); setToast("Looking sharp."); setTimeout(() => setToast(""), 3000); }} />}
+      {modal?.kind === "fishing" && <Fishing pid={pid} onClose={() => setModal(null)} onRewards={setRewards} />}
       {modal?.kind === "almanac" && <Almanac state={state} players={players} myPid={pid} live={Boolean(convex)} onClose={() => setModal(null)} />}
       {modal?.kind === "library" && <Library pid={pid} onPlanted={libraryPlanted} onClose={() => setModal(null)} />}
       {modal?.kind === "record" && <RuthRecord state={state} pid={pid} integrations={integrations} live={Boolean(convex)} onClose={() => setModal(null)} />}
@@ -890,12 +894,9 @@ function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }
           <span className="l2">Burrow</span>
         </div>
       </div>
-      <div className="ev-panel ev-poster-card">
-        <div className="ev-poster-stat"><b>$100B+</b><span>in benefits Americans<br />lose every year</span></div>
-        <p>AI agents find it, fill your claims and shop your perks. You just approve.</p>
-        <div className="ev-poster-chips">
-          {["Track every benefit", "AI agents shop & fill forms", "User has final approval"].map((c) => <span key={c}>{c}</span>)}
-        </div>
+      <p className="ev-tagline">Americans lose <b>$100B+ a year</b> in money they never claim.<br />AI agents find it, fill your claims and shop your perks. You just approve.</p>
+      <div className="ev-poster-chips">
+        {["Track every benefit", "AI agents shop & fill forms", "User has final approval"].map((c) => <span key={c} className="ev-panel">{c}</span>)}
       </div>
     </div>
   );
