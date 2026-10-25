@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   await hydrate(pid);
   const s = load(pid);
   const cats = keeper ? BUILDINGS.find((b) => b.id === who)?.place?.categories ?? [] : null;
-  const claims = s.tiles.filter((t) => !cats || cats.includes(t.category)).filter((t) => !s.done.includes(t.id)).sort((a, b) => b.atStake - a.atStake).slice(0, keeper ? 8 : 3);
+  const claims = s.tiles.filter((t) => !cats || cats.includes(t.category)).filter((t) => !s.done.includes(t.id) && s.reviews[t.id]?.verdict !== "reject").sort((a, b) => b.atStake - a.atStake).slice(0, keeper ? 8 : 6);
   const rescued = s.ledger.reduce((sum, l) => sum + l.amount, 0);
   const p = person.persona;
   // Friendship: hearts grow with chats; at 1 and 3 hearts they share a story beat, once.

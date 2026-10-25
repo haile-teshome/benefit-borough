@@ -37,11 +37,11 @@ export async function runQuest(pid: string, req: { benefitId: string; need: stri
   const rule = coverage(b);
   const notes: string[] = [];
   let spent = 0;
-  log(s, "quest", `Shopping quest: "${need}" with ${b.label} ($${b.amount.toFixed(2)} left), budget $${maxPrice.toFixed(2)}`);
+  log(s, "quest", `Shopping quest: "${need}" with ${b.label} (${b.basis === "plan_limit" ? "up to " : ""}$${b.amount.toFixed(2)}${b.basis === "plan_limit" ? "" : " left"}), budget $${maxPrice.toFixed(2)}`);
 
   // 1. Every seller agent quotes in parallel. Ruth pays each for its quote when her budget allows.
   const ids: AgentId[] = ["deal", "quality", "specialist"];
-  const params = (id: AgentId) => new URLSearchParams({ agent: id, need, benefit: `${b.label} ($${b.amount.toFixed(2)} left)`, constraint: rule, max: String(maxPrice) }).toString();
+  const params = (id: AgentId) => new URLSearchParams({ agent: id, need, benefit: `${b.label} (${b.basis === "plan_limit" ? `plan allows up to $${b.amount.toFixed(2)}` : `$${b.amount.toFixed(2)} left`})`, constraint: rule, max: String(maxPrice) }).toString();
   const results = await Promise.all(ids.map(async (id) => {
     if (canSpend(s, MARKET.quote.price)) {
       const r = await buy<{ offers: RawOffer[] }>(`${MARKET.quote.path}?${params(id)}`);
@@ -78,8 +78,8 @@ export async function runQuest(pid: string, req: { benefitId: string; need: stri
     const price = live[o.url] ?? o.price;
     const fits = r?.fits ?? true, eligible = r?.eligible ?? false, quality = r?.quality ?? (o.rating ? o.rating * 2 : 5);
     const ok = fits && eligible && price <= maxPrice + 0.01;
-    const covered = Math.round(Math.min(price, b.amount) * 100) / 100;
-    return { ...o, price, livePrice: live[o.url], verdict: { ok, fits, eligible, quality, note: r?.note ?? (claudeEnabled() ? "" : "Not reviewed (Claude offline)") + (price > maxPrice ? ` Over your $${maxPrice} budget.` : "") },
+    const covered = eligible ? Math.round(Math.min(price, b.amount) * 100) / 100 : 0;
+    return { ...o, price, livePrice: live[o.url], verdict: { ok, fits, eligible, quality, note: (r?.note ?? (claudeEnabled() ? "" : "Not reviewed (Claude offline)")) + (price > maxPrice ? ` Over your $${maxPrice} budget.` : "") },
       covered, outOfPocket: Math.round((price - covered) * 100) / 100, score: ok ? quality * 10 : -1 };
   });
   // Best quality for the money: every doubling of price over the cheapest approved offer costs

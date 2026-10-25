@@ -46,7 +46,7 @@ export function Bazaar({ state, preset, quest: shown, searching, keeper, onSearc
               <div className={styles.fields}>
                 <label className={styles.field}><span>Pay with</span>
                   <select value={benefitId} onChange={(e) => setBenefitId(e.target.value)} style={{ font: "15px var(--read)", padding: "5px 8px", border: "3px solid var(--wood)", background: "#fffaf0" }}>
-                    {benefits.map((x) => <option key={x.id} value={x.id}>{x.label}: ${x.amount.toFixed(0)} left (by {new Date(`${x.deadline}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })})</option>)}
+                    {benefits.map((x) => <option key={x.id} value={x.id}>{x.label}: {x.basis === "plan_limit" ? `up to $${x.amount.toFixed(0)}` : `$${x.amount.toFixed(0)} left`} (by {new Date(`${x.deadline}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })})</option>)}
                   </select>
                 </label>
                 <label className={styles.field}><span>Budget (optional)</span><input type="number" value={max} placeholder={b ? `up to $${b.amount.toFixed(0)}` : ""} onChange={(e) => setMax(e.target.value === "" ? "" : Number(e.target.value))} /></label>

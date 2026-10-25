@@ -217,25 +217,37 @@ function documentTiles(ex: Extraction, covered: Set<string>): Tile[] {
   return ex.balances.filter((b) => !covered.has(b.id) && (b.amount > 0 || yours(b)) && DOC_KINDS[b.category] && daysBetween(DEMO_TODAY, b.deadline) >= 0).map((b): Tile => {
     const k = DOC_KINDS[b.category]!;
     const by = new Date(`${b.deadline}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+    // A guide's limit says what the plan allows, not what you have or what you'd lose: a reminder to
+    // check your balance, with the plan's own rule. Nothing to claim, buy or book until you know it.
+    if (b.basis === "plan_limit" && !["espp", "tax_window"].includes(b.category)) return {
+      balanceIds: [b.id], deadline: b.deadline, daysLeft: daysBetween(DEMO_TODAY, b.deadline), sources: [b.source], engine: "mock",
+      id: `tile_${b.id}`, category: b.category, live: false, atStake: 0, doNothingCost: 0, recommendation: "check",
+      title: `${b.label}: check your balance${b.amount ? ` (plan allows up to ${usd(b.amount)})` : ""}`,
+      candidates: [{ id: "check", label: "Look up what's left in your account", costToUser: 0, detail: b.ruleText }],
+      headline: `Your plan's rule: ${b.ruleText}`,
+      tradeoff: "This is the plan's limit, not your balance. Ruth can only say what's at stake once you know what's left.",
+      doNothing: "Nothing changes on your farm until you check; the weekly check-in asks for your balance.",
+      action: { kind: "none", summary: "Check your balance", savings: 0, payload: {} },
+    };
     const days = b.category === "pto" && /\bdays?\b/i.test(b.label);
     const limit = b.basis === "plan_limit";
     // A plan limit is what the plan allows, not what you have left, so it's worded "up to".
     // Typed-in labels often carry their own amount ("$300 gym reimbursement"); don't say it twice.
     const named = b.label.includes(usd(b.amount)) ? b.label : `${usd(b.amount)} ${b.label}`;
-    const what = days ? `${b.amount} PTO day${b.amount === 1 ? "" : "s"}` : !b.amount ? b.label : limit ? `${b.label} (up to ${usd(b.amount)})` : named;
-    const money = days ? 0 : b.amount;
+    const what = days ? `${b.amount} PTO day${b.amount === 1 ? "" : "s"}` : !b.amount ? b.label : named;
+    const money = days || limit ? 0 : b.amount;
     // The same gating question the library plans ask, so nobody is nudged to spend just to use it up.
     const ask = days ? `Do you want to take ${b.amount} day${b.amount === 1 ? "" : "s"} off before ${by}?` : b.category === "retirement" || k.verb === "Decide on" ? undefined : "Is there something you'd buy or do anyway that it covers?";
     // A guide's PTO rule isn't your balance: say the rule, not a number of days you'd lose.
-    const title = days && limit ? `PTO: days over the rollover are forfeited ${by}` : days ? `${what} will be forfeited ${by}` : limit && !["espp", "tax_window"].includes(b.category) ? `${b.label}: ${b.amount ? `up to ${usd(b.amount)}, ` : ""}resets ${by}` : `${k.verb} your ${what} before ${by}`;
+    const title = days && limit ? `PTO: days over the rollover are forfeited ${by}` : days ? `${what} will be forfeited ${by}` : `${k.verb} your ${what} before ${by}`;
     return {
       balanceIds: [b.id], deadline: b.deadline, daysLeft: daysBetween(DEMO_TODAY, b.deadline), sources: [b.source], engine: "mock",
       id: `tile_${b.id}`, category: b.category, title, live: true, atStake: money, doNothingCost: money, ask,
       candidates: [{ id: "act", label: `${k.verb} it before ${by}`, costToUser: 0, detail: b.ruleText }], recommendation: "act",
-      headline: limit ? `Your plan allows ${b.amount ? `up to ${usd(b.amount)}` : "it"}; ${b.ruleText}` : `Your documents say: ${b.ruleText}`,
-      tradeoff: days ? "Rest is the point; plan around work so it's actually time off." : limit ? "That's the plan's limit; what's left for you depends on what you've used this year." : "Only for things you'd do or buy anyway.",
-      doNothing: days ? `${b.amount} day${b.amount === 1 ? "" : "s"} forfeited after ${by}.` : limit ? `Whatever's unused is lost after ${by}.` : `Lost after ${by}.`,
-      action: request(`${k.verb} your ${b.label.toLowerCase()}`, money, { title: `${k.verb} your ${b.label.toLowerCase()}`, to: k.to, steps: k.steps, confirmation: `DOC-${b.id.slice(-6).toUpperCase()}` }),
+      headline: `Your documents say: ${b.ruleText}`,
+      tradeoff: days ? "Rest is the point; plan around work so it's actually time off." : "Only for things you'd do or buy anyway.",
+      doNothing: days ? `${b.amount} day${b.amount === 1 ? "" : "s"} forfeited after ${by}.` : `Lost after ${by}.`,
+      action: request(`${k.verb} your ${b.label}`, money, { title: `${k.verb} your ${b.label}`, to: k.to, steps: k.steps, confirmation: `DOC-${b.id.slice(-6).toUpperCase()}` }),
     };
   });
 }

@@ -2,7 +2,7 @@ import { hydrate, load } from "@/lib/store";
 
 // Every open deadline as a calendar file (.ics) with alerts 3 days and 1 day before, plus a weekly
 // check-in. Works with Apple Calendar, Google Calendar and Outlook.
-const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
 const day = (iso: string) => iso.replace(/-/g, "");
 const next = (iso: string) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); };
 const usd = (n: number) => "$" + Math.round(n).toLocaleString("en-US");
@@ -23,10 +23,10 @@ export async function GET(req: Request) {
     `DTSTAMP:${stamp}`,
     `DTSTART;VALUE=DATE:${day(t.deadline)}`,
     `DTEND;VALUE=DATE:${day(next(t.deadline))}`,
-    `SUMMARY:${esc(`Benefit Borough: ${t.title}${t.atStake ? ` (${usd(t.atStake)})` : ""}`)}`,
+    `SUMMARY:${esc(`Benefit Borough: ${t.title}${t.atStake && !t.title.includes(usd(t.atStake)) ? ` (${usd(t.atStake)})` : ""}`)}`,
     `DESCRIPTION:${esc(`${t.headline}\nIf you do nothing: ${t.doNothing}\nOpen the borough: ${game}`)}`,
     `URL:${game}`,
-    ...[3, 1].flatMap((d) => ["BEGIN:VALARM", "ACTION:DISPLAY", `TRIGGER:-P${d}D`, `DESCRIPTION:${esc(`${t.title} is due in ${d} day${d > 1 ? "s" : ""}`)}`, "END:VALARM"]),
+    ...[3, 1].flatMap((d) => ["BEGIN:VALARM", "ACTION:DISPLAY", `TRIGGER:-P${d}D`, `DESCRIPTION:${esc(`${d} day${d > 1 ? "s" : ""} left: ${t.title}`)}`, "END:VALARM"]),
     "END:VEVENT",
   ]);
   // Weekly check-in, Sundays at 10am local time: mark credits you used, update balances.

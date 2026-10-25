@@ -133,3 +133,11 @@ INSURANCE
 GEICO auto policy renews November 18, 2026: $1,284.00 for 6 months (up 22% from the last term).`,
   },
 ];
+
+// The sandbox bank (Capital One Nessie) holds the sample person's accounts, so only a farm planted
+// from the sample documents ("Just show me a demo") may read it. Real players never see its lines.
+const SAMPLE_IDS = new Set(SAMPLE_DOCS.map((d) => d.id));
+export const usesSampleBank = (docs: SourceDoc[]) => docs.some((d) => SAMPLE_IDS.has(d.id));
+const BANK_DOCS = new Set(["upload_nessie", "upload_payday"]);
+// Drop sandbox bank lines from a real player's documents (cleans farms planted before this rule).
+export const withoutSampleBank = (docs: SourceDoc[]) => (usesSampleBank(docs) ? docs : docs.filter((d) => !BANK_DOCS.has(d.id)));

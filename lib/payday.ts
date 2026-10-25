@@ -1,3 +1,4 @@
+import { usesSampleBank } from "./documents";
 import { nessie, nessieEnabled } from "./integrations/nessie";
 import { hydrate, load, log, save } from "./store";
 import type { Tile } from "./types";
@@ -29,6 +30,8 @@ export async function checkPayday(pid: string) {
   if (!nessieEnabled()) throw new Error("Nessie isn't connected");
   await hydrate(pid);
   const s = load(pid);
+  // The sandbox paycheck is the sample person's; a real player's farm never gets it.
+  if (!usesSampleBank(s.docs)) return { state: s, found: false };
   const deposits = (await nessie<Deposit[]>(`/accounts/${process.env.NESSIE_ACCOUNT_ID}/deposits`)).filter((d) => /payroll|paycheck|direct dep/i.test(d.description ?? "")).sort((a, b) => b.transaction_date.localeCompare(a.transaction_date) || b._id.localeCompare(a._id));
   const pay = deposits[0];
   if (!pay) return { state: s, found: false };

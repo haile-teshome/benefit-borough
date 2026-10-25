@@ -96,7 +96,9 @@ export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile
   // Which plans to plant, from who you are and what Ruth confirmed.
   const chosen = useMemo(() => {
     const ids = new Set<string>();
-    if (working && p.jobType !== "Self-employed") { ids.add("work-401k-match"); ids.add("work-pto"); }
+    // Only what you tick (or Ruth confirms): not every employer has a 401(k) match or use-it-or-lose-it PTO.
+    if (working && has.has("match")) ids.add("work-401k-match");
+    if (working && has.has("pto")) ids.add("work-pto");
     if (has.has("fsa")) ids.add("irs-fsa-2026");
     if (has.has("hsa")) ids.add("irs-hsa-2026");
     if (has.has("dcfsa")) ids.add("work-dcfsa");
@@ -191,7 +193,7 @@ export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile
                 <label className="ev-lib-q"><span>Annual salary (for your 401(k) match and what a PTO day is worth)</span><input type="number" value={salary} onChange={(e) => setSalary(e.target.value === "" ? "" : Number(e.target.value))} /></label>
                 <div className="ev-field">Do you have any of these at work? (Not sure? Skip it; Ruth checks.)</div>
                 <div className="ev-pick ev-onb-chips">
-                  {[["fsa", "Health FSA"], ["hsa", "HSA"], ["dcfsa", "Dependent care FSA (kids)"], ["stipend", "Wellness or learning stipend"], ["espp", "Employee stock plan"], ["tuition", "Tuition assistance"], ["vesting", "401(k) not fully vested"]].map(([id, l]) => <button key={id} className={has.has(id) ? "on" : ""} onClick={() => tick(setHas, id)}>{has.has(id) ? "✓ " : ""}{l}</button>)}
+                  {[["match", "401(k) employer match"], ["pto", "PTO that expires"], ["fsa", "Health FSA"], ["hsa", "HSA"], ["dcfsa", "Dependent care FSA (kids)"], ["stipend", "Wellness or learning stipend"], ["espp", "Employee stock plan"], ["tuition", "Tuition assistance"], ["vesting", "401(k) not fully vested"]].map(([id, l]) => <button key={id} className={has.has(id) ? "on" : ""} onClick={() => tick(setHas, id)}>{has.has(id) ? "✓ " : ""}{l}</button>)}
                 </div>
               </>
             ) : <p className="ev-lead">No employer benefits to look up. On to your health plan.</p>

@@ -1,4 +1,4 @@
-import type { SourceDoc } from "./documents";
+import { usesSampleBank, withoutSampleBank, type SourceDoc } from "./documents";
 import { extract } from "./engine/extract";
 import { optimize } from "./engine/optimize";
 import { defend, review } from "./engine/reviewer";
@@ -34,6 +34,7 @@ const docsText = (s: AppState) => s.docs.map((d) => `[${d.name}]\n${d.text}`).jo
 export async function scan(docs: SourceDoc[], pid?: string | null, opts: { payForData?: boolean } = {}): Promise<AppState> {
   await hydrate(pid);
   const s = load(pid);
+  docs = withoutSampleBank(docs);
   s.docs = docs;
   const ex = await extract(docs);
   // Price watches: ask Apify for the store's live price of each watched purchase.
@@ -102,7 +103,7 @@ export async function prepare(tileId: string, pid?: string | null, by: Packet["p
   if (s.packets?.some((x) => x.tileId === tileId && x.status === "waiting")) throw new Error("Already filed; waiting on the company");
   s.profile = { ...profileFromDocs(s), ...(s.profile ?? {}) };
   // Receipts: Ruth reads your live bank activity too, so proof of payment is found, not asked for.
-  if (nessieEnabled() && !s.docs.some((d) => d.id === "upload_nessie")) {
+  if (nessieEnabled() && usesSampleBank(s.docs) && !s.docs.some((d) => d.id === "upload_nessie")) {
     try { s.docs = [...s.docs, await nessieStatement()]; log(s, "prepare", "Read your live bank activity (Capital One Nessie) to find receipts"); } catch { /* receipts can still be uploaded */ }
   }
   let packet = await preparePacket(tile, s, by);

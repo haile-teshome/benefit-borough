@@ -45,6 +45,8 @@ type Facts = Found["facts"];
 export function impliedPlans(f: Facts, opts: { insured?: boolean } = {}): string[] {
   const ids: string[] = [];
   if (yes(f.offers_fsa?.value)) ids.push("irs-fsa-2026");
+  if (f.match_rate_pct) ids.push("work-401k-match");
+  if (f.pto_rollover_days) ids.push("work-pto");
   if (f.stipend_amount) ids.push("work-stipend");
   if (f.espp_discount_pct) ids.push("work-espp");
   if (f.tuition_limit) ids.push("edu-tuition-127");

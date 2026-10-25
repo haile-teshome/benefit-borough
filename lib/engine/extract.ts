@@ -8,6 +8,9 @@ import { detect } from "../statement/detect";
 import { libraryFindings } from "../library/build";
 import { findSpan } from "./spans";
 import { structured } from "./llm";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 
 const CATEGORIES = [
   "fsa", "dental", "deductible", "dining", "card_credit", "tax_window",
@@ -89,13 +92,54 @@ export async function extract(docs: SourceDoc[]): Promise<Extraction> {
   const libs = docs.filter((d) => d.id.startsWith("lib_")).flatMap((d) => libraryFindings(d, DEMO_TODAY).map((f) => ({ f, d })));
   const libRaw = libs.map(({ f, d }) => ({ balance_id: f.id, category: f.category, label: f.label, amount: f.amount, deadline: f.deadline, source_doc: d.id, source_span: f.span, rule_text: f.rule, basis: "your_balance" as const }));
   const rest = docs.filter((d) => (!d.id.startsWith("upload_") || !uploads.includes(d)) && !d.id.startsWith("lib_"));
-  const ex = rest.length ? await extractDocs(rest, docs) : { balances: [], careItems: [], patterns: [], facts: {}, dropped: [], engine: "mock" as const };
+  // Uploaded guides and notes are read one at a time and remembered by their text, so rescanning an
+  // unchanged document gives the very same benefits (and the same crop ids) without asking again.
+  const notes = claudeEnabled() ? rest.filter((d) => d.id.startsWith("upload_")) : [];
+  const others = rest.filter((d) => !notes.includes(d));
+  const parts = await Promise.all([
+    others.length ? extractDocs(others, docs) : null,
+    ...notes.map(async (d) => { const raw = await readOne(d); return raw ? ground(docs, raw, "claude") : null; }),
+  ]);
+  const ex: Extraction = { balances: [], careItems: [], patterns: [], facts: {}, dropped: [], engine: "mock" };
+  for (const p of parts) if (p) {
+    ex.balances.push(...p.balances); ex.careItems.push(...p.careItems); ex.patterns.push(...p.patterns); ex.dropped.push(...p.dropped);
+    Object.assign(ex.facts, p.facts);
+    if (p.engine === "claude") ex.engine = "claude";
+  }
   // Whatever Claude read from an upload is tagged with that upload, so the sample person's
   // scenario builders never pick it up and the upload's own crops can be counted.
-  ex.balances = ex.balances.map((b) => (b.source.doc.startsWith("upload_") && !b.id.startsWith("up_") ? { ...b, id: `up_${b.source.doc.replace(/\W/g, "")}_${b.id}` } : b));
+  // The id comes from where the benefit is quoted, not the order Claude listed it, so a rescan
+  // keeps each crop's answers, review and claim form attached to the same benefit.
+  const seen = new Set<string>();
+  ex.balances = ex.balances.map((b) => {
+    if (!b.source.doc.startsWith("upload_") || b.id.startsWith("up_")) return b;
+    let id = `up_${b.source.doc.replace(/\W/g, "")}_${b.category}_${b.source.start}`;
+    while (seen.has(id)) id += "x";
+    seen.add(id);
+    return { ...b, id };
+  });
   const extra = ground(docs, { balances: [...found, ...libRaw], care_items: [], spend_patterns: [], facts: [] }, ex.engine);
   for (const { f } of libs) for (const [k, v] of Object.entries(f.facts ?? {})) ex.facts[`${f.id}:${k}`] = v;
   return { ...ex, balances: [...ex.balances, ...extra.balances], dropped: [...ex.dropped, ...extra.dropped] };
+}
+
+const CACHE = path.join(process.cwd(), ".data", "extract-cache.json");
+let cache: Record<string, z.infer<typeof ExtractionSchema>> | null = null;
+const readCache = () => (cache ??= (() => { try { return JSON.parse(fs.readFileSync(CACHE, "utf8")); } catch { return {}; } })());
+
+// One uploaded document, read by Claude and cached by (instructions, text). The cached reading is
+// re-pointed at the document's current id.
+async function readOne(d: SourceDoc): Promise<z.infer<typeof ExtractionSchema> | null> {
+  const key = crypto.createHash("sha256").update(SYSTEM + "\n" + d.text).digest("hex").slice(0, 32);
+  const at = <T extends { source_doc: string }>(xs: T[]) => xs.map((x) => ({ ...x, source_doc: d.id }));
+  const hit = readCache()[key];
+  if (hit) return { ...hit, balances: at(hit.balances), care_items: at(hit.care_items), spend_patterns: at(hit.spend_patterns), facts: at(hit.facts) };
+  const user = `<document id="${d.id}" name="${d.name}">\n${d.text}\n</document>`;
+  const out = await structured("extract", { system: SYSTEM, user, schema: ExtractionSchema, effort: "medium" });
+  if (!out) return null;
+  const c = readCache(); c[key] = out;
+  try { fs.mkdirSync(path.dirname(CACHE), { recursive: true }); fs.writeFileSync(CACHE, JSON.stringify(c)); } catch { /* cache is best-effort */ }
+  return { ...out, balances: at(out.balances), care_items: at(out.care_items), spend_patterns: at(out.spend_patterns), facts: at(out.facts) };
 }
 
 // Uploaded statements go through the deterministic detectors (see lib/statement).

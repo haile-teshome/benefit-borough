@@ -65,10 +65,10 @@ export function draftFor(tile: Tile, s: AppState): Draft {
     case "fitness": {
       const doc = s.docs.find((d) => d.meta?.plan === "health-fitness");
       const ans = (doc?.meta?.answers ?? {}) as Record<string, string | number>;
-      const insurer = String(ans.insurer ?? "your health plan"), gym = String(ans.gym ?? "your gym");
+      const insurer = !ans.insurer || ans.insurer === "Other" ? "your health plan" : String(ans.insurer), gym = String(ans.gym ?? "your gym");
       const { found, att } = proof(lines, /fitness|gym|ymca|equinox|planet fitness|yoga|climb/i, "Proof of payment: gym charges from your statements");
       const letter: Attachment = { name: `Letter to request from ${gym}`, kind: "letter", lines: [`Hi ${gym} team,`, `Could you send me a payment history for my membership for ${new Date().getFullYear()} (dates and amounts, on letterhead)? My health plan needs it for a fitness reimbursement claim.`, `Thank you,`, p.fullName ?? "[your name]"], todo: found.length ? undefined : "No gym charges found in your statements. Send this note to your gym (or upload a receipt) and Ruth will attach it." };
-      return { ...base, form: `${insurer} fitness reimbursement form`, provider: insurer, method: "mail", submitTo: `${insurer} member services (mail or member portal upload)`,
+      return { ...base, form: insurer === "your health plan" ? "Fitness reimbursement form" : `${insurer} fitness reimbursement form`, provider: insurer, method: "mail", submitTo: `${insurer} member services (mail or member portal upload)`,
         fields: [P("fullName", "Member name", p), P("memberId", "Member ID (on your insurance card)", p), P("birthDate", "Date of birth", p), P("address", "Mailing address", p), P("email", "Email", p, false),
           D("gym", "Fitness club name", gym, doc ? `My gym: ${gym}` : undefined), D("period", "Membership period", `January 1 – ${today()}`),
           D("paid", "Total membership fees paid", usd(fact("paid") ?? amount), cite), D("amount", "Reimbursement requested", usd(amount), cite),
@@ -145,12 +145,19 @@ export function draftFor(tile: Tile, s: AppState): Draft {
       }
       return { ...base, form: String(tile.action.payload.title ?? tile.title), provider: to, method: "portal", submitTo: to,
         fields: [P("fullName", "Your name", p), D("what", "What Ruth will do", tile.action.summary, cite), D("amount", "Worth", usd(amount), cite)],
-        attachments: [], minutes: { you: 1, without: 20 }, message: String(tile.action.payload.steps ?? "").split("|").join("\n") };
+        attachments: [], minutes: { you: 1, without: 20 }, message: requestMessage(tile, p.fullName) };
     }
     case "dining": return { ...base, form: "Flex dollars transfer", provider: "Cal Dining", method: "transfer", submitTo: "Cal Dining peer transfer",
       fields: [P("fullName", "From", p), D("amount", "Amount", usd(Number(tile.action.payload.amount ?? amount)), cite), { key: "to", label: "To (a friend's name or student ID; or pick a farmer next)", value: "", source: "you" }], attachments: [], minutes: { you: 1, without: 10 } };
     default: return { ...base, form: tile.action.payload.title ? String(tile.action.payload.title) : tile.action.kind === "book_call" ? `Booking call to ${to}` : tile.action.summary.slice(0, 60), provider: to, method: tile.action.kind === "book_call" ? "phone" : "portal", submitTo: to,
       fields: [P("fullName", "Your name", p), P("phone", "Callback number", p, false), D("what", "What Ruth will ask for", tile.action.summary, cite), D("amount", "Worth", usd(amount), cite)],
-      attachments: [], minutes: { you: 1, without: 15 }, message: String(tile.action.payload.steps ?? "").split("|").join("\n") };
+      attachments: [], minutes: { you: 1, without: 15 }, message: requestMessage(tile, p.fullName) };
   }
+}
+
+// The note that goes with a request: what you're asking for and by when, in plain words.
+function requestMessage(tile: Tile, name?: string) {
+  const by = new Date(`${tile.deadline}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" });
+  const ask = tile.action.summary.replace(/^./, (c) => c.toLowerCase());
+  return `Hi,\n\nI'd like to ${ask} before ${by}. Could you tell me what you need from me, or confirm it's done?\n\nThank you,\n${name || "[your name]"}`;
 }
