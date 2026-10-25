@@ -303,3 +303,47 @@ body { margin: 0; overflow: hidden; background: #8fc4e8; }
 .ev-whatif em { display: block; font-style: normal; font-size: 13px; color: #6b4a2a; }
 .ev-use { display: grid; gap: 4px; margin: 6px 0; font-size: 15px; }
 .ev-use input { width: 100%; }
+
+/* My claims + weekly check-in */
+.ev-claims-panel { width: min(900px, 100%); max-height: 86vh; display: flex; flex-direction: column; }
+.ev-claims-summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.ev-claims-summary div { background: var(--parchment-2); padding: 8px 12px; display: grid; min-width: 150px; }
+.ev-claims-summary b { font-size: 22px; }
+.ev-claims-summary span { font-size: 13px; color: #5a3d22; }
+.ev-claims-summary .warn b { color: var(--stamp); }
+.ev-claims-summary .ok b { color: #2f6e22; }
+.ev-claims-tools { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: center; }
+.ev-claims-tools .ev-pick { align-items: center; margin: 4px 0; }
+.ev-claims-table { overflow: auto; min-height: 0; flex: 1; display: grid; align-content: start; gap: 2px; margin-top: 6px; }
+.ev-claims-table .row { display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.2fr) 92px 80px 140px; gap: 10px; align-items: center; text-align: left; font: 400 15px var(--read); color: var(--ink); background: var(--parchment-2); border: 0; padding: 7px 10px; cursor: pointer; }
+.ev-claims-table .row:hover { background: #ffe9b0; }
+.ev-claims-table .row.head { background: transparent; cursor: default; font-weight: 700; font-size: 13px; color: #5a3d22; position: sticky; top: 0; background: var(--parchment); }
+.ev-claims-table .what { display: flex; gap: 8px; align-items: center; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-claims-table .what i { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.ev-claims-table .where { font-size: 13px; color: #5a3d22; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-claims-table .due em { font-style: normal; font-size: 12px; color: #6b4a2a; margin-left: 6px; }
+.ev-claims-table .due.soon { color: var(--stamp); font-weight: 700; }
+.ev-claims-table .num { text-align: right; font-weight: 700; }
+.ev-claims-table .st { font-size: 13px; font-weight: 700; }
+.ev-claims-table .st.ok { color: #2f6e22; }
+.ev-claims-table .st.wait { color: #6a4c93; }
+.ev-claims-table .st.no { color: var(--stamp); }
+.ev-claims-table .st.info { color: #6b4a2a; }
+a.ev-btn { text-decoration: none; display: inline-block; }
+@media (max-width: 700px) { .ev-claims-table .row { grid-template-columns: 1fr 80px 70px; } .ev-claims-table .where, .ev-claims-table .st { display: none; } }
+.ev-checkin-week { background: #efe4fb; padding: 8px 10px; display: grid; gap: 3px; font-size: 15px; }
+.ev-checkin-week em { font-style: normal; color: #5e44a0; font-weight: 700; }
+.ev-checkin-plan { background: var(--parchment-2); padding: 8px 10px; display: grid; gap: 6px; }
+.ev-link.strong { font-weight: 700; color: var(--ink); }
+
+/* onboarding */
+.ev-presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin: 6px 0 10px; }
+.ev-presets button { text-align: left; display: grid; gap: 2px; padding: 10px 12px; border: 3px solid var(--wood-dark); background: #fff8e2; color: var(--ink); cursor: pointer; font: 400 14px var(--read); }
+.ev-presets button b { font-size: 16px; }
+.ev-presets button span { color: #6b4a2a; }
+.ev-presets button.on { background: #e6f1d2; border-color: #22501a; }
+.ev-extras { display: grid; gap: 4px; margin-bottom: 8px; font-size: 15px; font-weight: 700; }
+.ev-onb-me { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 8px; }
+.ev-avatars.small img.icon { width: 40px; height: 48px; }
+.ev-avatars.small button { padding: 3px; }
+.ev-onb-me .ev-lib-q input { font: 400 16px var(--read); padding: 6px 8px; border: 3px solid var(--wood-dark); background: #fff8e2; color: var(--ink); }

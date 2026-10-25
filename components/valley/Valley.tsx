@@ -18,6 +18,9 @@ import { PushBack, RuthAsks, RuthRecord } from "./Ruth";
 import { TalkBox } from "./Talk";
 import { Library } from "./Library";
 import { Almanac } from "./Almanac";
+import { Claims } from "./Claims";
+import { Checkin } from "./Checkin";
+import { Onboarding } from "./Onboarding";
 import World2D, { type Burst, type Emote, type Mood, type Near, type WorldApi } from "./World2D";
 import { KEEPERS, RUTH_VOICE } from "@/lib/valley/people";
 
@@ -84,6 +87,8 @@ type Modal =
   | { kind: "keeper"; id: string }
   | { kind: "library" }
   | { kind: "almanac" }
+  | { kind: "claims" }
+  | { kind: "checkin" }
   | null;
 
 const hex = (id: { toHexString(): string } | undefined | null) => id?.toHexString() ?? "";
@@ -125,6 +130,15 @@ function Valley() {
   useEffect(() => {
     if (pid) expire.state(pid).then((r) => { setState(r.state); setIntegrations(r.integrations ?? {}); }).catch((e) => setError(e.message));
   }, [pid]);
+
+  // Weekly check-in: open it from a calendar link (?checkin=1), or when a week has passed.
+  const askedCheckin = useRef(false);
+  useEffect(() => {
+    if (askedCheckin.current || title || !state?.tiles.length || modal) return;
+    const fromLink = new URLSearchParams(window.location.search).get("checkin") === "1";
+    const stale = state.checkedInAt && Date.now() - Date.parse(state.checkedInAt) > 7 * 86_400_000;
+    if (fromLink || stale) { askedCheckin.current = true; setModal({ kind: "checkin" }); }
+  }, [title, state, modal]);
 
   // Step into the valley once connected (creates this farmer on first visit).
   const joined = useRef(false);
@@ -234,7 +248,6 @@ function Valley() {
 
   async function libraryPlanted(s: AppState, found: number) {
     if (!conn) return;
-    if (me && !myPlots.length) await conn.reducers.setProfile({ name: me.name, color: me.color, avatar: me.avatar });
     setState(s);
     await plant(s);
     sound.sprout();
@@ -336,6 +349,7 @@ function Valley() {
       if ((e.target as HTMLElement)?.tagName === "INPUT") return;
       if (title) return;
       if (e.key === "m" || e.key === "M") toggleMute();
+      if ((e.key === "l" || e.key === "L") && !modal) setModal({ kind: "claims" });
       if (e.key === "e" || e.key === "E") interact();
       if (e.key === "Escape") setModal((m) => (m?.kind === "run" && !m.result ? m : null));
       if (e.key === "Enter" && !modal) { e.preventDefault(); setChatOpen(true); }
@@ -407,7 +421,7 @@ function Valley() {
       {title ? (
         <Title onPlay={play} connected={isActive} />
       ) : (
-        <Hud inside={Boolean(inside)} me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} onLibrary={() => setModal({ kind: "library" })} onAlmanac={() => setModal({ kind: "almanac" })} />
+        <Hud inside={Boolean(inside)} me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} onLibrary={() => setModal({ kind: "library" })} onAlmanac={() => setModal({ kind: "almanac" })} onClaims={() => setModal({ kind: "claims" })} />
       )}
 
       {convex && !title && !inside && <div className="ev-live-wrap" onClick={() => setModal({ kind: "almanac" })} title="Open the Burrow Almanac"><LiveBoard players={players} myPid={pid} /></div>}
@@ -416,7 +430,7 @@ function Valley() {
       )}
       {toast && <div className="ev-toast">{toast}</div>}
       {error && <div className="ev-toast bad" onClick={() => setError("")}>{error}</div>}
-      {!title && <div className="ev-help">{inside ? `Inside ${BUILDINGS.find((b) => b.id === inside)?.place?.name} · walk to the door mat to leave` : "WASD or click to walk · E to interact or enter shops · Enter to chat · M to mute"}</div>}
+      {!title && <div className="ev-help">{inside ? `Inside ${BUILDINGS.find((b) => b.id === inside)?.place?.name} · walk to the door mat to leave` : "WASD or click to walk · E to interact or enter shops · L for your list · Enter to chat · M to mute"}</div>}
 
       {chatOpen && (
         <form className="ev-chat" onSubmit={(e) => { e.preventDefault(); const v = (e.currentTarget.elements.namedItem("t") as HTMLInputElement).value; if (v.trim() && conn) void conn.reducers.say({ text: v }); setChatOpen(false); }}>
@@ -424,7 +438,8 @@ function Valley() {
         </form>
       )}
 
-      {modal?.kind === "intro" && <Intro busy={busy} me={me} onPlant={plantDocs} onPick={pickAvatar} onUpload={uploadStatement} onLibrary={() => setModal({ kind: "library" })} />}
+      {modal?.kind === "intro" && <Onboarding pid={pid} me={me} busy={busy} onPlanted={libraryPlanted} onDemo={plantDocs} onPick={pickAvatar}
+        onProfile={async (name, color, avatar) => { if (conn) await conn.reducers.setProfile({ name: name.trim(), color, avatar }); }} />}
       {modal?.kind === "avatar" && (
         <Dialogue speaker="Choose your farmer" onClose={() => setModal(null)}>
           <AvatarPicker value={me?.avatar ?? ""} onPick={pickAvatar} />
@@ -472,6 +487,8 @@ function Valley() {
           </Dialogue>
         );
       })()}
+      {modal?.kind === "claims" && state && <Claims state={state} pid={pid} onOpen={(tileId) => setModal({ kind: "crop", tileId })} onCheckin={() => setModal({ kind: "checkin" })} onClose={() => setModal(null)} />}
+      {modal?.kind === "checkin" && state && <Checkin state={state} pid={pid} onDone={async (s) => { setState(s); await plant(s); setModal(null); setToast("Check-in saved. Your farm is up to date."); setTimeout(() => setToast(""), 5000); }} onLibrary={() => setModal({ kind: "library" })} onClose={() => setModal(null)} />}
       {modal?.kind === "almanac" && <Almanac state={state} players={players} myPid={pid} live={Boolean(convex)} onClose={() => setModal(null)} />}
       {modal?.kind === "library" && <Library pid={pid} onPlanted={libraryPlanted} onClose={() => setModal(null)} />}
       {modal?.kind === "record" && <RuthRecord state={state} pid={pid} integrations={integrations} live={Boolean(convex)} onClose={() => setModal(null)} />}
@@ -600,7 +617,7 @@ function UploadButton({ busy, onUpload, className, label }: { busy: boolean; onU
   );
 }
 
-function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord, onLibrary, onAlmanac }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean; onLibrary: () => void; onAlmanac: () => void }) {
+function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord, onLibrary, onAlmanac, onClaims }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean; onLibrary: () => void; onAlmanac: () => void; onClaims: () => void }) {
   const next = state?.tiles.filter((t) => !state.done.includes(t.id) && t.atStake > 0).sort((a, b) => a.daysLeft - b.daysLeft)[0];
   const clock = useClock();
   return (
@@ -621,6 +638,7 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
         <div className="ev-sub">{isActive ? `${others.length + (me ? 1 : 0)} in the burrow` : "Connecting…"}</div>
         {me && <div className="who"><i style={{ background: me.color }} />{me.name} (you)</div>}
         {others.map((p) => <div key={p.identity.toHexString()} className="who"><i style={{ background: p.color }} />{p.name}</div>)}
+        <button className="ev-link strong" onClick={onClaims}>My claims (list) · L</button>
         <button className="ev-link" onClick={onAlmanac}>Burrow Almanac (leaderboard)</button>
         <button className="ev-link" onClick={onLibrary}>Find my plans (plan library)</button>
         <button className="ev-link" onClick={onRecord}>Ruth's record (audit trail)</button>

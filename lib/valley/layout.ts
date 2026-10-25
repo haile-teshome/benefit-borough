@@ -35,6 +35,11 @@ export const CROP_LOOK: Record<string, { name: string; band: string }> = {
   insurance: { name: "Premium Peony", band: "#F49AC8" },
   vision: { name: "Spectacle Sunflower", band: "#3E8ED0" },
   hsa: { name: "Nest-Egg Gourd", band: "#3FA6A0" },
+  retirement: { name: "Match Melon", band: "#2F6E46" },
+  pto: { name: "Holiday Hollyhock", band: "#E0A526" },
+  stipend: { name: "Perk Pumpkin", band: "#E07BB0" },
+  dcfsa: { name: "Daycare Daisy", band: "#4E8FCB" },
+  espp: { name: "Stock Sprout", band: "#5E3A99" },
 };
 
 export const usd = (n: number) => "$" + Math.round(n).toLocaleString("en-US");

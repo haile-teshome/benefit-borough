@@ -20,7 +20,7 @@ export const BUILDINGS: BuildingDef[] = [
   { id: "store", kind: "cards", x: 20.5, z: -3, w: 5, place: { name: "The Card House", categories: ["card_credit", "annual_fee", "credit_move", "rotating", "promo_apr", "points"], line: "Every card you carry, managed in one place: credits, fees, cash back, store cards and miles." } },
   { id: "market", kind: "deals", x: 27, z: -3, w: 3, place: { name: "The Deal Desk", categories: ["price_adjust", "subscription"], line: "Price matches, returns and renewals before they bill." } },
   { id: "commons", kind: "commons", x: 17, z: -16, w: 8, place: { name: "Dining Commons", categories: ["dining"], line: "Meal-plan dollars spent here." } },
-  { id: "hall", kind: "hall", x: 0, z: -10, w: 8, place: { name: "Benefits Office", categories: ["tax_window", "insurance", "hsa"], line: "Open enrollment and policy renewals." } },
+  { id: "hall", kind: "hall", x: 0, z: -10, w: 8, place: { name: "HR & Benefits Office", categories: ["tax_window", "insurance", "hsa", "retirement", "pto", "stipend", "dcfsa", "espp"], line: "Your workplace benefits: 401(k), PTO, stipends, dependent care, ESPP and open enrollment." } },
   // Homes and shops that make it a town (no balances live here, just flavor)
   { id: "cottage1", kind: "cottage1", x: -28, z: 8.8, w: 4, place: { name: "Rose Cottage", line: "Someone is baking cinnamon rolls." } },
   { id: "library", kind: "library", x: -21.5, z: 8.8, w: 5, place: { name: "Library", line: "A whole shelf on reading your benefits summary." } },

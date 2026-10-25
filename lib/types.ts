@@ -4,7 +4,9 @@ export type Category =
   | "bank_bonus" | "bank_fee" | "idle_cash" | "annual_fee" | "credit_move" | "dispute" | "rotating"
   | "price_adjust" | "fsa_claim" | "promo_apr" | "subscription" | "points" | "insurance"
   // from the plan library
-  | "vision" | "hsa";
+  | "vision" | "hsa"
+  // workplace benefits
+  | "retirement" | "pto" | "stipend" | "dcfsa" | "espp";
 
 export type Span = { doc: string; start: number; end: number; text: string };
 
@@ -104,5 +106,6 @@ export type AppState = {
   ledger: LedgerEntry[];
   done: string[]; // tile ids whose action confirmed
   answers?: Record<string, "go" | "keep">; // the user's replies to Ruth's questions
+  checkedInAt?: string; // last weekly check-in
   audit: AuditEvent[];
 };

@@ -6,7 +6,7 @@ import type { AppState } from "@/lib/types";
 
 // The plan library: search a curated set of plan and card terms, pick yours, answer only the
 // questions that are personal, and plant. No uploads needed.
-type Answers = Record<string, string | number | string[]>;
+export type Answers = Record<string, string | number | string[]>;
 const CATS = ["All", "Health plan", "Dining", "Credit card", "Tax-advantaged account", "Points & miles"] as const;
 
 function defaults(p: Plan): Answers {
@@ -15,7 +15,7 @@ function defaults(p: Plan): Answers {
   return a;
 }
 
-function Field({ q, plan, value, onChange }: { q: Question; plan: Plan; value: Answers[string] | undefined; onChange: (v: Answers[string]) => void }) {
+export function Field({ q, plan, value, onChange }: { q: Question; plan: Plan; value: Answers[string] | undefined; onChange: (v: Answers[string]) => void }) {
   if (q.kind === "choice") return (
     <div className="ev-lib-q"><span>{q.ask}</span>
       <div className="ev-pick">{q.options.map((o) => <button key={o} className={value === o ? "on" : ""} onClick={() => onChange(o)}>{o}</button>)}</div>

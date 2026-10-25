@@ -11,7 +11,7 @@ export type Question =
 export type Credit = { key: string; name: string; amount: number; cadence: string; ends: string; note?: string };
 
 export type Plan = {
-  id: string; title: string; issuer: string; category: "Health plan" | "Dining" | "Credit card" | "Tax-advantaged account" | "Points & miles";
+  id: string; title: string; issuer: string; category: "Workplace benefit" | "Health plan" | "Dining" | "Credit card" | "Tax-advantaged account" | "Points & miles";
   community?: string; year: string; tags: string[];
   sources: { label: string; url: string }[];
   checked: string; // when and against what we last checked these terms
@@ -24,6 +24,88 @@ const TODAY = "2026-10-24";
 const MONTH_END = "2026-10-31", YEAR_END = "2026-12-31";
 
 export const LIBRARY: Plan[] = [
+  {
+    id: "work-401k-match", title: "401(k) employer match (any employer)", issuer: "Your employer's retirement plan", category: "Workplace benefit",
+    community: "Working professionals", year: "2026", tags: ["401k", "403b", "match", "retirement", "employer", "free money", "true-up"],
+    sources: [
+      { label: "Vanguard How America Saves 2026", url: "https://workplace.vanguard.com/content/dam/inst/iig-transformation/insights/pdf/has/how-america-saves-2026.pdf" },
+      { label: "Financial Engines via CNBC: $24B in missed match", url: "https://www.cnbc.com/2015/05/12/yees-missing-out-on-24b-of-free-money.html" },
+    ],
+    checked: "Use your plan's own match formula (Summary Plan Description or the recordkeeper portal). About 1 in 4 people miss part of their match.",
+    terms: [
+      "Your employer matches part of what you contribute from each paycheck, up to a percent of your pay.",
+      "Match is paid on contributions made through payroll; unless your plan has a year-end true-up, missed paychecks can't be made up later.",
+    ],
+    questions: [
+      { key: "salary", ask: "Your annual salary:", kind: "money", default: 95000 },
+      { key: "pct", ask: "What percent of pay do you contribute now?", kind: "percent", default: 3 },
+      { key: "rate", ask: "Your employer matches what percent of your contributions?", kind: "percent", default: 50, hint: "e.g. \"50% of contributions up to 6% of pay\" → 50" },
+      { key: "cap", ask: "...up to what percent of your pay?", kind: "percent", default: 6 },
+    ],
+  },
+  {
+    id: "work-pto", title: "Paid time off: use-it-or-lose-it", issuer: "Your employer's PTO policy", category: "Workplace benefit",
+    community: "Working professionals", year: "2026", tags: ["pto", "vacation", "time off", "rollover", "employer"],
+    sources: [{ label: "Pew Research: 46% don't take all their PTO", url: "https://www.pewresearch.org/short-reads/2023/08/10/more-than-4-in-10-u-s-workers-dont-take-all-their-paid-time-off/" }],
+    checked: "Rollover caps are set by your employer. California and a few states don't allow use-it-or-lose-it; check your handbook.",
+    terms: ["Days above your policy's rollover cap are forfeited when the PTO year ends."],
+    questions: [
+      { key: "days", ask: "PTO days you have left this year:", kind: "number", default: 8 },
+      { key: "rollover", ask: "Days your policy lets you roll over:", kind: "number", default: 5 },
+      { key: "salary", ask: "Your annual salary (to value a day off):", kind: "money", default: 95000 },
+      { key: "year_end", ask: "Your PTO year ends:", kind: "date", default: "2026-12-31" },
+    ],
+  },
+  {
+    id: "work-dcfsa", title: "Dependent care FSA (2026: up to $7,500)", issuer: "IRS + your employer", category: "Workplace benefit",
+    community: "Working parents", year: "2026", tags: ["dependent care", "dcfsa", "childcare", "daycare", "fsa", "employer"],
+    sources: [{ label: "Polsinelli: dependent care FSA limit rises to $7,500", url: "https://www.polsinelli.com/publications/new-year-new-dependent-care-fsa-limits" }],
+    checked: "The 2026 limit is $7,500 only if your employer adopted it. There's no carryover; some plans allow a grace period.",
+    terms: ["2026 dependent care FSA limit: $7,500 ($3,750 married filing separately), if your plan adopted it.", "Dependent care FSAs have no carryover: money not claimed for the plan year is forfeited (some plans allow a grace period of up to 2.5 months)."],
+    questions: [
+      { key: "balance", ask: "Your dependent care FSA balance:", kind: "money", default: 0 },
+      { key: "receipts", ask: "Childcare you've paid this year but not submitted yet:", kind: "money", default: 0, hint: "Daycare, after-school care, summer day camp" },
+      { key: "year_end", ask: "Plan year ends:", kind: "date", default: "2026-12-31" },
+    ],
+  },
+  {
+    id: "work-stipend", title: "Wellness, learning or lifestyle stipend", issuer: "Your employer", category: "Workplace benefit",
+    community: "Working professionals", year: "2026", tags: ["stipend", "lsa", "lifestyle spending account", "wellness", "learning", "education", "home office", "employer"],
+    sources: [{ label: "Compt 2026 lifestyle benefits benchmark", url: "https://compt.io/resources/2026-lifestyle-benefits-benchmark-report/" }],
+    checked: "Stipends usually reset each year with no rollover. Check your stipend portal (Compt, Forma, Benepass) for the reset date.",
+    terms: ["Stipend balances usually reset at the end of the program year, with no rollover."],
+    questions: [
+      { key: "type", ask: "What kind of stipend?", kind: "choice", options: ["Wellness", "Learning", "Lifestyle", "Home office"], default: "Wellness" },
+      { key: "left", ask: "Amount left:", kind: "money", default: 300 },
+      { key: "resets", ask: "Resets on:", kind: "date", default: "2026-12-31" },
+    ],
+  },
+  {
+    id: "work-vesting", title: "401(k) vesting: don't leave money behind", issuer: "Your employer's retirement plan", category: "Workplace benefit",
+    community: "Working professionals", year: "2026", tags: ["vesting", "cliff", "401k", "job change", "leaving", "employer"],
+    sources: [{ label: "Vanguard via NAPA: forfeitures in 30% of job separations", url: "https://www.napa-net.org/news/2025/2/do-401k-vesting-schedules-help-with-worker-retention/" }],
+    checked: "Your vesting schedule is in your plan summary; the recordkeeper shows your vested balance.",
+    terms: ["Employer contributions that haven't vested yet are forfeited if you leave before the vesting date."],
+    questions: [
+      { key: "unvested", ask: "Employer money not vested yet:", kind: "money", default: 0 },
+      { key: "vests", ask: "Date it vests:", kind: "date", default: "2027-03-01" },
+      { key: "leaving", ask: "Thinking about leaving before then?", kind: "choice", options: ["No", "Maybe", "Yes"], default: "No" },
+    ],
+  },
+  {
+    id: "work-espp", title: "Employee stock purchase plan (ESPP)", issuer: "Your employer", category: "Workplace benefit",
+    community: "Working professionals", year: "2026", tags: ["espp", "stock", "discount", "lookback", "enrollment window", "employer"],
+    sources: [{ label: "NASPP: trends in ESPPs (85% offer 15% discounts)", url: "https://www.naspp.com/blog/five-trends-in-espps" }],
+    checked: "Enrollment only opens in set windows. Most plans offer a 15% discount; selling and taxes are your call.",
+    terms: ["You can only join an ESPP during its enrollment window; most plans buy shares at a 15% discount."],
+    questions: [
+      { key: "enrolled", ask: "Are you enrolled?", kind: "choice", options: ["No", "Yes"], default: "No" },
+      { key: "window", ask: "Next enrollment window opens:", kind: "date", default: "2026-11-15" },
+      { key: "salary", ask: "Your annual salary:", kind: "money", default: 95000 },
+      { key: "pct", ask: "Percent of pay you'd contribute:", kind: "percent", default: 5 },
+      { key: "discount", ask: "Your plan's discount:", kind: "percent", default: 15 },
+    ],
+  },
   {
     id: "ucb-ship-2026", title: "UC Berkeley Student Health Insurance Plan (SHIP) 2026-27", issuer: "UC Berkeley University Health Services", category: "Health plan",
     community: "UC Berkeley students", year: "2026-27", tags: ["ship", "berkeley", "cal", "student health", "uhs", "metlife dental", "vsp vision", "deductible"],

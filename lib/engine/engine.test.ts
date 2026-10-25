@@ -133,3 +133,23 @@ test("library plans plus a person's answers become grounded findings", async () 
   assert.equal(tiles.filter((x) => x.category === "points").length, 1); // no double-counting by the sample builders
   for (const tile of tiles) assert.equal(ruleCheck({ kind: "tile", tile }, ex, docs.map((d) => d.text).join("\n")).verdict, "approve", tile.id);
 });
+
+test("workplace benefits: 401(k) match, PTO, dependent care, stipend", async () => {
+  const { buildDoc } = await import("../library/build");
+  const docs = [
+    buildDoc({ plan: "work-401k-match", answers: { salary: 100000, pct: 3, rate: 50, cap: 6 } })!,
+    buildDoc({ plan: "work-pto", answers: { days: 9, rollover: 5, salary: 104000, year_end: "2026-12-31" } })!,
+    buildDoc({ plan: "work-dcfsa", answers: { balance: 2000, receipts: 1200, year_end: "2026-12-31" } })!,
+    buildDoc({ plan: "work-stipend", answers: { type: "Learning", left: 400, resets: "2026-12-31" } })!,
+  ];
+  const ex = await extract(docs);
+  assert.equal(ex.dropped.length, 0);
+  const tiles = await optimize(ex);
+  const t = (re: RegExp) => tiles.find((x) => re.test(x.id))!;
+  assert.equal(ex.facts["lib_work401kmatch_match:yearly"], 1500); // 100k x 3% gap x 50% match
+  assert.equal(t(/_match$/).atStake, Math.round((1500 / 26) * 3 * 100) / 100); // 3 biweekly paychecks left after the change
+  assert.equal(t(/_pto$/).atStake, 1600); // 4 days over the cap x $400/day
+  assert.equal(t(/_dcfsa$/).action.savings, 1200);
+  assert.equal(t(/_stipend$/).atStake, 400);
+  for (const tile of tiles) assert.equal(ruleCheck({ kind: "tile", tile }, ex, docs.map((d) => d.text).join("\n")).verdict, "approve", tile.id);
+});

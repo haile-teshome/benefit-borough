@@ -266,6 +266,7 @@ const EXTRA_CROPS: Record<string, [string, string]> = {
   credit_move: ["bean", "#7CC46B"], dispute: ["daisy", "#FFFFFF"], rotating: ["clover", "#5BAA4A"], price_adjust: ["bush", "#7FE3C0"],
   fsa_claim: ["bush", "#E04870"], promo_apr: ["bean", "#E04848"], subscription: ["bulb", "#E04848"], points: ["flower", "#F06C3B"], insurance: ["flower", "#F49AC8"],
   vision: ["flower", "#7FB8E8"], hsa: ["bulb", "#3FA6A0"],
+  retirement: ["bulb", "#7CC46B"], pto: ["flower", "#E9BC3C"], stipend: ["bush", "#E07BB0"], dcfsa: ["daisy", "#FFFFFF"], espp: ["bean", "#8E5BD0"],
 };
 
 function paintExtra(g: Grid, shape: string, c: string, leaf: string, droop: number) {

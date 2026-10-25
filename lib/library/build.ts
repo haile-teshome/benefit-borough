@@ -14,6 +14,7 @@ const num = (v: unknown, d = 0) => { const n = typeof v === "number" ? v : parse
 const fmtDate = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
 const addMonths = (iso: string, m: number) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCMonth(d.getUTCMonth() + m); return d.toISOString().slice(0, 10); };
 const round2 = (n: number) => Math.round(n * 100) / 100;
+const daysTo = (a: string, b: string) => Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86_400_000);
 
 export function buildDoc(p: Pick): SourceDoc | null {
   const plan = LIBRARY.find((x) => x.id === p.plan);
@@ -38,6 +39,12 @@ function personalLines(plan: Plan, a: Answers): string[] {
     case "cal-dining-2026": return [`My Flex balance: ${usd(num(a.balance))}.`, `My spending: about ${usd(num(a.weekly, 30))} per week.`];
     case "irs-fsa-2026": return [`My FSA balance: ${usd(num(a.balance))}.`, `My plan's carryover: ${usd(num(a.carryover, 680))}.`, `My plan year ends: ${fmtDate(String(a.year_end || "2026-12-31"))}.`];
     case "irs-hsa-2026": return [`My HSA coverage: ${a.coverage === "Family" ? "family" : "self-only"}.`, `Contributed for 2026 so far: ${usd(num(a.contributed))}.`];
+    case "work-401k-match": return [`My salary: ${usd(num(a.salary))} a year.`, `I contribute ${num(a.pct, 3)}% of pay.`, `My employer matches ${num(a.rate, 50)}% of contributions up to ${num(a.cap, 6)}% of pay.`];
+    case "work-pto": return [`PTO days I have left: ${num(a.days)}.`, `Days my policy rolls over: ${num(a.rollover, 5)}.`, `My salary: ${usd(num(a.salary))} a year.`, `My PTO year ends: ${fmtDate(String(a.year_end || "2026-12-31"))}.`];
+    case "work-dcfsa": return [`My dependent care FSA balance: ${usd(num(a.balance))}.`, `Childcare paid but not submitted: ${usd(num(a.receipts))}.`, `My plan year ends: ${fmtDate(String(a.year_end || "2026-12-31"))}.`];
+    case "work-stipend": return [`My ${String(a.type || "wellness").toLowerCase()} stipend left: ${usd(num(a.left))}.`, `It resets on ${fmtDate(String(a.resets || "2026-12-31"))}.`];
+    case "work-vesting": return [`Employer money not vested yet: ${usd(num(a.unvested))}.`, `It vests on ${fmtDate(String(a.vests || "2027-03-01"))}.`, `Thinking about leaving before then: ${String(a.leaving || "No").toLowerCase()}.`];
+    case "work-espp": return [`Enrolled in the ESPP: ${a.enrolled === "Yes" ? "yes" : "no"}.`, `Next enrollment window opens: ${fmtDate(String(a.window || "2026-11-15"))}.`, `My salary: ${usd(num(a.salary))}; I'd contribute ${num(a.pct, 5)}% at a ${num(a.discount, 15)}% discount.`];
     case "venture-x-2026": return [`My account anniversary: ${fmtDate(String(a.anniversary || "2027-02-15"))}.`, `Travel credit used this cardmember year: ${usd(num(a.used_amount))} of $300.`];
     default:
       if (plan.credits) { const used = new Set((a.used as string[]) ?? []); return plan.credits.map((c) => `${c.name}: ${used.has(c.key) ? "used" : "not used yet"} this period.`); }
@@ -79,6 +86,32 @@ export function libraryFindings(doc: SourceDoc, today: string): LibFinding[] {
     const limit = a.coverage === "Family" ? 8750 : 4400;
     const room = Math.max(0, limit - num(a.contributed));
     if (room > 0) out.push({ id: id("hsa"), category: "hsa", label: "HSA contribution room for 2026", amount: room, deadline: "2027-04-15", span: line(/Contributed for 2026/), rule: plan.terms[1], facts: { limit } });
+  }
+  if (plan.id === "work-401k-match") {
+    const salary = num(a.salary), pct = num(a.pct, 3), rate = num(a.rate, 50) / 100, cap = num(a.cap, 6);
+    const yearly = round2(salary * (Math.max(0, cap - pct) / 100) * rate);
+    // Match is paid per paycheck: count the biweekly paychecks left after the change takes effect
+    // (one payroll of lag), not calendar days.
+    const paychecks = Math.max(0, Math.floor(daysTo(today, "2026-12-31") / 14) - 1);
+    const left = round2((yearly / 26) * paychecks);
+    if (yearly > 0) out.push({ id: id("match"), category: "retirement", label: "Unclaimed 401(k) match", amount: left, deadline: "2026-12-31", span: line(/^I contribute/), rule: plan.terms[1], facts: { yearly, pct, cap, paychecks, perPaycheck: round2((salary * (cap - pct)) / 100 / 26) } });
+  }
+  if (plan.id === "work-pto") {
+    const over = Math.max(0, num(a.days) - num(a.rollover, 5)), day = num(a.salary) / 260;
+    if (over > 0) out.push({ id: id("pto"), category: "pto", label: "PTO days you'd forfeit", amount: round2(over * day), deadline: String(a.year_end || "2026-12-31"), span: line(/^PTO days I have left/), rule: plan.terms[0], facts: { days: over, day: round2(day) } });
+  }
+  if (plan.id === "work-dcfsa" && num(a.balance) > 0) {
+    out.push({ id: id("dcfsa"), category: "dcfsa", label: "Dependent care FSA", amount: num(a.balance), deadline: String(a.year_end || "2026-12-31"), span: line(/dependent care FSA balance/), rule: plan.terms[1], facts: { receipts: num(a.receipts), claim: Math.min(num(a.balance), num(a.receipts)) } });
+  }
+  if (plan.id === "work-stipend" && num(a.left) > 0) {
+    out.push({ id: id("stipend"), category: "stipend", label: `${a.type || "Wellness"} stipend`, amount: num(a.left), deadline: String(a.resets || "2026-12-31"), span: line(/stipend left/), rule: plan.terms[0] });
+  }
+  if (plan.id === "work-vesting" && num(a.unvested) > 0 && a.leaving !== "No" && String(a.vests) >= today) {
+    out.push({ id: id("vesting"), category: "retirement", label: "Unvested 401(k) money", amount: num(a.unvested), deadline: String(a.vests || "2027-03-01"), span: line(/not vested yet/), rule: plan.terms[0] });
+  }
+  if (plan.id === "work-espp" && a.enrolled !== "Yes") {
+    const contrib = num(a.salary) * num(a.pct, 5) / 100, d = num(a.discount, 15) / 100;
+    out.push({ id: id("espp"), category: "espp", label: "ESPP enrollment window", amount: round2(contrib * (d / (1 - d))), deadline: String(a.window || "2026-11-15"), span: line(/Next enrollment window/), rule: plan.terms[0], facts: { contrib: round2(contrib), discount: num(a.discount, 15) } });
   }
   if (plan.id === "venture-x-2026") {
     const left = Math.max(0, 300 - num(a.used_amount));
