@@ -35,19 +35,33 @@ function grass(px: number, py: number) {
   return GRASS[i];
 }
 
-function cobble(px: number, py: number, base: string) {
-  const row = Math.floor(py / 5), off = (row % 2) * 3;
-  const cx = Math.floor((px + off) / 6);
-  const inX = (px + off) % 6, inY = py % 5;
-  if (inX === 5 || inY === 4) return shade(base, -0.32);
-  const v = (hash(cx, row) - 0.5) * 0.16;
-  let c = v > 0 ? shade(base, v) : shade(base, v);
-  if (inY === 0 && inX < 4) c = shade(c, 0.12);
+// Rounded cobblestones: a jittered grid of stone centers (Voronoi). Mortar where two stones meet,
+// a lit top-left and shaded bottom-right on each stone, and per-stone color variation.
+function stones(px: number, py: number, palette: string[], size = 7, wear = 0, mortar: [string, string] = ["#5A4636", "#7A6150"], relief = 1) {
+  const gx = Math.floor(px / size), gy = Math.floor(py / size);
+  let d1 = 1e9, d2 = 1e9, cx = 0, cy = 0, id = 0;
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const cxi = gx + i, cyi = gy + j;
+    const sx = (cxi + 0.2 + hash(cxi, cyi) * 0.6) * size, sy = (cyi + 0.2 + hash(cyi * 3.7, cxi * 1.3) * 0.6) * size;
+    const d = Math.hypot((px - sx) * 1.08, py - sy);
+    if (d < d1) { d2 = d1; d1 = d; cx = sx; cy = sy; id = hash(cxi * 7.1, cyi * 3.3); } else if (d < d2) d2 = d;
+  }
+  if (d2 - d1 < 1.15) return d2 - d1 < 0.55 ? mortar[0] : mortar[1]; // mortar, softer at its edge
+  let c = palette[Math.floor(id * palette.length) % palette.length];
+  c = shade(c, wear * 0.18);
+  const dx = (px - cx) / size, dy = (py - cy) / size;
+  if (dx + dy < -0.38) c = shade(c, 0.16 * relief); // light from the top-left
+  else if (dx + dy > 0.34) c = shade(c, -0.14 * relief);
+  if (hash(px, py) > 0.985) c = shade(c, -0.2); // pits and speckle
   return c;
 }
 
+const ROAD = ["#CDB08A", "#C4A57E", "#D6BC97", "#BC9C74", "#C9AD86"];
+const PLAZA = ["#D3CBBA", "#CCC3B1", "#D8D0BF", "#C8BFAD"];
+const CURB = ["#DCD2BE", "#D2C7B1", "#E4DBC8"];
+
 function paving(kind: string, px: number, py: number) {
-  if (kind === "plaza") return cobble(px, py, "#C9BFAE");
+  if (kind === "plaza") return stones(px, py, PLAZA, 6, 0, ["#A79C8A", "#B7AD9B"], 0.55);
   if (kind === "slab") {
     const ix = px % 16, iy = py % 12;
     if (ix === 15 || iy === 11) return "#9A9184";
@@ -83,12 +97,15 @@ export function bakeGround(): Ground {
     for (let px = 0; px < W; px++) {
       const x = BOUNDS.x0 + px / T, z = BOUNDS.z0 + py / T;
       let c = grass(px, py);
-      const jitter = (vnoise(px / 5, py / 5) - 0.5) * 0.35;
+      // Roads: a curb of pale edging stones, cobbles inside that get lighter where feet wear them,
+      // a thin shadow line under the curb, and grass tufts that spill over the edge.
+      const jitter = (vnoise(px / 6, py / 6) - 0.5) * 0.12;
       const rd = roadAt(x, z) + jitter;
-      if (rd < 0) {
-        c = cobble(px, py, "#C2A27A");
-        if (rd > -0.18) c = shade(c, -0.18);
-      } else if (rd < 0.12) c = shade(GRASS[0], -0.12);
+      const tuft = hash(px, py * 1.7) > 0.72 && vnoise(px / 3, py / 3) > 0.5;
+      if (rd < -0.2) c = stones(px, py, ROAD, 7, Math.min(1, (-rd - 0.2) / 1.1));
+      else if (rd < -0.04) c = tuft && rd > -0.1 ? GRASS[2] : stones(px + 3, py + 1, CURB, 4);
+      else if (rd < 0.02) c = "#6B5440";
+      else if (rd < 0.14) c = shade(c, -0.14);
       const zk = zoneAt(x, z);
       if (zk) c = paving(zk, px, py);
       const pd = Math.hypot(x - POND.x, z - POND.z) - POND.r + (vnoise(px / 12, py / 12) - 0.5) * 1.2;

@@ -844,6 +844,23 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
 
 function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }) {
   const [how, setHow] = useState(false);
+  // ?poster=1 shows the title as a clean poster (for the project thumbnail).
+  const poster = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("poster");
+  if (poster) return (
+    <div className="ev-title-screen ev-poster">
+      <div className="ev-sign">
+        <div className="ev-sign-board">
+          <span className="l1">Benefit</span>
+          <span className="l2">Burrow</span>
+          <span className="denom">GROW YOUR PAPERWORK · HARVEST YOUR MONEY</span>
+        </div>
+      </div>
+      <p className="ev-tagline">Americans lose <b>$100B+ a year</b> in money they never claim.<br />AI agents find it, fill your claims and shop your perks. You just approve.</p>
+      <div className="ev-poster-chips">
+        {["Track every benefit", "AI agents shop & fill forms", "You approve everything"].map((c) => <span key={c} className="ev-panel">{c}</span>)}
+      </div>
+    </div>
+  );
   return (
     <div className="ev-title-screen">
       <div className="ev-sign">
@@ -857,8 +874,8 @@ function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }
       {how ? (
         <div className="ev-panel ev-how">
           <p><b>Walk</b> with WASD or by clicking the ground. <b>E</b> to inspect a crop, talk, or open your mailbox. <b>Enter</b> to chat. <b>M</b> to mute.</p>
-          <p>Each crop is a real balance from your documents: dental max, a deductible window, dining dollars, card credits. The closer the deadline, the more it wilts.</p>
-          <p>Harvesting runs the real action (a booking call, a transfer, a refund request) after Ruth, the Reviewer, approves it. Your rescued total is real money.</p>
+          <p>Each crop is a real balance from your documents and plans: FSA, PTO, 401(k) match, card credits, tuition help. The closer the deadline, the more it wilts.</p>
+          <p>Ruth fills in the claim and checks it; you press Submit and send it where it goes. When the money arrives, it counts as rescued.</p>
         </div>
       ) : null}
       <div className="ev-title-actions">
