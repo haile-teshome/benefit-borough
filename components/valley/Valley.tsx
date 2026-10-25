@@ -925,7 +925,7 @@ function Title({ onPlay, connected }: { onPlay: () => void; connected: boolean }
           <span className="l2">Burrow</span>
         </div>
       </div>
-      <p className="ev-tagline">Americans lose <b>$100B+ a year</b> in money they never claim.<br />AI agents find it, fill your claims and shop your perks. You just approve.</p>
+      <p className="ev-tagline"><b>$100B+ a year</b> in earned benefits goes unclaimed.<br />AI agents find it, fill your claims and shop your perks. You just approve.</p>
       <div className="ev-poster-chips">
         {["Track every benefit", "AI agents shop & fill forms", "User has final approval"].map((c) => <span key={c} className="ev-panel">{c}</span>)}
       </div>
