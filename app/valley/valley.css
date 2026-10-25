@@ -348,9 +348,10 @@ button.ev-stat { cursor: pointer; }
 .ev-claims-table .row { display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.2fr) 92px 80px 140px; gap: 10px; align-items: center; text-align: left; font: 400 15px var(--read); color: var(--ink); background: var(--parchment-2); border: 0; padding: 7px 10px; cursor: pointer; }
 .ev-claims-table .row:hover { background: #ffe9b0; }
 .ev-claims-table .row.head { background: transparent; cursor: default; font-weight: 700; font-size: 13px; color: #5a3d22; position: sticky; top: 0; background: var(--parchment); }
-.ev-claims-table .what { display: flex; gap: 8px; align-items: center; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ev-claims-table .what i { width: 10px; height: 10px; border-radius: 2px; flex: none; }
-.ev-claims-table .where { font-size: 13px; color: #5a3d22; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-claims-table .what { display: flex; gap: 8px; align-items: flex-start; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; } /* long titles wrap instead of being cut off */
+.ev-claims-table .what i { width: 10px; height: 10px; border-radius: 2px; flex: none; margin-top: 0.3em; }
+.ev-claims-table .where { font-size: 13px; color: #5a3d22; line-height: 1.25; }
+.ev-claims-table .due { white-space: nowrap; }
 .ev-claims-table .due em { font-style: normal; font-size: 12px; color: #6b4a2a; margin-left: 6px; }
 .ev-claims-table .due.soon { color: var(--stamp); font-weight: 700; }
 .ev-claims-table .num { text-align: right; font-weight: 700; }
