@@ -61,7 +61,7 @@ export const LIBRARY: Plan[] = [
   {
     id: "work-dcfsa", title: "Dependent care FSA (2026: up to $7,500)", issuer: "IRS + your employer", category: "Workplace benefit",
     community: "Working parents", year: "2026", tags: ["dependent care", "dcfsa", "childcare", "daycare", "fsa", "employer"],
-    sources: [{ label: "Polsinelli: dependent care FSA limit rises to $7,500", url: "https://www.polsinelli.com/publications/new-year-new-dependent-care-fsa-limits" }],
+    sources: [{ label: "Hill Ward Henderson: dependent care FSA limit increased to $7,500 for 2026", url: "https://www.hwhlaw.com/advisory-dependent-care-fsa-limit-increased-to-7-500-for-2026" }, { label: "NIS Benefits: dependent care FSA maximum increases for 2026", url: "https://blog.nisbenefits.com/dependent-care-fsa-maximum-increases-2026" }],
     checked: "The 2026 limit is $7,500 only if your employer adopted it. There's no carryover; some plans allow a grace period.",
     terms: ["2026 dependent care FSA limit: $7,500 ($3,750 married filing separately), if your plan adopted it.", "Dependent care FSAs have no carryover: money not claimed for the plan year is forfeited (some plans allow a grace period of up to 2.5 months)."],
     questions: [
@@ -87,7 +87,7 @@ export const LIBRARY: Plan[] = [
     community: "Anyone with health insurance", year: "2026", tags: ["gym", "fitness", "reimbursement", "wellness", "insurance", "blue cross", "tufts", "health plan"],
     sources: [
       { label: "Blue Cross Blue Shield of Massachusetts fitness reimbursement form", url: "https://www.bu.edu/hr/documents/BCBS_Fitness_Reimbursement_Form.pdf" },
-      { label: "Tufts Health Plan fitness rebate form", url: "https://salve.edu/document/tufts-fitness-rebate-form" },
+      { label: "Tufts Health Plan: member fitness rebate ($150 per family per benefit year)", url: "https://tuftshealthplan.com/documents/members/health-wellness/fitness-rewards-member-fitness-rebate" },
     ],
     checked: "Amounts and rules differ by plan: check your plan's fitness or wellness reimbursement page. Some plans count it as taxable income.",
     terms: [
@@ -238,7 +238,7 @@ export const LIBRARY: Plan[] = [
     id: "chase-sapphire-reserve-2026", title: "Chase Sapphire Reserve: 2026 credits", issuer: "Chase", category: "Credit card",
     year: "2026", tags: ["chase", "sapphire", "reserve", "csr", "the edit", "doordash", "lyft", "stubhub", "peloton"],
     sources: [
-      { label: "Katie's Travel Tricks: Sapphire Reserve guide", url: "https://katiestraveltricks.com/portfolio-items/chase-sapphire-reserve/" },
+      { label: "Upgraded Points: Sapphire Reserve DoorDash credit update (Oct 2026)", url: "https://upgradedpoints.com/news/chase-sapphire-reserve-updates-doordash-credit/" },
       { label: "View from the Wing: CSR credits and rules", url: "https://viewfromthewing.com/30-chase-sapphire-reserve-benefits-credits-and-rules-even-seasoned-cardmembers-miss/" },
     ],
     checked: "From 2026 reporting; confirm in the Chase app's card benefits tracker.",
@@ -248,7 +248,7 @@ export const LIBRARY: Plan[] = [
       { key: "hotel2026", name: "2026 select-brand hotel credit", amount: 250, cadence: "2026 only", ends: YEAR_END },
       { key: "dining", name: "Exclusive Tables dining credit", amount: 150, cadence: "semiannual", ends: YEAR_END },
       { key: "stubhub", name: "StubHub credit", amount: 150, cadence: "semiannual", ends: YEAR_END },
-      { key: "doordash", name: "DoorDash credits", amount: 25, cadence: "monthly", ends: MONTH_END },
+      { key: "doordash", name: "DoorDash credits", amount: 35, cadence: "monthly", ends: MONTH_END, note: "$15 on any order plus two $10 promos, from Oct 1, 2026" },
       { key: "lyft", name: "Lyft credit", amount: 10, cadence: "monthly", ends: MONTH_END },
       { key: "peloton", name: "Peloton credit", amount: 10, cadence: "monthly", ends: MONTH_END },
     ],

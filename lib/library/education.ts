@@ -19,7 +19,7 @@ export type Perk = { key: string; name: string; deal: string; after: string; cla
 export const STUDENT_PERKS: Perk[] = [
   { key: "prime", name: "Amazon Prime Student", deal: "6 months free, then $7.49/month or $69/year (half of Prime)", after: "Becomes regular Prime ($14.99/month) after 4 years or when you're no longer a student" },
   { key: "spotify", name: "Spotify Premium Student", deal: "About half price, with Hulu (with ads) included in the US", after: "Re-verify every 12 months, up to 4 years; then regular Premium" },
-  { key: "applemusic", name: "Apple Music Student", deal: "Student price with Apple TV+ included (check the current price)", after: "Re-verify yearly through UNiDAYS, up to 4 years; then the Individual plan ($11.99/month from August 2026)" },
+  { key: "applemusic", name: "Apple Music Student", deal: "Student price with Apple TV+ included (check the current price)", after: "Re-verify yearly through UNiDAYS, up to 4 years; then the regular Individual plan" },
   { key: "youtube", name: "YouTube Premium Student", deal: "Discounted Premium for verified students", after: "Re-verify yearly, up to 4 years; then regular Premium" },
   { key: "appleedu", name: "Apple education pricing", deal: "Discounts on Mac and iPad (plus back-to-school promotions in summer)", after: "Only while you're a student; buy the laptop you need before you graduate" },
   { key: "m365", name: "Microsoft 365 through school", deal: "Word, Excel, PowerPoint, OneDrive and Teams free with your school account", after: "Ends when your school account closes: download your files first" },
@@ -130,8 +130,11 @@ export const EDU_PLANS: Plan[] = [
   {
     id: "edu-drop-refund", title: "Tuition refund: drop a class before the refund deadline", issuer: "Your college's registrar", category: "Education",
     community: "College students", year: "2026", tags: ["drop deadline", "tuition refund", "withdraw", "registrar", "add drop"],
-    sources: [{ label: "Example: UC Berkeley Office of the Registrar, refund schedule", url: "https://registrar.berkeley.edu/tuition-fees-residency/tuition-fees/fee-payment/refund-schedule/" }],
-    checked: "Most colleges refund 100% of a class's tuition only through the add/drop deadline, then on a shrinking schedule. Check your registrar's calendar.",
+    sources: [
+      { label: "Example: University of Cincinnati fall 2026 dates (100% drop deadline Sept 7)", url: "https://www.uc.edu/about/registrar/calendars/fall-2026/dates-deadlines.html" },
+      { label: "Example: Texas Southern University fall 2026 drop and refund schedule", url: "https://www.tsu.edu/about/administration/finance/departments/student-accounting/pdf/Fall%202026%20Drop_Withdrawal%20Refund%20Schedule_Final.pdf" },
+    ],
+    checked: "Colleges refund 100% of a class's tuition only through an early drop deadline, then pro-rate or stop. Dates differ by school: check your registrar's calendar.",
     terms: ["Colleges refund tuition for a dropped class in full only before the drop deadline; after it, the refund shrinks and then disappears."],
     questions: [
       { key: "dropping", ask: "Thinking about dropping a class?", kind: "choice", options: ["No", "Maybe", "Yes"], default: "No" },
@@ -147,6 +150,7 @@ export const EDU_PLANS: Plan[] = [
       { label: "The Penny Hoarder: Amazon Prime Student 2026", url: "https://www.thepennyhoarder.com/save-money/amazon-prime-student-more-affordable/" },
       { label: "Layer3 Labs: AI student discounts in 2026", url: "https://www.layer3labs.io/guides/ai-student-discounts" },
       { label: "BGR: How much is Apple Music in 2026", url: "https://www.bgr.com/2265143/how-much-is-apple-music-2026/" },
+      { label: "Uber: Uber One for Students (4 weeks free, then $4.99/month)", url: "https://www.uber.com/us/en/uberonestudent" },
     ],
     checked: "Offers as reported in 2026 by the companies and deal sites; they change often, so check the offer page before you sign up. Most verify through your school email, SheerID or UNiDAYS.",
     terms: [

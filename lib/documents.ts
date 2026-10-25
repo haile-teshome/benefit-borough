@@ -1,4 +1,6 @@
-// Synthetic documents for the demo. Every number on the board traces back to a line here.
+// Sample documents for a made-up person (Jordan Lee), used only by the demo. They are labeled
+// "Sample" everywhere they appear. Real numbers come from documents you plant, live bank data
+// (Nessie) or the sourced plan library. Every number on the board traces back to a line.
 export type SourceDoc = { id: string; name: string; text: string; meta?: { plan: string; answers: Record<string, unknown> } };
 
 export const DEMO_TODAY = process.env.DEMO_TODAY ?? "2026-10-24";
@@ -6,7 +8,7 @@ export const DEMO_TODAY = process.env.DEMO_TODAY ?? "2026-10-24";
 export const SAMPLE_DOCS: SourceDoc[] = [
   {
     id: "benefits",
-    name: "2026 Benefits Summary.txt",
+    name: "Sample · 2026 Benefits Summary.txt",
     text: `ACME CORP — 2026 BENEFITS SUMMARY
 Plan year: January 1, 2026 – December 31, 2026
 Member: Jordan Lee
@@ -34,7 +36,7 @@ FSA election limit for 2027: $3,400.`,
   },
   {
     id: "dental_plan",
-    name: "Dental Treatment Plan.txt",
+    name: "Sample · Dental Treatment Plan.txt",
     text: `BRIGHT SMILE DENTAL — TREATMENT PLAN
 Patient: Jordan Lee    Date: October 9, 2026    Office phone: (510) 555-0142
 Provider: Dr. Amara Okafor, DDS
@@ -50,7 +52,7 @@ Estimated patient cost if completed in 2026: $1,900.00`,
   },
   {
     id: "eob",
-    name: "EOBs Aug-Sep 2026.txt",
+    name: "Sample · EOBs Aug-Sep 2026.txt",
     text: `EXPLANATION OF BENEFITS — PPO Silver
 Member: Jordan Lee
 
@@ -67,7 +69,7 @@ In-network imaging: Bay Imaging Center, (510) 555-0199`,
   },
   {
     id: "dining",
-    name: "Dining Dollars Statement.txt",
+    name: "Sample · Dining Dollars Statement.txt",
     text: `CAL DINING — DINING DOLLARS STATEMENT
 Account holder: Jordan Lee
 Balance: $412.00
@@ -78,7 +80,7 @@ Transfers to another student are allowed through the Cal Dining peer transfer pr
   },
   {
     id: "cards",
-    name: "Credit Cards.txt",
+    name: "Sample · Credit Cards.txt",
     text: `CARD WALLET
 Sapphire Reserve — annual travel credit: $300.00 remaining, expires December 31, 2026
 Freedom Flex — no active credits
@@ -87,7 +89,7 @@ Stated needs (from onboarding): Flying home to Seattle for winter break, Dec 20,
   },
   {
     id: "statements",
-    name: "Bank & Card Statements Oct 2026.txt",
+    name: "Sample · Bank & Card Statements Oct 2026.txt",
     text: `BANK & CARD STATEMENTS — OCTOBER 2026
 Account holder: Jordan Lee    Statement date: October 24, 2026
 

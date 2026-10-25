@@ -45,6 +45,7 @@ function LiveTrail({ pid, fallback }: { pid: string; fallback: AuditEvent[] }) {
 export function RuthRecord({ state, pid, integrations, live, onClose }: { state: AppState | null; pid: string; integrations: Record<string, boolean>; live: boolean; onClose: () => void }) {
   const [tab, setTab] = useState<"record" | "real" | "rules">("record");
   const real: [string, boolean, string][] = [
+    ["Where the numbers come from", true, "Documents you plant, your live bank (Nessie), and the plan library, where every term cites a public source. The demo farm uses sample documents for a made-up person, labeled Sample."],
     ["Reading your documents", Boolean(integrations.claude), integrations.claude ? "Claude extracts and reviews every balance" : "Rules engine on the sample documents"],
     ["Bank and card activity", Boolean(integrations.nessie), integrations.nessie ? "Live from Capital One Nessie (sandbox bank)" : "Sample statement"],
     ["Ruth's voice and booking calls", Boolean(integrations.cartesia), integrations.cartesia ? "Cartesia text-to-speech" : "Text only"],

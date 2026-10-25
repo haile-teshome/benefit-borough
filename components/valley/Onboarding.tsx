@@ -100,7 +100,7 @@ export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile
               </div>
             ))}
             <div className="ev-actions">
-              <button className="ev-btn ghost" disabled={busy} onClick={() => onDemo(name, color, me?.avatar ?? "")}>{busy ? "Planting…" : "Just show me a demo"}</button>
+              <button className="ev-btn ghost" disabled={busy} onClick={() => onDemo(name, color, me?.avatar ?? "")}>{busy ? "Planting…" : "Demo with a sample person"}</button>
               <button className="ev-btn" disabled={!chosen.length} onClick={() => setStep(2)}>Next: a few numbers</button>
             </div>
           </>
