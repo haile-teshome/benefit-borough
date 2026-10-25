@@ -111,16 +111,18 @@ class ValleyAudio {
 
   // ---- animal voices: each word becomes one call in the character's own animal voice ----
   private line: GainNode | null = null;
+  private lineEnds = 0;
+  speaking() { return Boolean(this.line && this.ctx && this.ctx.currentTime < this.lineEnds); }
   stopLine() {
     if (this.line && this.ctx) this.line.gain.setTargetAtTime(0, this.ctx.currentTime, 0.02);
     this.line = null;
   }
-  animal(text: string, species: string, who: string) {
+  animal(text: string, species: string, who: string, volume = 1) {
     const ctx = this.ctx, out = this.sfxBus;
     if (!ctx || !out) return;
     this.stopLine();
     const bus = ctx.createGain();
-    bus.gain.value = 1.4;
+    bus.gain.value = 1.4 * volume;
     bus.connect(out);
     this.line = bus;
     const c = CALLS[species] ?? CALLS.alpaca;
@@ -136,6 +138,7 @@ class ValleyAudio {
       this.call(c, f, at, bus);
       at += c.dur * (w.length > 6 ? 1.15 : 1) + c.gap + (/[,;:]$/.test(w) ? 0.14 : /[.!?]$/.test(w) ? 0.3 : 0);
     });
+    this.lineEnds = at;
   }
   private call(c: Call, f: number, at: number, bus: GainNode) {
     const ctx = this.ctx!;
@@ -198,6 +201,8 @@ export const sound = new ValleyAudio();
 // Spoken lines. "people": each character's Cartesia voice, streamed and cached (see /api/voice),
 // and preloaded as you walk up to someone so it starts the moment the dialogue opens.
 // "animals": the same lines as the character's own animal calls, synthesized instantly.
+// Nobody is ever silent: when a person voice can't be had (Cartesia not set up, out of credits,
+// busy), that line is spoken in the character's animal voice instead.
 export type VoiceMode = "people" | "animals";
 let mode: VoiceMode = (() => { try { return localStorage.getItem("ev-voices") === "animals" ? "animals" : "people"; } catch { return "people"; } })();
 export const voiceMode = () => mode;
@@ -214,13 +219,15 @@ function voiceLine(text: string, voice?: string) {
   if (!p) {
     p = fetch("/api/voice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, voice }) })
       .then(async (res) => {
-        if (res.status !== 200) return null;
-        const { id, cached } = (await res.json()) as { id: string; cached: boolean };
+        if (res.status !== 200) { primed.delete(key); return null; }
+        const { id, cached, available } = (await res.json()) as { id: string; cached: boolean; available?: boolean };
+        if (available === false) { primed.delete(key); return null; }
         const url = `/api/voice?id=${id}`;
         // Have the server render (and cache) the line now, while you're still walking up; playing it
         // later is then a read from the cache.
         if (!cached) void fetch(url).then((r) => r.arrayBuffer()).catch(() => {});
         const a = new Audio(url);
+        a.addEventListener("error", () => primed.delete(key), { once: true }); // try again next time
         a.preload = "auto";
         a.load();
         return a;
@@ -237,18 +244,42 @@ export function primeVoice(text: string | undefined, voice?: string) {
   if (text && !sound.muted && mode === "people") void voiceLine(text, voice);
 }
 
-export function stopVoice() { voiceEl?.pause(); sound.stopLine(); }
+export function stopVoice() { voiceEl?.pause(); sound.stopLine(); ambient = false; }
+
+// Villagers talking among themselves: quieter the farther away they are, and never over a line
+// someone is saying to you (a dialogue's voice always wins; chatter just waits its turn).
+let ambient = false;
+const asAnimal = (text: string, voice: string | undefined, volume = 1) =>
+  sound.animal(text, SPECIES_OF_VOICE.get(voice ?? "") ?? "alpaca", voice ?? "ruth", volume);
+// Play a person voice; if it fails to load, the animal voice takes over (while it's still this line's turn).
+function play(a: HTMLAudioElement, text: string, voice: string | undefined, volume: number) {
+  if (a.error) { asAnimal(text, voice, volume); return; }
+  voiceEl?.pause();
+  voiceEl = a;
+  a.volume = Math.max(0.1, Math.min(1, volume));
+  a.currentTime = 0;
+  a.addEventListener("error", () => { if (voiceEl === a) asAnimal(text, voice, volume); }, { once: true });
+  void a.play().catch(() => { if (voiceEl === a && a.error) asAnimal(text, voice, volume); });
+}
+const busy = () => Boolean(voiceEl && !voiceEl.paused && !voiceEl.ended) || sound.speaking();
+export async function speakAmbient(text: string, voice: string | undefined, volume: number) {
+  if (sound.muted || !text || (busy() && !ambient)) return;
+  if (mode === "animals") { ambient = true; asAnimal(text, voice, volume); return; }
+  const a = await voiceLine(text, voice);
+  if (busy() && !ambient) return;
+  ambient = true;
+  if (!a) asAnimal(text, voice, volume);
+  else play(a, text, voice, volume);
+}
 
 export async function speak(text: string, voice?: string) {
   if (sound.muted || !text) return;
   stopVoice();
-  if (mode === "animals") { sound.animal(text, SPECIES_OF_VOICE.get(voice ?? "") ?? "alpaca", voice ?? "ruth"); return; }
+  if (mode === "animals") { asAnimal(text, voice); return; }
   const a = await voiceLine(text, voice);
-  if (!a) return; // voice is a nicety; the text is already on screen
-  voiceEl?.pause();
-  voiceEl = a;
-  a.currentTime = 0;
-  void a.play().catch(() => {});
+  ambient = false;
+  if (!a) asAnimal(text, voice);
+  else play(a, text, voice, 1);
 }
 export function playAudio(src: string) {
   stopVoice();

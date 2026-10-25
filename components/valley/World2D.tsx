@@ -47,7 +47,13 @@ type Props = {
   canMove: boolean; onNear: (n: Near) => void; conn: DbConnection | null; myGiftCount: number; attract: boolean;
   bursts: Burst[]; onBurstDone: (id: number) => void; emotes: Record<string, Emote>; ruthMood: Mood;
   tiles: Tile[]; done: string[]; api: WorldApi; onScene: (buildingId: string | null) => void;
+  // Villagers' small talk: the whole conversation as it starts (to get the voices ready), then each
+  // line as it's said, with how far the speaker is from you.
+  onChatter?: (e: { lines: [string, string][] } | { who: string; text: string; dist: number }) => void;
 };
+
+// How long a line of small talk stays up: long enough to be spoken, never under 2.8 s.
+const lineMs = (text: string) => Math.max(2800, text.split(/\s+/).length * 330 + 700);
 
 
 const STYLES: Record<string, P.BuildingStyle> = {
@@ -585,8 +591,9 @@ export default function World2D(props: Props) {
           const c = close[Math.floor(Math.random() * close.length)];
           const fill = (txt: string) => txt.replace("{player}", p.me?.name ?? "A farmer").replace("{rescued}", usd(p.me?.rescued ?? 0));
           chat = { lines: c.lines.map(([who, txt]) => [who === 0 ? c.a : c.b, fill(txt)] as [string, string]), i: 0, next: now };
+          p.onChatter?.({ lines: chat.lines });
           const A = folk.get(c.a)!, B = folk.get(c.b)!;
-          const until = now + c.lines.length * 2900 + 600;
+          const until = now + chat.lines.reduce((ms, [, txt]) => ms + lineMs(txt) + 100, 0) + 600;
           A.pauseUntil = B.pauseUntil = until;
           A.dir = dirOf(B.x - A.x, B.z - A.z, A.dir); B.dir = dirOf(A.x - B.x, A.z - B.z, B.dir);
         } else nextChat = now + 1500;
@@ -594,10 +601,12 @@ export default function World2D(props: Props) {
       if (chat && now >= chat.next) {
         if (chat.i < chat.lines.length) {
           const [who, txt] = chat.lines[chat.i++];
-          bubbles.set(who, { text: txt, until: now + 2800 });
+          const ms = lineMs(txt), f = folk.get(who);
+          bubbles.set(who, { text: txt, until: now + ms });
           const el = labelEls.get(`say:${who}`);
           if (el) el.firstElementChild!.textContent = txt;
-          chat.next = now + 2900;
+          chat.next = now + ms + 100;
+          p.onChatter?.({ who, text: txt, dist: pos && f ? Math.hypot(f.x - pos.x, f.z - pos.z) : 99 });
         } else { chat = null; nextChat = now + 4000 + Math.random() * 5000; }
       }
       // Ruth, the Reviewer: an alpaca in reading glasses behind her audit desk.

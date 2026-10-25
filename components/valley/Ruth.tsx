@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import type { AppState, AuditEvent } from "@/lib/types";
 import { speak } from "@/lib/valley/audio";
 import { expire } from "@/lib/valley/expire";
+import { RUTH_VOICE } from "@/lib/valley/people";
 
 // Ruth's side of the Hyphenate pitch: what she may do, what's real, and her record of work.
 
@@ -118,7 +119,7 @@ export function PushBack({ pid, verdictKey, onState }: { pid: string; verdictKey
       const r = await expire.challenge(pid, verdictKey, text);
       setReply(r.reply);
       onState(r.state);
-      void speak(r.reply.reply);
+      void speak(r.reply.reply, RUTH_VOICE);
       setText("");
     } catch (e) {
       setReply({ stance: "hold", reply: (e as Error).message });

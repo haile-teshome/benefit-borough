@@ -8,7 +8,7 @@ import type { Player, Plot } from "@/lib/valley_bindings/types";
 import { expire } from "@/lib/valley/expire";
 import { CROP_LOOK, ELDER_POS, slotPosition, usd } from "@/lib/valley/layout";
 import type { AppState, DispatchResult, Handoff, Packet, Quest, ShiftReport, Tile, Verdict } from "@/lib/types";
-import { playAudio, primeVoice, setVoiceMode, sound, speak, stopVoice, voiceMode, type VoiceMode } from "@/lib/valley/audio";
+import { playAudio, primeVoice, setVoiceMode, sound, speak, speakAmbient, stopVoice, voiceMode, type VoiceMode } from "@/lib/valley/audio";
 import { clockLabel, dateLabel, gameHour, setHour } from "@/lib/valley/clock";
 import { anchors, registerLabel, setAnchor } from "@/lib/valley/labels";
 import { AVATARS, portrait } from "@/lib/valley/pixel/animals";
@@ -457,7 +457,7 @@ function Valley() {
     sound.click();
     const r = await expire.answer(pid, tileId, reply);
     setState(r.state);
-    void speak(reply === "go" ? "All right. It's yours to harvest." : "Then I'll leave it alone.");
+    void speak(reply === "go" ? "All right. It's yours to harvest." : "Then I'll leave it alone.", RUTH_VOICE);
   }
 
   async function openGifts() {
@@ -518,6 +518,7 @@ function Valley() {
 
   useEffect(() => {
     if (process.env.NODE_ENV !== "production") (window as unknown as { __setHour?: (h: number | null) => void }).__setHour = setHour;
+    if (process.env.NODE_ENV !== "production") Object.assign(window, { __say: speak });
   }, []);
 
   // A soft chime when something new comes within reach, and their first line gets ready to speak,
@@ -569,6 +570,13 @@ function Valley() {
         giftsWaitingFor={giftsWaitingFor}
         canMove={!modal && !chatOpen && !title}
         onNear={setNear}
+        onChatter={(e) => {
+          // Every villager has a voice, in conversations with each other too (only when you're free to listen).
+          if (modal || title || chatOpen) return;
+          const voiceOf = (id: string) => NPCS.find((n) => n.id === id)?.persona.voice;
+          if ("lines" in e) { for (const [who, text] of e.lines) primeVoice(text, voiceOf(who)); return; }
+          if (e.dist < 14) void speakAmbient(e.text, voiceOf(e.who), Math.max(0.15, 0.75 - e.dist / 18));
+        }}
         conn={conn}
         myGiftCount={myGifts.length}
         attract={title}
