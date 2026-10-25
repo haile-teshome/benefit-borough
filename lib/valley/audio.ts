@@ -1,7 +1,22 @@
+import { SPECIES_OF_VOICE } from "./people";
 // All sound is synthesized with Web Audio: no asset files, nothing to license, works offline.
 // Browsers only allow audio after a user gesture, so the title screen's Play button calls start().
 
 type Wave = OscillatorType;
+
+// How each animal "talks": pitch, its contour (start, middle, end), length, vocal formant, wobble.
+type Call = { base: number; glide: [number, number, number]; dur: number; gap: number; wave: Wave; formant: [number, number, number]; q: number; vibrato: [number, number]; vol: number; breath?: number };
+const CALLS: Record<string, Call> = {
+  cow: { base: 125, glide: [0.9, 1.12, 0.82], dur: 0.5, gap: 0.1, wave: "sawtooth", formant: [380, 620, 420], q: 3, vibrato: [5, 0.025], vol: 0.5 }, // mooo
+  cat: { base: 560, glide: [0.85, 1.22, 0.78], dur: 0.3, gap: 0.08, wave: "sawtooth", formant: [900, 1700, 800], q: 4, vibrato: [7, 0.02], vol: 0.35 }, // meow
+  husky: { base: 190, glide: [1.25, 1, 0.8], dur: 0.14, gap: 0.1, wave: "sawtooth", formant: [800, 650, 500], q: 2, vibrato: [0, 0], vol: 0.45, breath: 0.12 }, // woof
+  shiba: { base: 330, glide: [1.3, 1.05, 0.85], dur: 0.12, gap: 0.09, wave: "sawtooth", formant: [1100, 900, 700], q: 2.5, vibrato: [0, 0], vol: 0.4, breath: 0.1 }, // arf
+  rabbit: { base: 1300, glide: [1, 1.3, 1.1], dur: 0.08, gap: 0.07, wave: "triangle", formant: [1800, 2400, 2000], q: 1.5, vibrato: [0, 0], vol: 0.3 }, // squeak
+  bear: { base: 82, glide: [1, 1.12, 0.9], dur: 0.32, gap: 0.1, wave: "sawtooth", formant: [420, 520, 360], q: 2, vibrato: [17, 0.06], vol: 0.55 }, // hrrumph
+  deer: { base: 360, glide: [1, 1.06, 0.95], dur: 0.28, gap: 0.09, wave: "sawtooth", formant: [1000, 1200, 900], q: 5, vibrato: [11, 0.05], vol: 0.35 }, // meh-eh-eh
+  fox: { base: 780, glide: [1.3, 1, 0.72], dur: 0.1, gap: 0.08, wave: "sawtooth", formant: [1500, 1200, 950], q: 4, vibrato: [0, 0], vol: 0.35 }, // yip
+  alpaca: { base: 250, glide: [1, 1.08, 0.94], dur: 0.34, gap: 0.08, wave: "triangle", formant: [650, 760, 520], q: 3, vibrato: [6, 0.02], vol: 0.45 }, // hmmm
+};
 
 class ValleyAudio {
   private ctx: AudioContext | null = null;
@@ -94,6 +109,65 @@ class ValleyAudio {
   gift() { const t = this.now; [784, 988, 1175, 1568].forEach((f, i) => this.tone(f, t + i * 0.09, 0.3, { wave: "triangle", vol: 0.12 })); }
   sprout() { const t = this.now; [392, 523, 659, 784].forEach((f, i) => this.tone(f, t + i * 0.08, 0.22, { wave: "triangle", vol: 0.12 })); }
 
+  // ---- animal voices: each word becomes one call in the character's own animal voice ----
+  private line: GainNode | null = null;
+  stopLine() {
+    if (this.line && this.ctx) this.line.gain.setTargetAtTime(0, this.ctx.currentTime, 0.02);
+    this.line = null;
+  }
+  animal(text: string, species: string, who: string) {
+    const ctx = this.ctx, out = this.sfxBus;
+    if (!ctx || !out) return;
+    this.stopLine();
+    const bus = ctx.createGain();
+    bus.gain.value = 1.4;
+    bus.connect(out);
+    this.line = bus;
+    const c = CALLS[species] ?? CALLS.alpaca;
+    // Every character sounds a little different: their own pitch, from who they are.
+    let h = 0;
+    for (const ch of who) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const pitch = 0.86 + ((h % 1000) / 1000) * 0.32;
+    let at = ctx.currentTime + 0.03;
+    const words = text.split(/\s+/).filter(Boolean).slice(0, 16);
+    words.forEach((w, i) => {
+      const jitter = 0.92 + ((h >> (i % 16)) & 7) / 40;
+      const f = c.base * pitch * jitter * (w.endsWith("?") ? 1.15 : 1);
+      this.call(c, f, at, bus);
+      at += c.dur * (w.length > 6 ? 1.15 : 1) + c.gap + (/[,;:]$/.test(w) ? 0.14 : /[.!?]$/.test(w) ? 0.3 : 0);
+    });
+  }
+  private call(c: Call, f: number, at: number, bus: GainNode) {
+    const ctx = this.ctx!;
+    const osc = ctx.createOscillator();
+    osc.type = c.wave;
+    const [a, b, z] = c.glide;
+    osc.frequency.setValueAtTime(f * a, at);
+    osc.frequency.linearRampToValueAtTime(f * b, at + c.dur * 0.4);
+    osc.frequency.linearRampToValueAtTime(f * z, at + c.dur);
+    // Vibrato (a cow's wobble, a deer's bleat, a bear's grumble).
+    const lfo = ctx.createOscillator(), depth = ctx.createGain();
+    lfo.frequency.value = c.vibrato[0];
+    depth.gain.value = f * c.vibrato[1];
+    lfo.connect(depth).connect(osc.frequency);
+    // A vocal formant that moves through the call ("mmm-ooo", "mee-ow").
+    const form = ctx.createBiquadFilter();
+    form.type = "bandpass";
+    form.Q.value = c.q;
+    form.frequency.setValueAtTime(c.formant[0], at);
+    form.frequency.linearRampToValueAtTime(c.formant[1], at + c.dur * 0.45);
+    form.frequency.linearRampToValueAtTime(c.formant[2], at + c.dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(c.vol, at + Math.min(0.04, c.dur * 0.25));
+    g.gain.setValueAtTime(c.vol, at + c.dur * 0.7);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + c.dur);
+    osc.connect(form).connect(g).connect(bus);
+    osc.start(at); lfo.start(at);
+    osc.stop(at + c.dur + 0.05); lfo.stop(at + c.dur + 0.05);
+    if (c.breath) this.noise(at, Math.min(0.08, c.dur), c.breath, bus, 1200);
+  }
+
   // ---- music: a gentle pentatonic farm loop ----
   private startMusic() {
     if (!this.ctx) return;
@@ -121,18 +195,63 @@ class ValleyAudio {
 
 export const sound = new ValleyAudio();
 
-// Spoken lines (Ruth, booking calls) via the Cartesia route; silent when muted or not configured.
+// Spoken lines. "people": each character's Cartesia voice, streamed and cached (see /api/voice),
+// and preloaded as you walk up to someone so it starts the moment the dialogue opens.
+// "animals": the same lines as the character's own animal calls, synthesized instantly.
+export type VoiceMode = "people" | "animals";
+let mode: VoiceMode = (() => { try { return localStorage.getItem("ev-voices") === "animals" ? "animals" : "people"; } catch { return "people"; } })();
+export const voiceMode = () => mode;
+export function setVoiceMode(m: VoiceMode) {
+  mode = m;
+  try { localStorage.setItem("ev-voices", m); } catch { /* a per-device preference */ }
+}
+
 let voiceEl: HTMLAudioElement | null = null;
+const primed = new Map<string, Promise<HTMLAudioElement | null>>();
+function voiceLine(text: string, voice?: string) {
+  const key = `${voice ?? ""}|${text}`;
+  let p = primed.get(key);
+  if (!p) {
+    p = fetch("/api/voice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, voice }) })
+      .then(async (res) => {
+        if (res.status !== 200) return null;
+        const { id, cached } = (await res.json()) as { id: string; cached: boolean };
+        const url = `/api/voice?id=${id}`;
+        // Have the server render (and cache) the line now, while you're still walking up; playing it
+        // later is then a read from the cache.
+        if (!cached) void fetch(url).then((r) => r.arrayBuffer()).catch(() => {});
+        const a = new Audio(url);
+        a.preload = "auto";
+        a.load();
+        return a;
+      })
+      .catch(() => null);
+    primed.set(key, p);
+    if (primed.size > 30) primed.delete(primed.keys().next().value!);
+  }
+  return p;
+}
+
+// Get a line ready ahead of time (walking up to a villager, the next line of a dialogue).
+export function primeVoice(text: string | undefined, voice?: string) {
+  if (text && !sound.muted && mode === "people") void voiceLine(text, voice);
+}
+
+export function stopVoice() { voiceEl?.pause(); sound.stopLine(); }
+
 export async function speak(text: string, voice?: string) {
   if (sound.muted || !text) return;
-  try {
-    const res = await fetch("/api/voice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, voice }) });
-    if (res.status !== 200) return;
-    playAudio(URL.createObjectURL(await res.blob()));
-  } catch { /* voice is a nicety; the text is already on screen */ }
+  stopVoice();
+  if (mode === "animals") { sound.animal(text, SPECIES_OF_VOICE.get(voice ?? "") ?? "alpaca", voice ?? "ruth"); return; }
+  const a = await voiceLine(text, voice);
+  if (!a) return; // voice is a nicety; the text is already on screen
+  voiceEl?.pause();
+  voiceEl = a;
+  a.currentTime = 0;
+  void a.play().catch(() => {});
 }
 export function playAudio(src: string) {
-  voiceEl?.pause();
+  stopVoice();
   voiceEl = new Audio(src);
   void voiceEl.play().catch(() => {});
 }

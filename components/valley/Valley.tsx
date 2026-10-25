@@ -8,7 +8,7 @@ import type { Player, Plot } from "@/lib/valley_bindings/types";
 import { expire } from "@/lib/valley/expire";
 import { CROP_LOOK, ELDER_POS, slotPosition, usd } from "@/lib/valley/layout";
 import type { AppState, DispatchResult, Handoff, Packet, Quest, ShiftReport, Tile, Verdict } from "@/lib/types";
-import { playAudio, sound, speak } from "@/lib/valley/audio";
+import { playAudio, primeVoice, setVoiceMode, sound, speak, stopVoice, voiceMode, type VoiceMode } from "@/lib/valley/audio";
 import { clockLabel, dateLabel, gameHour, setHour } from "@/lib/valley/clock";
 import { anchors, registerLabel, setAnchor } from "@/lib/valley/labels";
 import { AVATARS, portrait } from "@/lib/valley/pixel/animals";
@@ -478,7 +478,7 @@ function Valley() {
     if (!near || modal || title) return;
     sound.click();
     if (near.kind === "crop") { setModal({ kind: "crop", tileId: near.tileId }); setEmotes((e) => ({ ...e, [myHex]: { clip: "Interact", at: performance.now() } })); }
-    if (near.kind === "elder") { setModal({ kind: "elder", step: "hello" }); void speak("I audit every harvest in this borough. Show me what you want to buy with your FSA."); }
+    if (near.kind === "elder") { setModal({ kind: "elder", step: "hello" }); void speak(ELDER_HELLO, RUTH_VOICE); }
     if (near.kind === "mailbox") void openGifts();
     if (near.kind === "fish") setModal({ kind: "fishing" });
     if (near.kind === "balloons") setModal({ kind: "balloons" });
@@ -487,7 +487,7 @@ function Valley() {
     if (near.kind === "exit") worldApi.exit?.();
     if (near.kind === "claim") setModal({ kind: "crop", tileId: near.tileId });
     if (near.kind === "keeper") { const k = KEEPERS[near.id]; setModal({ kind: "keeper", id: near.id }); if (k) void speak(k.hello, k.persona.voice); }
-    if (near.kind === "npc") { const n = NPCS.find((x) => x.id === near.id); setModal({ kind: "npc", id: near.id, line: 0 }); if (n) void speak(n.talk[0], n.persona.voice); }
+    if (near.kind === "npc") { const n = NPCS.find((x) => x.id === near.id); setModal({ kind: "npc", id: near.id, line: 0 }); if (n) { void speak(n.talk[0], n.persona.voice); primeVoice(n.talk[1], n.persona.voice); } }
   }
 
   // Keyboard: E to interact, Esc to close, Enter to chat.
@@ -520,13 +520,30 @@ function Valley() {
     if (process.env.NODE_ENV !== "production") (window as unknown as { __setHour?: (h: number | null) => void }).__setHour = setHour;
   }, []);
 
-  // A soft chime when something new comes within reach.
+  // A soft chime when something new comes within reach, and their first line gets ready to speak,
+  // so the voice starts the moment the dialogue opens.
   const lastNear = useRef("");
   useEffect(() => {
     const k = near ? `${near.kind}:${near.label}` : "";
-    if (k && k !== lastNear.current && !title) sound.prompt();
+    if (k && k !== lastNear.current && !title) {
+      sound.prompt();
+      if (near?.kind === "npc") { const n = NPCS.find((x) => x.id === near.id); if (n) primeVoice(n.talk[0], n.persona.voice); }
+      if (near?.kind === "keeper") { const kp = KEEPERS[near.id]; if (kp) primeVoice(kp.hello, kp.persona.voice); }
+      if (near?.kind === "elder") primeVoice(ELDER_HELLO, RUTH_VOICE);
+    }
     lastNear.current = k;
   }, [near, title]);
+  // Closing a dialogue stops whoever was talking.
+  useEffect(() => { if (!modal) stopVoice(); }, [modal]);
+
+  // People voices or animal sounds; a per-device choice, read after mount.
+  const [voices, setVoices] = useState<VoiceMode>("people");
+  useEffect(() => setVoices(voiceMode()), []);
+  function toggleVoices() {
+    const m: VoiceMode = voices === "people" ? "animals" : "people";
+    setVoiceMode(m); setVoices(m);
+    void speak(m === "animals" ? "Fine. We'll all speak animal now." : "Back to words, then.", RUTH_VOICE);
+  }
 
   const bubbles = useMemo(() => {
     const now = Date.now();
@@ -569,7 +586,7 @@ function Valley() {
       {title ? (
         <Title onPlay={play} connected={isActive} />
       ) : (
-        <Hud inside={Boolean(inside)} me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} onLibrary={() => setModal({ kind: "library" })} onClaims={() => setModal({ kind: "claims" })} onHome={() => worldApi.home?.()} onExchange={() => setModal({ kind: "exchange" })} acorns={rewards.acorns} streak={rewards.streak}
+        <Hud inside={Boolean(inside)} me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} voices={voices} onVoices={toggleVoices} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} onLibrary={() => setModal({ kind: "library" })} onClaims={() => setModal({ kind: "claims" })} onHome={() => worldApi.home?.()} onExchange={() => setModal({ kind: "exchange" })} acorns={rewards.acorns} streak={rewards.streak}
           onOutbox={() => setModal({ kind: "outbox" })} onAutopilot={() => setModal({ kind: "autopilot" })} onVoice={() => setModal({ kind: "voice" })} onHousehold={convex ? () => setModal({ kind: "household" }) : undefined} onBazaar={() => setModal({ kind: "bazaar" })} onCheckout={() => setModal({ kind: "checkout" })} onSwap={() => setModal({ kind: "swap" })} onTerms={() => setModal({ kind: "terms" })} />
       )}
 
@@ -604,7 +621,7 @@ function Valley() {
         const n = NPCS.find((x) => x.id === modal.id)!;
         return (
           <Dialogue speaker={n.name} onClose={() => setModal(null)}
-            actions={n.talk.length > 1 ? <button className="ev-btn ghost" onClick={() => { const i = (modal.line + 1) % n.talk.length; setModal({ ...modal, line: i }); void speak(n.talk[i], n.persona.voice); }}>Tell me more</button> : null}>
+            actions={n.talk.length > 1 ? <button className="ev-btn ghost" onClick={() => { const i = (modal.line + 1) % n.talk.length; setModal({ ...modal, line: i }); void speak(n.talk[i], n.persona.voice); primeVoice(n.talk[(i + 1) % n.talk.length], n.persona.voice); }}>Tell me more</button> : null}>
             <p className="ev-lead">{n.talk[modal.line]}</p>
             <p className="ev-sub ev-quirk">{n.persona.quirk}</p>
             <TalkBox key={n.id} pid={pid} who={n.id} name={n.name} voice={n.persona.voice} hearts={heartsFor(state?.friends?.[n.id]?.talks ?? 0)} onSaid={() => void acornEvent({ kind: "chat" })} />
@@ -837,7 +854,9 @@ function UploadButton({ busy, onUpload, className, label }: { busy: boolean; onU
   );
 }
 
-function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord, onLibrary, onClaims, onHome, onExchange, acorns, streak, onOutbox, onCheckout, onSwap, onTerms, onAutopilot, onVoice, onHousehold, onBazaar }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean; onLibrary: () => void; onClaims: () => void; onHome: () => void; onExchange: () => void; acorns: number; streak: number; onOutbox: () => void; onCheckout: () => void; onSwap: () => void; onTerms: () => void; onAutopilot: () => void; onVoice: () => void; onHousehold?: () => void; onBazaar: () => void }) {
+const ELDER_HELLO = "I audit every harvest in this borough. Show me what you want to buy with your FSA.";
+
+function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, voices, onVoices, onAvatar, onUpload, onRecord, onLibrary, onClaims, onHome, onExchange, acorns, streak, onOutbox, onCheckout, onSwap, onTerms, onAutopilot, onVoice, onHousehold, onBazaar }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; voices: VoiceMode; onVoices: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean; onLibrary: () => void; onClaims: () => void; onHome: () => void; onExchange: () => void; acorns: number; streak: number; onOutbox: () => void; onCheckout: () => void; onSwap: () => void; onTerms: () => void; onAutopilot: () => void; onVoice: () => void; onHousehold?: () => void; onBazaar: () => void }) {
   const waiting = (state?.packets ?? []).filter((p) => p.status !== "submitted");
   const clock = useClock();
   const [open, setOpen] = useState(false);
@@ -907,6 +926,7 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
             <h4>Settings</h4>
             <button className="ev-link" onClick={onAvatar}>Change avatar</button>
             <button className="ev-link" onClick={onMute}>{muted ? "Sound: off · M" : "Sound: on · M"}</button>
+            <button className="ev-link" onClick={onVoices}>{voices === "animals" ? "Voices: animal sounds" : "Voices: people"}</button>
             <button className="ev-link" disabled={busy} onClick={onReplant}>{busy ? "Replanting…" : "Replant (reset demo)"}</button>
           </section>
         </div>

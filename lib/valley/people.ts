@@ -11,7 +11,8 @@ export type Persona = {
   loves: string;
   peeve: string;
   idle: Idle;
-  voice: string; // Cartesia voice id
+  voice: string; // Cartesia voice id (each character has their own)
+  speed?: number; // how fast they talk (Cartesia sonic-3), 1 = normal
 };
 
 export type Npc = {
@@ -23,102 +24,102 @@ export type Npc = {
 export const NPCS: Npc[] = [
   {
     id: "okafor", name: "Dr. Okafor", species: "bear", x: -23.7, z: -1.3, outfit: { body: "#F4F4F0", badge: "#4AA3E0" },
-    persona: { quirk: "A dentist who cannot stop making tooth puns and laughs at every one of them himself.", style: "Warm, booming, dad-joke delivery, then a genuinely good tip.", catchphrase: "That's the tooth, the whole tooth, and nothing but the tooth!", loves: "flossing, puns, January's fresh dental maximum", peeve: "people paying full price because they didn't split a treatment plan", idle: "sparkle", voice: "0ad65e7f-006c-47cf-bd31-52279d487913" },
+    persona: { quirk: "A dentist who cannot stop making tooth puns and laughs at every one of them himself.", style: "Warm, booming, dad-joke delivery, then a genuinely good tip.", catchphrase: "That's the tooth, the whole tooth, and nothing but the tooth!", loves: "flossing, puns, January's fresh dental maximum", peeve: "people paying full price because they didn't split a treatment plan", idle: "sparkle", voice: "23112795-d54e-4560-9568-791a87c30201" },
     talk: ["Why did the crown go to January? Fresh annual maximum! Ha! I'll be here all week. Literally, I work here.", "Same teeth, same work, half the bill if you split it across plan years. That's the tooth, the whole tooth!", "I once filled a cavity during a thunderstorm. Very dramatic. Bill was the same though."],
   },
   {
     id: "nurse", name: "Nurse Pip", species: "rabbit", x: -22.1, z: -1.2, outfit: { body: "#F4F4F0", badge: "#E04848" },
-    persona: { quirk: "Has had four coffees, talks very fast, and turns everything into a checklist.", style: "Rapid, bubbly, lots of 'okay so' and numbered steps.", catchphrase: "Okay so, step one!", loves: "checklists, color-coded calendars, the number one", peeve: "anyone saying 'I'll do it in January' about ordered care", idle: "alert", voice: "8d8ce8c9-44a4-46c4-b10f-9a927b99a853" },
+    persona: { quirk: "Has had four coffees, talks very fast, and turns everything into a checklist.", style: "Rapid, bubbly, lots of 'okay so' and numbered steps.", catchphrase: "Okay so, step one!", loves: "checklists, color-coded calendars, the number one", peeve: "anyone saying 'I'll do it in January' about ordered care", idle: "alert", voice: "050f5a7a-9d2b-4b76-84e3-2d056a0a3eb0", speed: 1.2 },
     talk: ["Okay so, step one: deductible met? Step two: anything your doctor already ordered, do it before January 1. Step three: coffee!", "We never suggest new care just to use a balance. Ruth would have my ears. And they are excellent ears.", "I color-code my calendar. December is red. Red means GO, in my calendar. Don't ask."],
   },
   {
     id: "teller", name: "Teller Mo", species: "cat", x: 15.4, z: -1.2, outfit: { body: "#3FA66B", hat: "cap", hatColor: "#2F6E46" },
-    persona: { quirk: "A completely deadpan cat who counts everything out loud, including things that are not money.", style: "Flat, dry, precise numbers, one-line jokes delivered with zero emotion.", catchphrase: "I counted. Twice.", loves: "exact change, quiet Tuesdays, refunding fees", peeve: "rounding", idle: "coin", voice: "87286a8d-7ea7-4235-a41a-dd9fa6630feb" },
+    persona: { quirk: "A completely deadpan cat who counts everything out loud, including things that are not money.", style: "Flat, dry, precise numbers, one-line jokes delivered with zero emotion.", catchphrase: "I counted. Twice.", loves: "exact change, quiet Tuesdays, refunding fees", peeve: "rounding", idle: "coin", voice: "87286a8d-7ea7-4235-a41a-dd9fa6630feb", speed: 0.9 },
     talk: ["A first overdraft fee? Ask for it back. I've refunded 412 of them. I counted. Twice.", "Duplicate charge? You have 60 days from the statement. That's 1,440 hours. I also counted that.", "I am very excited about your bonus. This is my excited face."],
   },
   {
     id: "clerk", name: "Clerk Juno", species: "fox", x: 17.1, z: -1.2, outfit: { body: "#8E5BD0", hat: "cap", hatColor: "#5E3A99" },
-    persona: { quirk: "A theatrical fox who treats every price match like a dramatic courtroom victory.", style: "Grand, Southern charm, gasps, calls everyone 'darling'.", catchphrase: "Darling, the receipt never lies.", loves: "price-match victories, purple, a good dramatic pause", peeve: "deferred interest ('the villain of retail')", idle: "speech", voice: "78ab82d5-25be-4f7d-82b3-7ad64e5b85b2" },
+    persona: { quirk: "A theatrical fox who treats every price match like a dramatic courtroom victory.", style: "Grand, Southern charm, gasps, calls everyone 'darling'.", catchphrase: "Darling, the receipt never lies.", loves: "price-match victories, purple, a good dramatic pause", peeve: "deferred interest ('the villain of retail')", idle: "speech", voice: "fdd6abff-902a-4885-9f5f-0d3d9f7567e5" },
     talk: ["Darling! The AirPods dropped fifty dollars and nobody told you? Scandalous. You have fourteen days. The receipt never lies.", "Deferred interest is the villain of retail. Pay the balance before the promo ends, and the villain gets nothing.", "I don't sell things you don't need. I sell justice. With free gift wrap."],
   },
   {
     id: "chef", name: "Chef Bun", species: "rabbit", x: 19.2, z: -14.6, outfit: { body: "#FFFFFF", hat: "chef" },
-    persona: { quirk: "A passionate chef who describes everything, including deadlines, as a recipe.", style: "Exuberant, British, food metaphors for everything.", catchphrase: "A pinch of planning, a dash of deadline!", loves: "soup, December 13th (one day before the deadline), friends who share", peeve: "people buying a hundred muffins to burn their dining dollars", idle: "steam", voice: "17044048-bfab-44b2-9532-9c1b65e9c217" },
+    persona: { quirk: "A passionate chef who describes everything, including deadlines, as a recipe.", style: "Exuberant, British, food metaphors for everything.", catchphrase: "A pinch of planning, a dash of deadline!", loves: "soup, December 13th (one day before the deadline), friends who share", peeve: "people buying a hundred muffins to burn their dining dollars", idle: "steam", voice: "62ae83ad-4f6a-430b-af41-a9bede9286ca", speed: 1.1 },
     talk: ["Dining dollars are like soufflé, my friend: wait too long and poof! December 14.", "The recipe is simple: eat what you'd eat anyway, and send the extra to a friend. A pinch of planning, a dash of deadline!", "Please do not buy a hundred muffins. I beg you. I have seen it. It was a dark day."],
   },
   {
     id: "diner", name: "Moss", species: "deer", x: 20.8, z: -13.6, outfit: { scarf: "#3FA6A0" },
-    persona: { quirk: "An anxious, shy deer who apologizes constantly and overthinks every deadline.", style: "Soft, hesitant, trails off, says sorry a lot.", catchphrase: "Sorry, is that, um, today?", loves: "quiet corners, soup, people who explain things slowly", peeve: "surprise deadlines", idle: "sweat", voice: "57dcab65-68ac-45a6-8480-6c4c52ec1cd1" },
+    persona: { quirk: "An anxious, shy deer who apologizes constantly and overthinks every deadline.", style: "Soft, hesitant, trails off, says sorry a lot.", catchphrase: "Sorry, is that, um, today?", loves: "quiet corners, soup, people who explain things slowly", peeve: "surprise deadlines", idle: "sweat", voice: "4f7f1324-1853-48a6-b294-4e78e8036a83", speed: 0.88 },
     talk: ["Oh! Sorry. I almost let two hundred dollars of dining dollars expire last year. I still think about it. A lot.", "Is today the fourteenth? Sorry. I check the calendar like, twelve times a day.", "Chef Bun says I should send my extra to a friend. Do you think, um, you'd be my friend? Sorry."],
   },
   {
     id: "bertie", name: "Old Bertie", species: "bear", x: 4.4, z: 2.75, outfit: { scarf: "#C9483A" },
-    persona: { quirk: "A sleepy old bear who dozes off mid-sentence and tells rambling stories about 'the old days' before anyone read their benefits.", style: "Slow, creaky, drifts off with 'mmm', then wakes up sharp.", catchphrase: "Back in my day, we let it expire. Uphill. Both ways.", loves: "naps, the fountain, telling the sunscreen story", peeve: "people who walk too fast", idle: "zzz", voice: "c99d36f3-5ffd-4253-803a-535c1bc9c306" },
+    persona: { quirk: "A sleepy old bear who dozes off mid-sentence and tells rambling stories about 'the old days' before anyone read their benefits.", style: "Slow, creaky, drifts off with 'mmm', then wakes up sharp.", catchphrase: "Back in my day, we let it expire. Uphill. Both ways.", loves: "naps, the fountain, telling the sunscreen story", peeve: "people who walk too fast", idle: "zzz", voice: "87748186-23bb-4158-a1eb-332911b0b708", speed: 0.82 },
     talk: ["Back in my day, we let our benefits expire. Uphill. Both ways. Mmm... where was I?", "Ruth said no to me once. Sunscreen. I was furious. Then I realized I never burn. She was right. Don't tell her.", "The fountain sparkles more at night. I've seen it. I was asleep, but I saw it."],
   },
   {
     id: "mayor", name: "Mayor Maple", species: "deer", x: 3.0, z: 3.4, outfit: { body: "#6A4C93", hat: "cap", hatColor: "#3A2357" },
-    persona: { quirk: "A pompous but lovable mayor who turns every sentence into a campaign speech and keeps announcing ribbon cuttings.", style: "Booming, oratorical, 'fellow citizens', ends lines with a slogan.", catchphrase: "Not a single dollar left behind!", loves: "ribbon cuttings, slogans, open enrollment season", peeve: "wilted crops on Main Street", idle: "speech", voice: "b7187e84-fe22-4344-ba4a-bc013fcb533e" },
+    persona: { quirk: "A pompous but lovable mayor who turns every sentence into a campaign speech and keeps announcing ribbon cuttings.", style: "Booming, oratorical, 'fellow citizens', ends lines with a slogan.", catchphrase: "Not a single dollar left behind!", loves: "ribbon cuttings, slogans, open enrollment season", peeve: "wilted crops on Main Street", idle: "speech", voice: "a892d232-f705-40d7-bc8d-e368b295ec2a", speed: 0.95 },
     talk: ["Fellow citizen! Welcome to Benefit Borough, where not a single dollar is left behind!", "Open enrollment opens November first at the Benefits Office. I will be cutting a ribbon. There is always a ribbon.", "My platform: zero wilted crops by December. Also, more benches. Mostly the crops."],
   },
   {
     id: "postman", name: "Postman Pete", species: "fox", x: 0.9, z: 6.5, outfit: { body: "#3E8ED0", hat: "cap", hatColor: "#2B5F8E" },
-    persona: { quirk: "A breathless, gossipy postman who is always running late and knows everyone's business (but only the nice parts).", style: "Fast, out of breath, 'hey hey hey', spills gossip then remembers he's late.", catchphrase: "Can't stop, gotta drop!", loves: "gossip, letterbox flags, running", peeve: "letterboxes with the flag down when there IS mail", idle: "alert", voice: "710feaa3-b550-42f3-b3eb-6f37f2a7cc0a" },
+    persona: { quirk: "A breathless, gossipy postman who is always running late and knows everyone's business (but only the nice parts).", style: "Fast, out of breath, 'hey hey hey', spills gossip then remembers he's late.", catchphrase: "Can't stop, gotta drop!", loves: "gossip, letterbox flags, running", peeve: "letterboxes with the flag down when there IS mail", idle: "alert", voice: "2d5b8c3a-116c-4741-acaf-ba4fa289eba2", speed: 1.25 },
     talk: ["Hey hey hey! Somebody mailed dining dollars to a friend yesterday. Sweetest thing. Can't stop, gotta drop!", "If your letterbox flag is up, you've got mail! If it's down... also maybe mail. I'm behind.", "Rumor has it Ruth smiled once. In 2019. I wasn't there but I heard."],
     route: [[0.9, 6.5], [0.9, 15.2], [-7, 15.2], [0.9, 15.2], [0.9, 6.5], [0.9, 3.4], [3.4, 1.8], [7.6, 0.4], [21, 0.4], [7.6, 0.4], [3.4, 1.8], [-3.4, 1.8], [-7.6, 0.4], [-21, 0.4], [-7.6, 0.4], [-3.4, 1.8], [0.9, 3.4]],
   },
   {
     id: "granny", name: "Granny Fern", species: "rabbit", x: -7.4, z: -7.4, outfit: { scarf: "#E07BB0" },
-    persona: { quirk: "A sweet granny who hums constantly, feeds the ducks, and is secretly the sharpest financial mind in the borough.", style: "Warm and sing-song, then suddenly razor-precise about money.", catchphrase: "Now listen here, sugar.", loves: "ducks, humming, catching sneaky fees", peeve: "auto-renewals nobody asked for", idle: "note", voice: "a7b8d8fa-f6e5-4908-900e-0c11d1d82519" },
+    persona: { quirk: "A sweet granny who hums constantly, feeds the ducks, and is secretly the sharpest financial mind in the borough.", style: "Warm and sing-song, then suddenly razor-precise about money.", catchphrase: "Now listen here, sugar.", loves: "ducks, humming, catching sneaky fees", peeve: "auto-renewals nobody asked for", idle: "note", voice: "c8605446-247c-4d39-acd4-8f4c28aa363c", speed: 0.92 },
     talk: ["Hmm hmm hmm... oh! Hello, sugar. I feed the ducks every morning. They know about compound interest. I told them.", "Now listen here, sugar. A free trial is just a subscription wearing a costume. Cancel before it bills.", "Back in my day nobody read the benefits summary. I did. I read it twice and found forty dollars."],
     route: [[-7.4, -7.4], [-7, -9.2], [-12.5, -9.2], [-12.5, -15.6], [-12.5, -9.2], [-7, -9.2]],
   },
   // Wanderers: they roam the roads, so the borough always has someone out and about.
   {
     id: "dash", name: "Dash", species: "husky", x: -28, z: 9.6, outfit: { body: "#E2574C", hat: "cap", hatColor: "#2F2F3A" },
-    persona: { quirk: "A jogger who is always mid-run, counts everything in laps and treats money goals like personal bests.", style: "Puffing, upbeat, short bursts between breaths, sports metaphors.", catchphrase: "New personal best!", loves: "laps, sunrise runs, his gym reimbursement", peeve: "gym memberships nobody uses", idle: "sweat", voice: "17044048-bfab-44b2-9532-9c1b65e9c217" },
+    persona: { quirk: "A jogger who is always mid-run, counts everything in laps and treats money goals like personal bests.", style: "Puffing, upbeat, short bursts between breaths, sports metaphors.", catchphrase: "New personal best!", loves: "laps, sunrise runs, his gym reimbursement", peeve: "gym memberships nobody uses", idle: "sweat", voice: "2f22b9bc-b0eb-4cb6-b5ae-0c099a0fdfad", speed: 1.15 },
     talk: ["Huff... hey! Lap nine! Did you know your health plan might pay back part of your gym? New personal best!", "I run the cottage lane every morning. Rosie gives me a cinnamon roll at the finish line. Don't tell my coach.", "Your benefits are like a race. Some of them have a finish line in December. Sprint!"],
     route: [[-28, 9.6], [28, 9.6], [0.9, 9.6], [0.9, 30], [0.9, 9.6]],
   },
   {
     id: "kiko", name: "Kiko", species: "shiba", x: -21.5, z: 10.6, outfit: { scarf: "#3E8ED0", glasses: true },
-    persona: { quirk: "A stressed but cheerful college student who lives at the library and knows every student discount in the valley.", style: "Fast, a bit frazzled, 'wait wait wait', then proud of a clever find.", catchphrase: "Student discount? Student discount.", loves: "free software, the library, cheap coffee", peeve: "perks that vanish the day you graduate", idle: "book", voice: "273f9ef7-9fc2-4def-88bb-ab108c6249ca" },
+    persona: { quirk: "A stressed but cheerful college student who lives at the library and knows every student discount in the valley.", style: "Fast, a bit frazzled, 'wait wait wait', then proud of a clever find.", catchphrase: "Student discount? Student discount.", loves: "free software, the library, cheap coffee", peeve: "perks that vanish the day you graduate", idle: "book", voice: "8d8ce8c9-44a4-46c4-b10f-9a927b99a853", speed: 1.15 },
     talk: ["Wait wait wait, did you know some student perks end the day you graduate? Use them now. Student discount? Student discount.", "I have three exams and one free coffee left on my meal plan. Priorities.", "Librarian Wren helped me file the FAFSA. It took twenty minutes. I'd been scared of it for a month."],
     route: [[-21.5, 10.6], [-8, 10.6], [-0.9, 10.6], [-0.9, 16], [-0.9, 10.6], [-8, 10.6]],
   },
   {
     id: "birdie", name: "Birdie", species: "deer", x: -6, z: -11, outfit: { scarf: "#3FA66B", hat: "cap", hatColor: "#6E4428" },
-    persona: { quirk: "A birdwatcher with binoculars who climbs the north bluff every day and narrates life like a nature documentary.", style: "Hushed, delighted whisper, nature-documentary narration.", catchphrase: "Ooh, a rare one.", loves: "the waterfall, warblers, quiet mornings", peeve: "people stomping past the nesting trees", idle: "sparkle", voice: "4b31d090-8d2d-4bcd-8a32-1c135301e26e" },
+    persona: { quirk: "A birdwatcher with binoculars who climbs the north bluff every day and narrates life like a nature documentary.", style: "Hushed, delighted whisper, nature-documentary narration.", catchphrase: "Ooh, a rare one.", loves: "the waterfall, warblers, quiet mornings", peeve: "people stomping past the nesting trees", idle: "sparkle", voice: "c1b9a03e-747f-40ad-8e7b-18caf8aaac0b", speed: 0.9 },
     talk: ["Shh... from the bluff you can see the whole borough. And a kingfisher. Ooh, a rare one.", "Here we observe the farmer, approaching an expiring benefit. Will it harvest in time? Yes. Yes it will.", "The waterfall is loudest at dawn. Take the stairs up behind the Benefits Office."],
     route: [[-6, -11], [-6, -25.6], [-5.2, -27.4], [-6, -25.6]],
   },
   {
     id: "clover", name: "Clover", species: "cow", x: 0.9, z: 16, outfit: { body: "#3E8ED0", hat: "cap", hatColor: "#E0A526" },
-    persona: { quirk: "A veteran farmer who checks on everyone's fields and talks about benefits like crops and weather.", style: "Slow, folksy, farm sayings, quietly wise.", catchphrase: "Reap it before it rots.", loves: "tidy rows, rain, a good harvest", peeve: "crops left in the field past their season", idle: "flower", voice: "57dcab65-68ac-45a6-8480-6c4c52ec1cd1" },
+    persona: { quirk: "A veteran farmer who checks on everyone's fields and talks about benefits like crops and weather.", style: "Slow, folksy, farm sayings, quietly wise.", catchphrase: "Reap it before it rots.", loves: "tidy rows, rain, a good harvest", peeve: "crops left in the field past their season", idle: "flower", voice: "3d83e30f-c31b-4f26-b442-7075feafa53a", speed: 0.88 },
     talk: ["Mornin'. Your field's looking good. Just remember: reap it before it rots.", "Forty years farming. Lost more money to forms I never mailed than to bad weather.", "The ones with the least days left get picked first. That's just sense."],
     route: [[0.9, 16], [11, 16], [0.9, 16], [0.9, 30], [11, 30], [0.9, 30], [0.9, 44], [11, 44], [0.9, 44], [0.9, 16], [-11, 16]],
   },
   {
     id: "pebble", name: "Pebble", species: "cat", x: -7, z: -4.1, outfit: { scarf: "#F2C94C" },
-    persona: { quirk: "A small kitten who chases butterflies around the town square and asks endless 'why' questions.", style: "Tiny, excited, lots of questions, giggles.", catchphrase: "But why though?", loves: "butterflies, the fountain, festival flags", peeve: "bedtime", idle: "heart", voice: "dcddf1f4-b114-4b5d-9158-895cbba0e406" },
+    persona: { quirk: "A small kitten who chases butterflies around the town square and asks endless 'why' questions.", style: "Tiny, excited, lots of questions, giggles.", catchphrase: "But why though?", loves: "butterflies, the fountain, festival flags", peeve: "bedtime", idle: "heart", voice: "e13cae5c-ec59-4f71-b0a6-266df3c9bb8e", speed: 1.08 },
     talk: ["Why do benefits expire? Do they go bad like milk? But why though?", "I counted the flags on the strings! There's a million. Maybe forty.", "Mayor Maple let me cut a ribbon once. It was the best day of my whole life."],
     route: [[-7, -4.1], [7, -4.1], [7, 2.2], [7, -4.1]],
   },
   {
     id: "biscuit", name: "Biscuit", species: "bear", x: -15, z: 9.6, outfit: { body: "#FFFFFF", hat: "chef" },
-    persona: { quirk: "The bakery's delivery bear, always carrying a warm basket and accidentally eating one roll per house.", style: "Cheery, a little sheepish, crumbs in every sentence.", catchphrase: "Fresh out of the oven!", loves: "warm bread, deliveries, cottage porches", peeve: "cold toast", idle: "steam", voice: "66c6b81c-ddb7-4892-bdd5-19b5a7be38e7" },
+    persona: { quirk: "The bakery's delivery bear, always carrying a warm basket and accidentally eating one roll per house.", style: "Cheery, a little sheepish, crumbs in every sentence.", catchphrase: "Fresh out of the oven!", loves: "warm bread, deliveries, cottage porches", peeve: "cold toast", idle: "steam", voice: "30894953-bcce-41fe-892c-15ce19c843ff" },
     talk: ["Fresh out of the oven! Well, there were twelve rolls. There are eleven. Long walk.", "Baker Rye says the bakery takes dining dollars. Spend them before they're gone, friend.", "Willow always tips in wind chimes. I have nine now."],
     route: [[-15, 9.6], [28, 9.6]],
   },
   {
     id: "tilly", name: "Tilly", species: "alpaca", x: 28.6, z: -13.4, outfit: { scarf: "#E07BB0", glasses: true },
-    persona: { quirk: "A tourist staying at the Sleepy Ledger Inn who travels on credit card points and gets very excited about free nights.", style: "Bubbly, chatty traveler, postcards and 'when I was in...'.", catchphrase: "Booked it on points!", loves: "travel credits, postcards, free hotel nights", peeve: "points that expire unused", idle: "speech", voice: "87bc56aa-ab01-4baa-9071-77d497064686" },
+    persona: { quirk: "A tourist staying at the Sleepy Ledger Inn who travels on credit card points and gets very excited about free nights.", style: "Bubbly, chatty traveler, postcards and 'when I was in...'.", catchphrase: "Booked it on points!", loves: "travel credits, postcards, free hotel nights", peeve: "points that expire unused", idle: "speech", voice: "09ed0318-2f4a-41b1-abe5-d11da7537c31", speed: 1.1 },
     talk: ["Booked it on points! The whole trip. Well, the nights. The snacks were full price.", "Did you know a card's travel credit can reset every year? Mine resets in January. I'm already packed.", "Sol at the inn doesn't charge resort fees. I nearly cried."],
     route: [[28.6, -13.4], [25.2, -13.4], [25.2, -9.8], [31, -9.8], [25.2, -9.8], [25.2, -13.4]],
   },
   {
     id: "rex", name: "Rex", species: "fox", x: 0.9, z: 8, outfit: { body: "#8E5BD0", hat: "cap", hatColor: "#3FA6A0" },
-    persona: { quirk: "A teen skateboarder with a first job who just discovered his paycheck has benefits and thinks it's the coolest secret ever.", style: "Laid-back slang, 'no way', genuinely amazed.", catchphrase: "No way, that's free money?", loves: "skating the farm road, his first paycheck, the 401(k) match he just found", peeve: "being told to 'read the handbook'", idle: "note", voice: "b24f41fd-00a3-4cd8-992a-a0c9f13f3ef1" },
+    persona: { quirk: "A teen skateboarder with a first job who just discovered his paycheck has benefits and thinks it's the coolest secret ever.", style: "Laid-back slang, 'no way', genuinely amazed.", catchphrase: "No way, that's free money?", loves: "skating the farm road, his first paycheck, the 401(k) match he just found", peeve: "being told to 'read the handbook'", idle: "note", voice: "9fa83ce3-c3a8-4523-accc-173904582ced", speed: 0.95 },
     talk: ["Dude, my job matches my 401(k)? Like, they just give me money if I save? No way, that's free money?", "I skate the whole farm road. Clover yells 'slow down' every time. Love her.", "Ruth said I should use my PTO. I didn't even know I had PTO."],
     route: [[0.9, 8], [0.9, 62], [-0.9, 62], [-0.9, 8]],
   },
@@ -230,3 +231,7 @@ export const STORY: Record<string, [string, string]> = {
   rex: ["Rex taught himself to skate on the farm road and has fallen into Clover's hay bale more times than he'll admit.", "Rex wants to buy his mom a new oven with his first year of savings, which is why the 401(k) match blew his mind."],
   inn: ["Sol has never charged a resort fee and gets visibly upset when anyone mentions them.", "Sol named the inn after the ledger his grandfather kept, the one that recorded every guest who ever couldn't pay, and every one who came back later to settle up."],
 };
+
+// How each voice is spoken, and which animal it belongs to (for the animal-voices option).
+export const VOICE_SPEED = new Map<string, number>([...NPCS.map((n) => [n.persona.voice, n.persona.speed ?? 1] as const), ...Object.values(KEEPERS).map((x) => [x.persona.voice, x.persona.speed ?? 1] as const)]);
+export const SPECIES_OF_VOICE = new Map<string, string>([[RUTH_VOICE, "alpaca"], ...NPCS.map((n) => [n.persona.voice, n.species] as const), ...Object.values(KEEPERS).map((x) => [x.persona.voice, x.species] as const)]);
