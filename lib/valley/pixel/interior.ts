@@ -89,7 +89,7 @@ export function furniture(kind: string, v = 0, color?: string, wTiles?: number):
     case "shelf": {
       g = new Grid(34, 34);
       g.rect(1, 1, 32, 32, (x, y) => (x < 2 || x > 29 || y < 2 || y % 10 === 0 ? "#7A4E2D" : "#5A3B22"));
-      const items = [["#E04848", "#FFFFFF", "#3FA66B"], ["#F3C53D", "#E04848", "#7CC4EA"], ["#FFFFFF", "#F06C8B", "#7FE3C0"], ["#C9822E", "#F2C27A", "#E9BC3C"]][v % 4];
+      const items = [["#E04848", "#FFFFFF", "#3FA66B"], ["#F3C53D", "#E04848", "#7CC4EA"], ["#FFFFFF", "#F06C8B", "#7FE3C0"], ["#C9822E", "#F2C27A", "#E9BC3C"], ["#8E5BD0", "#E9BC3C", "#3E8ED0"]][v % 5];
       for (let row = 0; row < 3; row++) for (let i = 0; i < 6; i++) { const x = 4 + i * 4.3, y = 4 + row * 10; g.rect(x, y + (i % 2), 3, 6 - (i % 2), items[(i + row) % 3]); g.set(x, y + (i % 2), "#FFFFFF"); }
       return g.outline(0.5).sprite(17, 33);
     }

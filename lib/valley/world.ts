@@ -13,12 +13,12 @@ export type BuildingDef = { id: string; kind: string; x: number; z: number; w: n
 
 // x, z is the bottom-center of the front wall; w is the width in tiles.
 export const BUILDINGS: BuildingDef[] = [
-  { id: "pharmacy", kind: "pharmacy", x: -11.5, z: -3, w: 4, place: { name: "Pharmacy", categories: ["fsa", "fsa_claim"], line: "FSA-eligible shelves. Ruth checks every cart." } },
-  { id: "clinic", kind: "clinic", x: -18.5, z: -3, w: 6, place: { name: "Valley Hospital", categories: ["deductible", "vision"], line: "Imaging and labs. Your deductible is already met." } },
+  { id: "pharmacy", kind: "pharmacy", x: -11.5, z: -3, w: 4, place: { name: "Pharmacy & Optical", categories: ["fsa", "fsa_claim", "vision"], line: "FSA money, prescriptions and your glasses allowance, all at one counter." } },
+  { id: "clinic", kind: "clinic", x: -18.5, z: -3, w: 6, place: { name: "Valley Hospital", categories: ["deductible"], line: "Imaging and labs. Your deductible is already met." } },
   { id: "dental", kind: "dental", x: -26.5, z: -3, w: 5, place: { name: "Dr. Okafor’s Dental", categories: ["dental"], line: "Crowns, fillings and cleanings." } },
-  { id: "bank", kind: "bank", x: 12.5, z: -3, w: 6, place: { name: "Valley Bank", categories: ["bank_bonus", "bank_fee", "annual_fee", "dispute", "rotating", "idle_cash"], line: "Checking, fees, disputes and card perks." } },
-  { id: "store", kind: "store", x: 20.5, z: -3, w: 5, place: { name: "Department Store", categories: ["price_adjust", "promo_apr", "subscription", "credit_move", "card_credit", "points"], line: "Price matches, store cards and a travel desk upstairs." } },
-  { id: "market", kind: "market", x: 27, z: -3, w: 3, place: { name: "Corner Market", line: "Fresh produce. Nothing expiring here." } },
+  { id: "bank", kind: "bank", x: 12.5, z: -3, w: 6, place: { name: "Valley Bank", categories: ["bank_bonus", "bank_fee", "dispute", "idle_cash"], line: "Checking and savings: bonuses, fees, disputes, idle cash." } },
+  { id: "store", kind: "cards", x: 20.5, z: -3, w: 5, place: { name: "The Card House", categories: ["card_credit", "annual_fee", "credit_move", "rotating", "promo_apr", "points"], line: "Every card you carry, managed in one place: credits, fees, cash back, store cards and miles." } },
+  { id: "market", kind: "deals", x: 27, z: -3, w: 3, place: { name: "The Deal Desk", categories: ["price_adjust", "subscription"], line: "Price matches, returns and renewals before they bill." } },
   { id: "commons", kind: "commons", x: 17, z: -16, w: 8, place: { name: "Dining Commons", categories: ["dining"], line: "Meal-plan dollars spent here." } },
   { id: "hall", kind: "hall", x: 0, z: -10, w: 8, place: { name: "Benefits Office", categories: ["tax_window", "insurance", "hsa"], line: "Open enrollment and policy renewals." } },
   // Homes and shops that make it a town (no balances live here, just flavor)
@@ -36,7 +36,8 @@ export const doorOf = (b: BuildingDef) => ({ x: b.x, z: b.z + 0.5 });
 export type District = { id: string; name: string; x: number; z: number; color: string };
 export const DISTRICTS: District[] = [
   { id: "health", name: "Healthcare District", x: -8.6, z: 3.2, color: "#D2413A" },
-  { id: "credit", name: "Credit Card Quarter", x: 8.6, z: 3.2, color: "#8E5BD0" },
+  { id: "credit", name: "Financial District", x: 8.6, z: 3.2, color: "#8E5BD0" },
+  { id: "civic", name: "Civic Center", x: -7.6, z: -6.2, color: "#3E6E9E" },
   { id: "dining", name: "Dining Commons", x: 9.5, z: -8.4, color: "#E0A526" },
   { id: "farms", name: "Farmland", x: 2.6, z: 8.2, color: "#3FA66B" },
 ];
@@ -130,8 +131,8 @@ const FIXED: Decor[] = [
   ...[-28, -20, -13].map((x) => ({ kind: "banner", x, z: -2.7, color: "#D2413A", icon: "cross" })),
   { kind: "bench", x: -19, z: 2.6 },
   ...[-30, -24, -16, -9].map((x) => ({ kind: "lamp", x, z: 2.8 })),
-  // Credit Card Quarter
-  ...[11, 19.5, 26].map((x) => ({ kind: "banner", x, z: -2.7, color: "#8E5BD0", icon: "card" })),
+  // Financial District
+  { kind: "banner", x: 11, z: -2.7, color: "#5E3A99", icon: "coin" }, { kind: "banner", x: 19.5, z: -2.7, color: "#8E5BD0", icon: "card" }, { kind: "banner", x: 26, z: -2.7, color: "#E0A526", icon: "coin" },
   { kind: "atm", x: 16.3, z: -2.7 },
   ...[9, 16, 24, 30].map((x) => ({ kind: "lamp", x, z: 2.8 })),
   ...[15, 22.5, 29].map((x) => ({ kind: "hedge", x, z: 3.1 })),
@@ -164,7 +165,7 @@ const FIXED: Decor[] = [
   { kind: "arch", x: -25, z: -6.6 },
   ...[-29, -27, -23, -21].flatMap((x, i) => [{ kind: "flowerbed", x, z: -8.6, v: 20 + i }, { kind: "flowerbed", x, z: -10.8, v: 30 + i }]),
   { kind: "well", x: -14.5, z: -8.4 }, { kind: "bench", x: -17.5, z: -8 },
-  // farmers' market north of the Credit Card Quarter
+  // farmers' market north of the Financial District
   { kind: "stall", x: 27.5, z: -7.6, color: "#3FA66B", v: 2 }, { kind: "stall", x: 31.5, z: -7.6, color: "#E0A526", v: 4 },
   { kind: "barrel", x: 25, z: -7.2 }, { kind: "crate", x: 33.4, z: -7.2 }, { kind: "crate", x: 33.4, z: -6.4 },
   // dining commons garnish
@@ -259,7 +260,7 @@ export const buildingRect = (x: number, z: number, w: number, tall = false): Rec
   const h = (w * 16 * 0.26 + 12 + (tall ? 40 : 31)) / 16;
   return { x0: x - w / 2 - 0.25, z0: z - h - 0.3, x1: x + w / 2 + 0.25, z1: z - 0.05 };
 };
-const TALL = new Set(["clinic", "bank", "store", "hall", "library", "inn"]);
+const TALL = new Set(["clinic", "bank", "cards", "hall", "library", "inn"]);
 export const BUILDING_RECTS = BUILDINGS.map((b) => buildingRect(b.x, b.z, b.w, TALL.has(b.kind)));
 
 // The farm pieces that are solid: the house, mailbox, decor and fences of a claimed farm, or the

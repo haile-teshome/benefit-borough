@@ -13,7 +13,7 @@ import { BUILDINGS } from "@/lib/valley/world";
 const Reply = z.object({ reply: z.string().describe("1 to 3 short sentences, in character, spoken aloud") });
 type Turn = { from: "you" | "them"; text: string };
 
-const VALLEY = `Expire Valley is a cozy farming town where every benefit about to expire grows as a crop. Districts: the Healthcare District (Valley Hospital, Dr. Okafor's Dental, the Pharmacy), the Credit Card Quarter (Valley Bank, the Department Store, the Corner Market), the Dining Commons, the Benefits Office (open enrollment Nov 1-21), Farmland to the south, a pond with a dock, a fountain plaza. Ruth, an alpaca in reading glasses, is the Reviewer: she approves or rejects every harvest by her rules and can't be argued out of one. Today is October 24, 2026.`;
+const VALLEY = `Expire Valley is a cozy farming town where every benefit about to expire grows as a crop. Districts: the Healthcare District (Valley Hospital, Dr. Okafor's Dental, the Pharmacy & Optical), the Financial District (Valley Bank for checking and savings, the Card House for every credit card, the Deal Desk for price matches and renewals), the Dining Commons, the Benefits Office (open enrollment Nov 1-21), Farmland to the south, a pond with a dock, a fountain plaza. Ruth, an alpaca in reading glasses, is the Reviewer: she approves or rejects every harvest by her rules and can't be argued out of one. Today is October 24, 2026.`;
 
 export async function POST(req: Request) {
   const { pid, who, message, history = [] } = (await req.json()) as { pid?: string; who: string; message: string; history?: Turn[] };
