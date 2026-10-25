@@ -14,13 +14,13 @@ export type BuildingDef = { id: string; kind: string; x: number; z: number; w: n
 // x, z is the bottom-center of the front wall; w is the width in tiles.
 export const BUILDINGS: BuildingDef[] = [
   { id: "pharmacy", kind: "pharmacy", x: -11.5, z: -3, w: 4, place: { name: "Pharmacy", categories: ["fsa", "fsa_claim"], line: "FSA-eligible shelves. Ruth checks every cart." } },
-  { id: "clinic", kind: "clinic", x: -18.5, z: -3, w: 6, place: { name: "Valley Hospital", categories: ["deductible"], line: "Imaging and labs. Your deductible is already met." } },
+  { id: "clinic", kind: "clinic", x: -18.5, z: -3, w: 6, place: { name: "Valley Hospital", categories: ["deductible", "vision"], line: "Imaging and labs. Your deductible is already met." } },
   { id: "dental", kind: "dental", x: -26.5, z: -3, w: 5, place: { name: "Dr. Okafor’s Dental", categories: ["dental"], line: "Crowns, fillings and cleanings." } },
   { id: "bank", kind: "bank", x: 12.5, z: -3, w: 6, place: { name: "Valley Bank", categories: ["bank_bonus", "bank_fee", "annual_fee", "dispute", "rotating", "idle_cash"], line: "Checking, fees, disputes and card perks." } },
   { id: "store", kind: "store", x: 20.5, z: -3, w: 5, place: { name: "Department Store", categories: ["price_adjust", "promo_apr", "subscription", "credit_move", "card_credit", "points"], line: "Price matches, store cards and a travel desk upstairs." } },
   { id: "market", kind: "market", x: 27, z: -3, w: 3, place: { name: "Corner Market", line: "Fresh produce. Nothing expiring here." } },
   { id: "commons", kind: "commons", x: 17, z: -16, w: 8, place: { name: "Dining Commons", categories: ["dining"], line: "Meal-plan dollars spent here." } },
-  { id: "hall", kind: "hall", x: 0, z: -10, w: 8, place: { name: "Benefits Office", categories: ["tax_window", "insurance"], line: "Open enrollment and policy renewals." } },
+  { id: "hall", kind: "hall", x: 0, z: -10, w: 8, place: { name: "Benefits Office", categories: ["tax_window", "insurance", "hsa"], line: "Open enrollment and policy renewals." } },
   // Homes and shops that make it a town (no balances live here, just flavor)
   { id: "cottage1", kind: "cottage1", x: -28, z: 8.8, w: 4, place: { name: "Rose Cottage", line: "Someone is baking cinnamon rolls." } },
   { id: "library", kind: "library", x: -21.5, z: 8.8, w: 5, place: { name: "Library", line: "A whole shelf on reading your benefits summary." } },

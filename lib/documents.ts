@@ -1,5 +1,5 @@
 // Synthetic documents for the demo. Every number on the board traces back to a line here.
-export type SourceDoc = { id: string; name: string; text: string };
+export type SourceDoc = { id: string; name: string; text: string; meta?: { plan: string; answers: Record<string, unknown> } };
 
 export const DEMO_TODAY = process.env.DEMO_TODAY ?? "2026-10-24";
 

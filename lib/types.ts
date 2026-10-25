@@ -2,7 +2,9 @@ export type Category =
   | "fsa" | "dental" | "deductible" | "dining" | "card_credit" | "tax_window"
   // found in bank and card statements
   | "bank_bonus" | "bank_fee" | "idle_cash" | "annual_fee" | "credit_move" | "dispute" | "rotating"
-  | "price_adjust" | "fsa_claim" | "promo_apr" | "subscription" | "points" | "insurance";
+  | "price_adjust" | "fsa_claim" | "promo_apr" | "subscription" | "points" | "insurance"
+  // from the plan library
+  | "vision" | "hsa";
 
 export type Span = { doc: string; start: number; end: number; text: string };
 
@@ -95,7 +97,7 @@ export type DispatchResult = {
 export type AuditEvent = { at: string; type: string; detail: string };
 
 export type AppState = {
-  docs: { id: string; name: string; text: string }[];
+  docs: { id: string; name: string; text: string; meta?: { plan: string; answers: Record<string, unknown> } }[];
   extraction: Extraction | null;
   tiles: Tile[];
   reviews: Record<string, Verdict>; // keyed by tile id or "cart:<balanceId>"

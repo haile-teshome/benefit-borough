@@ -56,7 +56,8 @@ export function diningSurplus(balance: number, weeklyAvg: number, daysLeft: numb
 export async function optimize(ex: Extraction): Promise<Tile[]> {
   const f = ex.facts;
   const tiles: Tile[] = [];
-  const by = (c: Balance["category"]) => ex.balances.find((b) => b.category === c);
+  // These builders read the sample documents; uploads and library plans have their own below.
+  const by = (c: Balance["category"]) => ex.balances.find((b) => b.category === c && !b.id.startsWith("up_") && !b.id.startsWith("lib_"));
   const base = (b: Balance, extra: Span[] = []) => {
     const daysLeft = daysBetween(DEMO_TODAY, b.deadline);
     return { balanceIds: [b.id], deadline: b.deadline, daysLeft, sources: [b.source, ...extra], engine: "mock" as const };
@@ -179,7 +180,7 @@ export async function optimize(ex: Extraction): Promise<Tile[]> {
     });
   }
 
-  tiles.push(...statementTiles(ex), ...uploadTiles(ex));
+  tiles.push(...statementTiles(ex), ...uploadTiles(ex), ...libraryTiles(ex));
 
   const score = (t: Tile) => t.atStake / Math.sqrt(Math.max(t.daysLeft, 1));
   tiles.sort((a, b) => score(b) - score(a));
@@ -210,7 +211,7 @@ const request = (summary: string, savings: number, r: Req) =>
 
 function statementTiles(ex: Extraction): Tile[] {
   const f = ex.facts;
-  const all = (c: Balance["category"]) => ex.balances.filter((b) => b.category === c && !b.id.startsWith("up_"));
+  const all = (c: Balance["category"]) => ex.balances.filter((b) => b.category === c && !b.id.startsWith("up_") && !b.id.startsWith("lib_"));
   const one = (c: Balance["category"]) => all(c)[0];
   const base = (bs: Balance[]) => {
     const deadline = bs.map((b) => b.deadline).sort()[0];
@@ -419,6 +420,61 @@ function statementTiles(ex: Extraction): Tile[] {
   }, [ins]);
 
   return out;
+}
+
+// ---------- plan library ----------
+
+// One tile per library finding. The math uses the plan's published terms and the person's answers.
+function libraryTiles(ex: Extraction): Tile[] {
+  const f = ex.facts;
+  return ex.balances.filter((b) => b.id.startsWith("lib_")).flatMap((b): Tile[] => {
+    const daysLeft = daysBetween(DEMO_TODAY, b.deadline);
+    const by = new Date(`${b.deadline}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: daysLeft > 300 ? "numeric" : undefined, timeZone: "UTC" });
+    const fact = (k: string) => f[`${b.id}:${k}`];
+    const base = { balanceIds: [b.id], deadline: b.deadline, daysLeft, sources: [b.source], engine: "mock" as const, recommendation: "act" };
+    const req = (title: string, to: string, lines: string[], savings = b.amount) => request(title, savings, { title, to, steps: lines, confirmation: `LIB-${b.id.slice(-6).toUpperCase()}` });
+    const kind = b.id.split("_")[2];
+    if (kind === "health") return [{ ...base, id: `tile_${b.id}`, category: "deductible", title: "Do the care that's already ordered before your plan year resets", live: true, atStake: b.amount, doNothingCost: b.amount,
+      candidates: [{ id: "act", label: `Before ${by}`, costToUser: fact("now"), detail: "This plan year's deductible and out-of-pocket progress apply." }, { id: "wait", label: "After the plan year resets", costToUser: fact("after"), detail: "The deductible starts over." }],
+      headline: `The care your doctor already ordered costs about ${usd(fact("now"))} now, ${usd(fact("after"))} after the reset.`, tradeoff: "Only care that's already ordered. We never suggest new care to use up a deductible.",
+      doNothing: `It costs ${usd(b.amount)} more after the plan year resets.`, action: req("Schedule the ordered care", "your provider", ["Calling your provider's scheduling line", `Booking the ordered care before ${by}`, "Provider: you're booked"]) }];
+    if (kind === "dental") return [{ ...base, id: `tile_${b.id}`, category: "dental", title: `Dental: ${usd(b.amount)} of coverage left, ${fact("cleanings")} free cleaning${fact("cleanings") === 1 ? "" : "s"}`, live: false, atStake: 0, doNothingCost: 0,
+      candidates: [{ id: "act", label: "Book your free cleaning", costToUser: 0, detail: "Exams and cleanings are $0, twice per plan year." }],
+      headline: `You have ${usd(b.amount)} of dental benefit and ${fact("cleanings")} free cleaning${fact("cleanings") === 1 ? "" : "s"} left until ${by}.`, tradeoff: "Only care you need; unused benefit doesn't carry over.",
+      doNothing: `Unused dental benefit resets after ${by}.`, action: { kind: "none", summary: "Informational", savings: 0, payload: {} } }];
+    if (kind === "vision") return [{ ...base, id: `tile_${b.id}`, category: "vision", title: "If you need glasses or contacts: use your $150 allowance", live: true, atStake: 115, doNothingCost: 115, ask: "Do you need new glasses or contacts this year?",
+      candidates: [{ id: "act", label: "Book a VSP eye exam ($10) and use the allowance", costToUser: 35, detail: "$10 exam copay + $25 materials copay; the plan covers up to $150." }],
+      headline: `If you need glasses or contacts, your plan covers up to $150 before ${by}: about $115 back after the $35 in copays.`, tradeoff: "Only if you actually need them; skipping an allowance you don't need costs nothing. Ruth asks first.",
+      doNothing: `If you need them and wait past ${by}, you pay about $115 more yourself.`, action: req("Book a VSP eye exam", "a VSP eye doctor", ["Finding an in-network VSP eye doctor", "Booking an eye exam ($10 copay)", "Your $150 allowance applies to the glasses or contacts you choose"], 115) }];
+    if (kind === "dining") {
+      const s = diningSurplus(b.amount, fact("weekly") ?? 30, daysLeft);
+      if (s.transfer <= 0) return [];
+      return [{ ...base, id: `tile_${b.id}`, category: "dining", title: `Flex dollars: about ${usd(s.surplus)} would be forfeited in May`, live: true, atStake: s.surplus, doNothingCost: s.surplus,
+        candidates: [{ id: "act", label: `Keep ${usd(round2(b.amount - s.transfer))}, send ${usd(s.transfer)} to a friend`, costToUser: 0, detail: `At ${usd(fact("weekly") ?? 30)} a week you'll spend about ${usd(Math.round(s.projected))} by ${by}.` }],
+        headline: `At your pace you'll use about ${usd(Math.round(s.projected))}; ${usd(s.surplus)} would be forfeited at the end of spring.`, tradeoff: "Spend on what you'd eat anyway; send the rest. Don't stock up to burn it.",
+        doNothing: `${usd(s.surplus)} is forfeited after ${by}.`, action: { kind: "transfer", summary: `Transfer ${usd(s.transfer)} of Flex dollars to a friend`, savings: s.transfer, payload: { amount: s.transfer, rail: "Cal Dining peer transfer", to: "a friend you choose" } } }];
+    }
+    if (kind === "fsa") return [{ ...base, id: `tile_${b.id}`, category: "fsa", title: b.amount ? `FSA: ${usd(b.amount)} would be forfeited` : "FSA: your balance is under the carryover", live: false, atStake: b.amount, doNothingCost: b.amount,
+      candidates: [{ id: "act", label: "Submit receipts for care you already had", costToUser: 0, detail: `${usd(fact("carryover"))} carries over under your plan.` }],
+      headline: b.amount ? `${usd(fact("balance"))} in your FSA, ${usd(fact("carryover"))} carries over, so ${usd(b.amount)} is forfeited after ${by} unless you use it on care you need.` : `Your ${usd(fact("balance"))} is under your plan's ${usd(fact("carryover"))} carryover. Nothing is forfeited.`,
+      tradeoff: "Carryover applied before computing forfeiture (rule 4). Ruth rejects 'use it up' purchases.", doNothing: b.amount ? `${usd(b.amount)} lost after ${by}.` : "Nothing is lost.", action: { kind: "none", summary: "Informational", savings: 0, payload: {} } }];
+    if (kind === "hsa") return [{ ...base, id: `tile_${b.id}`, category: "hsa", title: `HSA: ${usd(b.amount)} of 2026 contribution room left`, live: false, atStake: 0, doNothingCost: 0,
+      candidates: [{ id: "act", label: "Option: contribute more for 2026", costToUser: 0, detail: `Limit ${usd(fact("limit"))}; contributions for 2026 are allowed until Apr 15, 2027.` }, { id: "skip", label: "Option: leave it", costToUser: 0, detail: "HSA money never expires; only the 2026 contribution window does." }],
+      headline: `Options, not advice: you can still put up to ${usd(b.amount)} into your HSA for 2026, until April 15, 2027.`, tradeoff: "Labeled options (rule 5). Talk to a tax professional about whether it fits.",
+      doNothing: "The 2026 contribution window closes April 15, 2027.", action: { kind: "none", summary: "Options only", savings: 0, payload: {} } }];
+    if (kind === "credit") {
+      const name = b.label;
+      return [{ ...base, id: `tile_${b.id}`, category: "card_credit", title: `Use your ${usd(b.amount)} ${name.replace(/^(American Express|Chase|Citi|Capital One) /, "")}`, live: true, atStake: b.amount, doNothingCost: b.amount, ask: "Will you use it on something you'd buy anyway?",
+        candidates: [{ id: "act", label: "Use it on something you already planned", costToUser: 0, detail: b.ruleText }],
+        headline: `${name}: ${usd(b.amount)} unused, and it resets after ${by}.`, tradeoff: "Only on something you'd buy anyway. A credit isn't a reason to spend.",
+        doNothing: `${usd(b.amount)} lapses after ${by}.`, action: req(`Use the ${name}`, name.split(" ")[0] === "Venture" ? "Capital One Travel" : name, ["Checking the credit is enrolled and the card is set as the payment method", `You'll use it on your next planned purchase before ${by}`, "Statement credit posts after the purchase"]) }];
+    }
+    if (kind === "points") return [{ ...base, id: `tile_${b.id}`, category: "points", title: `${b.label}: expiring ${by}`, live: true, atStake: b.amount, doNothingCost: b.amount,
+      candidates: [{ id: "act", label: "Earn or redeem one point to reset the clock", costToUser: 0, detail: "A dining program or shopping portal purchase you'd make anyway counts." }],
+      headline: `${Math.round(fact("balance")).toLocaleString("en-US")} points (about ${usd(b.amount)}) expire ${by} without activity. One small activity saves them.`, tradeoff: `Rough value at ${fact("cents")}¢ a point.`,
+      doNothing: `All ${Math.round(fact("balance")).toLocaleString("en-US")} points disappear after ${by}.`, action: req("Post one activity to keep the points", b.label, ["Linking your card to the program's dining or shopping portal", "Your next everyday purchase posts activity and resets expiration"]) }];
+    return [];
+  });
 }
 
 // ---------- uploaded statements ----------

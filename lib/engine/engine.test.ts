@@ -110,3 +110,26 @@ test("Ruth waits for the user's answer before acting, and stands down on 'keep'"
   await assert.rejects(dispatch("tile_annual_fee", pid), /Reviewer has not approved/);
   (await import("node:fs")).rmSync(`.data/state-${pid}.json`, { force: true });
 });
+
+test("library plans plus a person's answers become grounded findings", async () => {
+  const { buildDoc } = await import("../library/build");
+  const docs = [
+    buildDoc({ plan: "ucb-ship-2026", answers: { deductible_met: 450, oop_applied: 900, ordered_care: 1800, coinsurance: 20, dental_used: 300, cleanings: "1", vision_used: "No" } })!,
+    buildDoc({ plan: "cal-dining-2026", answers: { balance: 900, weekly: 25 } })!,
+    buildDoc({ plan: "amex-gold-2026", answers: { used: ["dunkin"] } })!,
+    buildDoc({ plan: "points-aadvantage", answers: { balance: 20000, last_activity: "2025-03-01", exempt: "No" } })!,
+  ];
+  const ex = await extract(docs);
+  assert.equal(ex.dropped.length, 0);
+  for (const b of ex.balances) assert.ok(docs.find((d) => d.id === b.source.doc)!.text.includes(b.source.text), b.id);
+  const tiles = await optimize(ex);
+  const t = (re: RegExp) => tiles.find((x) => re.test(x.id))!;
+  assert.equal(t(/ucbship2026_health/).atStake, 360); // $1,800 after reset: 450 + 20% of 1,350 = $720; now 20% of 1,800 = $360
+  assert.equal(t(/ucbship2026_vision/).atStake, 115); // $150 allowance minus $35 in copays
+  assert.ok(t(/caldining2026_dining/).action.savings > 0);
+  assert.equal(tiles.filter((x) => x.id.includes("amexgold2026_credit")).length, 3); // Dunkin' already used
+  assert.equal(t(/pointsaadvantage_points/).atStake, 260); // 20,000 x 1.3 cents
+  assert.equal(t(/pointsaadvantage_points/).deadline, "2027-03-01");
+  assert.equal(tiles.filter((x) => x.category === "points").length, 1); // no double-counting by the sample builders
+  for (const tile of tiles) assert.equal(ruleCheck({ kind: "tile", tile }, ex, docs.map((d) => d.text).join("\n")).verdict, "approve", tile.id);
+});

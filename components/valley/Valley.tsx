@@ -16,6 +16,7 @@ import { BUILDINGS, DISTRICTS, NPCS } from "@/lib/valley/world";
 import { LiveBoard } from "./LiveBoard";
 import { PushBack, RuthAsks, RuthRecord } from "./Ruth";
 import { TalkBox } from "./Talk";
+import { Library } from "./Library";
 import World2D, { type Burst, type Emote, type Mood, type Near, type WorldApi } from "./World2D";
 import { KEEPERS, RUTH_VOICE } from "@/lib/valley/people";
 
@@ -80,6 +81,7 @@ type Modal =
   | { kind: "record" }
   | { kind: "npc"; id: string; line: number }
   | { kind: "keeper"; id: string }
+  | { kind: "library" }
   | null;
 
 const hex = (id: { toHexString(): string } | undefined | null) => id?.toHexString() ?? "";
@@ -226,6 +228,17 @@ function Valley() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function libraryPlanted(s: AppState, found: number) {
+    if (!conn) return;
+    if (me && !myPlots.length) await conn.reducers.setProfile({ name: me.name, color: me.color, avatar: me.avatar });
+    setState(s);
+    await plant(s);
+    sound.sprout();
+    setModal(null);
+    setToast(`${found} crop${found === 1 ? "" : "s"} planted from your plans. Walk to your farm, or visit the shops.`);
+    setTimeout(() => setToast(""), 6000);
   }
 
   async function replant() {
@@ -393,7 +406,7 @@ function Valley() {
       {title ? (
         <Title onPlay={play} connected={isActive} />
       ) : (
-        <Hud inside={Boolean(inside)} me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} />
+        <Hud inside={Boolean(inside)} me={me} others={others} isActive={isActive} state={state} busy={busy} onReplant={replant} muted={muted} onMute={toggleMute} onAvatar={() => setModal({ kind: "avatar" })} onUpload={uploadStatement} onRecord={() => setModal({ kind: "record" })} onLibrary={() => setModal({ kind: "library" })} />
       )}
 
       {convex && !title && <LiveBoard players={players} myPid={pid} />}
@@ -410,7 +423,7 @@ function Valley() {
         </form>
       )}
 
-      {modal?.kind === "intro" && <Intro busy={busy} me={me} onPlant={plantDocs} onPick={pickAvatar} onUpload={uploadStatement} />}
+      {modal?.kind === "intro" && <Intro busy={busy} me={me} onPlant={plantDocs} onPick={pickAvatar} onUpload={uploadStatement} onLibrary={() => setModal({ kind: "library" })} />}
       {modal?.kind === "avatar" && (
         <Dialogue speaker="Choose your farmer" onClose={() => setModal(null)}>
           <AvatarPicker value={me?.avatar ?? ""} onPick={pickAvatar} />
@@ -453,10 +466,12 @@ function Valley() {
                 </ul>
               </>
             ) : <p className="ev-sub">Nothing of yours expires here. Come back anytime.</p>}
+            {modal.id === "hall" && <button className="ev-btn" onClick={() => setModal({ kind: "library" })}>Find my plans in the library</button>}
             <TalkBox key={modal.id} pid={pid} who={modal.id} name={k.name} voice={k.persona.voice} />
           </Dialogue>
         );
       })()}
+      {modal?.kind === "library" && <Library pid={pid} onPlanted={libraryPlanted} onClose={() => setModal(null)} />}
       {modal?.kind === "record" && <RuthRecord state={state} pid={pid} integrations={integrations} live={Boolean(convex)} onClose={() => setModal(null)} />}
       {modal?.kind === "confirm" && tileById(modal.tileId) && (
         <Confirm tile={tileById(modal.tileId)!} others={others} onCancel={() => setModal({ kind: "crop", tileId: modal.tileId })} onConfirm={(to) => harvest(modal.tileId, to)} />
@@ -582,7 +597,7 @@ function UploadButton({ busy, onUpload, className, label }: { busy: boolean; onU
   );
 }
 
-function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean }) {
+function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMute, onAvatar, onUpload, onRecord, onLibrary }: { me?: Player; others: Player[]; isActive: boolean; state: AppState | null; busy: boolean; onReplant: () => void; muted: boolean; onMute: () => void; onAvatar: () => void; onUpload: (f: File) => void; onRecord: () => void; inside: boolean; onLibrary: () => void }) {
   const next = state?.tiles.filter((t) => !state.done.includes(t.id) && t.atStake > 0).sort((a, b) => a.daysLeft - b.daysLeft)[0];
   const clock = useClock();
   return (
@@ -603,6 +618,7 @@ function Hud({ inside, me, others, isActive, state, busy, onReplant, muted, onMu
         <div className="ev-sub">{isActive ? `${others.length + (me ? 1 : 0)} in the valley` : "Connecting…"}</div>
         {me && <div className="who"><i style={{ background: me.color }} />{me.name} (you)</div>}
         {others.map((p) => <div key={p.identity.toHexString()} className="who"><i style={{ background: p.color }} />{p.name}</div>)}
+        <button className="ev-link" onClick={onLibrary}>Find my plans (plan library)</button>
         <button className="ev-link" onClick={onRecord}>Ruth's record (audit trail)</button>
         <UploadButton busy={busy} onUpload={onUpload} className="ev-link" label="Plant a bank statement (CSV/PDF)" />
         <button className="ev-link" disabled={busy} onClick={onReplant}>{busy ? "Replanting…" : "Replant (reset demo)"}</button>
@@ -671,7 +687,7 @@ function AvatarPicker({ value, onPick }: { value: string; onPick: (a: string) =>
   );
 }
 
-function Intro({ busy, me, onPlant, onPick, onUpload }: { busy: boolean; me?: Player; onPlant: (name: string, color: string, avatar: string) => void; onPick: (a: string) => void; onUpload: (f: File) => void }) {
+function Intro({ busy, me, onPlant, onPick, onUpload, onLibrary }: { busy: boolean; me?: Player; onPlant: (name: string, color: string, avatar: string) => void; onPick: (a: string) => void; onUpload: (f: File) => void; onLibrary: () => void }) {
   const [name, setName] = useState("");
   const [color, setColor] = useState(me?.color ?? COLORS[0]);
   return (
@@ -683,6 +699,7 @@ function Intro({ busy, me, onPlant, onPick, onUpload }: { busy: boolean; me?: Pl
       <div className="ev-colors">{COLORS.map((c) => <button key={c} aria-label={`Color ${c}`} className={c === color ? "on" : ""} style={{ background: c }} onClick={() => setColor(c)} />)}</div>
       <p className="ev-sub">Seeds: a sample benefits summary, dental plan, EOBs, dining statement, card list and bank statement.</p>
       <div className="ev-upload">
+        <button className="ev-btn ghost" onClick={onLibrary}>Find my plans in the library</button>
         <UploadButton busy={busy} onUpload={onUpload} className="ev-btn ghost" label="Or plant your own bank statement" />
         <span className="ev-sub">CSV export or PDF. It stays on this computer.</span>
       </div>

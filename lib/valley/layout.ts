@@ -33,6 +33,8 @@ export const CROP_LOOK: Record<string, { name: string; band: string }> = {
   subscription: { name: "Renewal Radish", band: "#E04848" },
   points: { name: "Mileage Poppy", band: "#F06C3B" },
   insurance: { name: "Premium Peony", band: "#F49AC8" },
+  vision: { name: "Spectacle Sunflower", band: "#3E8ED0" },
+  hsa: { name: "Nest-Egg Gourd", band: "#3FA6A0" },
 };
 
 export const usd = (n: number) => "$" + Math.round(n).toLocaleString("en-US");

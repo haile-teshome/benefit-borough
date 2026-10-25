@@ -5,12 +5,13 @@ import { callStructured, claudeEnabled } from "./claude";
 import { DEMO_TODAY } from "../documents";
 import { parseCsv, parseLines, statementYear } from "../statement/parse";
 import { detect } from "../statement/detect";
+import { libraryFindings } from "../library/build";
 import { findSpan } from "./spans";
 
 const CATEGORIES = [
   "fsa", "dental", "deductible", "dining", "card_credit", "tax_window",
   "bank_bonus", "bank_fee", "idle_cash", "annual_fee", "credit_move", "dispute", "rotating",
-  "price_adjust", "fsa_claim", "promo_apr", "subscription", "points", "insurance",
+  "price_adjust", "fsa_claim", "promo_apr", "subscription", "points", "insurance", "vision", "hsa",
 ] as const;
 
 export const FACT_KEYS = [
@@ -73,8 +74,13 @@ Rules:
 export async function extract(docs: SourceDoc[]): Promise<Extraction> {
   const uploads = docs.filter((d) => d.id.startsWith("upload_"));
   const found = uploads.flatMap((d) => statementFindings(d));
-  const ex = await extractDocs(docs.filter((d) => !d.id.startsWith("upload_")), docs);
-  const extra = ground(docs, { balances: found, care_items: [], spend_patterns: [], facts: [] }, ex.engine);
+  // Library plans are already structured, so their findings are computed, not extracted.
+  const libs = docs.filter((d) => d.id.startsWith("lib_")).flatMap((d) => libraryFindings(d, DEMO_TODAY).map((f) => ({ f, d })));
+  const libRaw = libs.map(({ f, d }) => ({ balance_id: f.id, category: f.category, label: f.label, amount: f.amount, deadline: f.deadline, source_doc: d.id, source_span: f.span, rule_text: f.rule }));
+  const rest = docs.filter((d) => !d.id.startsWith("upload_") && !d.id.startsWith("lib_"));
+  const ex = rest.length ? await extractDocs(rest, docs) : { balances: [], careItems: [], patterns: [], facts: {}, dropped: [], engine: "mock" as const };
+  const extra = ground(docs, { balances: [...found, ...libRaw], care_items: [], spend_patterns: [], facts: [] }, ex.engine);
+  for (const { f } of libs) for (const [k, v] of Object.entries(f.facts ?? {})) ex.facts[`${f.id}:${k}`] = v;
   return { ...ex, balances: [...ex.balances, ...extra.balances], dropped: [...ex.dropped, ...extra.dropped] };
 }
 
