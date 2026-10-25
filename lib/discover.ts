@@ -8,26 +8,8 @@ import { claudeEnabled, searchStructured } from "./engine/claude";
 
 export type Who = { employer?: string; jobType?: string; insurer?: string; healthPlan?: string; school?: string; homeState?: string };
 
-// What Ruth can look up, and what each one means (sent to Claude with the schema).
-export const FACTS = {
-  match_rate_pct: "401(k) match: percent of your contribution the employer matches (e.g. 50)",
-  match_cap_pct: "401(k) match: up to what percent of pay (e.g. 6)",
-  pto_days: "Paid time off days per year for a typical full-time employee",
-  pto_rollover_days: "Unused PTO days that roll over to next year",
-  stipend_amount: "Annual wellness, lifestyle or learning stipend, in dollars",
-  stipend_type: "What the stipend is for: Wellness, Learning, Lifestyle, Home office or Phone/internet",
-  tuition_limit: "Annual tuition assistance limit, in dollars",
-  student_loan_monthly: "Monthly student loan repayment benefit, in dollars",
-  espp_discount_pct: "Employee stock purchase plan discount, in percent",
-  offers_fsa: "Whether a health FSA is offered (yes/no)",
-  offers_hsa: "Whether an HSA is offered (yes/no)",
-  offers_dcfsa: "Whether a dependent care FSA is offered (yes/no)",
-  fitness_max: "The health plan's annual gym or fitness reimbursement, in dollars",
-  fitness_program: "Name of the health plan's fitness reimbursement or discount program",
-  student_health_plan: "Name of the school's student health insurance plan",
-  dining_plan_expires: "When the school's unused meal plan or dining dollars expire",
-} as const;
-export type FactKey = keyof typeof FACTS;
+import { FACTS, type FactKey, type Found } from "./findings";
+export type { Found, FactKey };
 
 export const FoundSchema = z.object({
   facts: z.array(z.object({
@@ -38,7 +20,6 @@ export const FoundSchema = z.object({
   })),
   notes: z.array(z.string()).describe("Short notes on what couldn't be confirmed"),
 });
-export type Found = { facts: Partial<Record<FactKey, { value: string; source: string; quote: string }>>; notes: string[] };
 
 export async function discover(w: Who): Promise<{ found: Found | null; searches: number }> {
   if (!claudeEnabled()) return { found: null, searches: 0 };

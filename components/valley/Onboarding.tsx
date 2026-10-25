@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LIBRARY, type Plan, type Question } from "@/lib/library/catalog";
-import type { Found, FactKey } from "@/lib/discover";
+import { impliedPlans, prefillFor, reported, showFact, siteOf, LABEL, type Found, type FactKey } from "@/lib/findings";
 import { AVATARS, portrait } from "@/lib/valley/pixel/animals";
 import { openOutside } from "@/lib/valley/popup";
 import type { AppState, Profile } from "@/lib/types";
@@ -29,25 +29,16 @@ const KEY: Record<string, string[]> = {
   "ucb-ship-2026": ["deductible_met", "ordered_care"], "cal-dining-2026": ["balance"], "venture-x-2026": ["used_amount"],
   "points-aadvantage": ["balance", "last_activity"], "points-marriott": ["balance", "last_activity"], "points-hilton": ["balance", "last_activity"], "points-ihg": ["balance", "last_activity"],
 };
-const LABEL: Partial<Record<FactKey, string>> = {
-  match_rate_pct: "401(k) match rate", match_cap_pct: "Match up to (of pay)", pto_days: "PTO days a year", pto_rollover_days: "PTO days that roll over", stipend_amount: "Stipend a year", stipend_type: "Stipend for",
-  tuition_limit: "Tuition assistance a year", student_loan_monthly: "Student loan help a month", espp_discount_pct: "ESPP discount", offers_fsa: "Health FSA", offers_hsa: "HSA", offers_dcfsa: "Dependent care FSA",
-  fitness_max: "Gym reimbursement a year", fitness_program: "Fitness program", student_health_plan: "Student health plan", dining_plan_expires: "Dining dollars expire",
-};
-const MONEY = new Set<FactKey>(["stipend_amount", "tuition_limit", "student_loan_monthly", "fitness_max"]);
-const PCT = new Set<FactKey>(["match_rate_pct", "match_cap_pct", "espp_discount_pct"]);
-
 const plan = (id: string) => LIBRARY.find((p) => p.id === id)!;
 function defaults(p: Plan): Answers {
   const a: Answers = {};
   for (const q of p.questions) if ("default" in q && q.default !== undefined) a[q.key] = q.default; else if (q.kind === "used") a[q.key] = [];
   return a;
 }
-const num = (s?: string) => { const n = parseFloat(String(s ?? "").replace(/[^0-9.]/g, "")); return Number.isFinite(n) ? n : undefined; };
-const yes = (s?: string) => /^(yes|true|offered|available)/i.test(String(s ?? "").trim());
 
-export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile }: {
+export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile, onLateFindings }: {
   pid: string; me?: { name: string; color: string; avatar: string }; busy: boolean;
+  onLateFindings?: (found: Found, who: { employer?: string; insurer?: string; school?: string }) => void; // Ruth finished after you planted
   onPlanted: (s: AppState, found: number) => void; onDemo: (name: string, color: string, avatar: string) => void; onPick: (a: string) => void;
   onProfile: (name: string, color: string, avatar: string) => Promise<void>;
 }) {
@@ -67,6 +58,7 @@ export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile
   const [beat, setBeat] = useState(0); // planting progress messages
   const [error, setError] = useState("");
   const lookedFor = useRef("");
+  const plantedAt = useRef(false); // planting started before Ruth's findings came back
   useEffect(() => { if (!planting) return; setBeat(0); const id = setInterval(() => setBeat((t) => t + 1), 6000); return () => clearInterval(id); }, [planting]);
   const PLANTING = ["Writing down your plans and numbers…", "Ruth is checking every claim against its rules…", "Working out where each one gets filed…", "Planting your crops…"];
   const body = useRef<HTMLDivElement>(null);
@@ -89,48 +81,43 @@ export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile
     lookedFor.current = key;
     setLooking("busy");
     void fetch("/api/discover", { method: "POST", headers: { "Content-Type": "application/json" }, body: key })
-      .then((r) => r.json()).then((j: { found: Found | null }) => { setFound(j.found); setKeep(new Set(Object.keys(j.found?.facts ?? {}) as FactKey[])); setLooking(j.found ? "done" : "failed"); })
+      .then((r) => r.json()).then((j: { found: Found | null }) => {
+        // Planted already? Hand the findings to the game so you can apply them from your farm.
+        if (plantedAt.current) { if (j.found && Object.keys(j.found.facts).length) onLateFindings?.(j.found, { employer: who.employer, insurer: who.insurer, school: who.school }); return; }
+        setFound(j.found); setKeep(new Set(Object.keys(j.found?.facts ?? {}) as FactKey[])); setLooking(j.found ? "done" : "failed");
+      })
       .catch(() => setLooking("failed"));
   }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const f = (k: FactKey) => (keep.has(k) ? found?.facts[k] : undefined);
+  // Only the findings you kept count.
+  const kept = Object.fromEntries(Object.entries(found?.facts ?? {}).filter(([k]) => keep.has(k as FactKey))) as Found["facts"];
   // Which plans to plant, from who you are and what Ruth confirmed.
   const chosen = useMemo(() => {
     const ids = new Set<string>();
     if (working && p.jobType !== "Self-employed") { ids.add("work-401k-match"); ids.add("work-pto"); }
-    if (has.has("fsa") || yes(f("offers_fsa")?.value)) ids.add("irs-fsa-2026");
+    if (has.has("fsa")) ids.add("irs-fsa-2026");
     if (has.has("hsa")) ids.add("irs-hsa-2026");
     if (has.has("dcfsa")) ids.add("work-dcfsa");
-    if (has.has("stipend") || f("stipend_amount")) ids.add("work-stipend");
-    if (has.has("espp") || f("espp_discount_pct")) ids.add("work-espp");
+    if (has.has("stipend")) ids.add("work-stipend");
+    if (has.has("espp")) ids.add("work-espp");
     if (has.has("vesting")) ids.add("work-vesting");
-    if (insured && (has.has("gym") || f("fitness_max"))) ids.add("health-fitness");
+    if (insured && has.has("gym")) ids.add("health-fitness");
     cards.forEach((c) => ids.add(c));
     if (student) { ids.add("edu-credits"); ids.add("edu-fafsa"); ids.add("edu-student-perks"); if (/berkeley|\bucb\b/i.test(p.school ?? "")) { ids.add("ucb-ship-2026"); ids.add("cal-dining-2026"); } }
     if (has.has("loans")) { ids.add("edu-loan-interest"); ids.add("edu-idr"); }
-    if (has.has("tuition") || f("tuition_limit")) ids.add("edu-tuition-127");
-    if (f("student_loan_monthly")) ids.add("edu-loan-repay");
+    if (has.has("tuition")) ids.add("edu-tuition-127");
+    for (const id of impliedPlans(kept, { insured: Boolean(insured) })) ids.add(id);
     return [...ids].map(plan).filter(Boolean);
   }, [working, student, insured, has, cards, p.jobType, p.school, keep, found]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Numbers Ruth found become the starting answers (you can still change them).
-  const prefill = (pl: Plan): Answers => {
-    const a: Answers = {};
-    const put = (k: string, v?: number | string) => { if (v !== undefined && pl.questions.some((q) => q.key === k)) a[k] = v; };
-    if (pl.id === "work-401k-match") { put("rate", num(f("match_rate_pct")?.value)); put("cap", num(f("match_cap_pct")?.value)); }
-    if (pl.id === "work-pto") put("rollover", num(f("pto_rollover_days")?.value));
-    if (pl.id === "work-stipend") { put("left", num(f("stipend_amount")?.value)); const t = f("stipend_type")?.value; const q = pl.questions.find((x) => x.key === "type"); if (t && q?.kind === "choice" && q.options.includes(t)) a.type = t; }
-    if (pl.id === "work-espp") put("discount", num(f("espp_discount_pct")?.value));
-    if (pl.id === "edu-tuition-127") put("limit", num(f("tuition_limit")?.value));
-    if (pl.id === "edu-loan-repay") put("monthly", num(f("student_loan_monthly")?.value));
-    if (pl.id === "health-fitness") { put("max", num(f("fitness_max")?.value)); const q = pl.questions.find((x) => x.key === "insurer"); if (q?.kind === "choice") a.insurer = q.options.includes(p.insurer ?? "") ? p.insurer! : "Other"; }
-    return a;
-  };
+  const prefill = (pl: Plan): Answers => prefillFor(pl.id, kept, p.insurer);
   const needsSalary = chosen.some((pl) => pl.questions.some((q) => q.key === "salary"));
   const value = (pl: Plan, q: Question) => answers[pl.id]?.[q.key] ?? prefill(pl)[q.key] ?? defaults(pl)[q.key];
 
   async function plant() {
     setPlanting(true); setError("");
+    if (looking === "busy") plantedAt.current = true;
     try {
       await onProfile(name, color, me?.avatar ?? "");
       // Your details pre-fill every claim form Ruth prepares.
@@ -154,6 +141,7 @@ export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile
       if (!state) throw new Error("Tell Ruth a little about your benefits first, or add a document.");
       onPlanted(state, count);
     } catch (e) {
+      plantedAt.current = false; // still here, so the findings can show on this screen
       setError((e as Error).message);
     } finally {
       setPlanting(false);
@@ -161,8 +149,6 @@ export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile
   }
 
   const factRows = (Object.entries(found?.facts ?? {}) as [FactKey, { value: string; source: string; quote: string }][]);
-  const show = (k: FactKey, v: string) => (MONEY.has(k) && num(v) ? `$${num(v)!.toLocaleString("en-US")}` : PCT.has(k) && num(v) ? `${num(v)}%` : v);
-  const site = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return u; } };
 
   return (
     <div className="ev-dialogue-wrap">
@@ -232,8 +218,8 @@ export function Onboarding({ pid, me, busy, onPlanted, onDemo, onPick, onProfile
                 <div className="ev-onb-found">
                   <b>Ruth found these online. Untick anything that isn't true for you:</b>
                   <ul>{factRows.map(([k, v]) => (
-                    <li key={k}><label><input type="checkbox" checked={keep.has(k)} onChange={() => tick(setKeep as typeof setHas, k)} /> <span>{LABEL[k] ?? k}: <b>{show(k, v.value)}</b></span></label>
-                      <a href={v.source} target="_blank" rel="noreferrer" onClick={openOutside} title={v.quote}>{site(v.source)}{/glassdoor|levels\.fyi|indeed|reddit|blind|perkup/i.test(v.source) ? " · reported by employees" : ""}</a></li>
+                    <li key={k}><label><input type="checkbox" checked={keep.has(k)} onChange={() => tick(setKeep as typeof setHas, k)} /> <span>{LABEL[k] ?? k}: <b>{showFact(k, v.value)}</b></span></label>
+                      <a href={v.source} target="_blank" rel="noreferrer" onClick={openOutside} title={v.quote}>{siteOf(v.source)}{reported(v.source) ? " · reported by employees" : ""}</a></li>
                   ))}</ul>
                 </div>
               )}

@@ -19,6 +19,7 @@ import { TalkBox } from "./Talk";
 import { Library } from "./Library";
 import { Almanac } from "./Almanac";
 import { Fishing } from "./Fishing";
+import { FindingsReview, type LateFindings } from "./Findings";
 import { Claims } from "./Claims";
 import { Checkin } from "./Checkin";
 import { Onboarding } from "./Onboarding";
@@ -114,6 +115,7 @@ type Modal =
   | { kind: "library" }
   | { kind: "almanac" }
   | { kind: "fishing" }
+  | { kind: "findings" }
   | { kind: "claims" }
   | { kind: "checkin" }
   | { kind: "exchange" }
@@ -157,6 +159,7 @@ function Valley() {
   }, [pid]);
 
   const [modal, setModal] = useState<Modal>(null);
+  const [late, setLate] = useState<LateFindings | null>(null); // Ruth's lookup finished after planting
   const [near, setNear] = useState<Near>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -579,7 +582,10 @@ function Valley() {
       )}
 
       {modal?.kind === "intro" && <Onboarding pid={pid} me={me} busy={busy} onPlanted={libraryPlanted} onDemo={plantDocs} onPick={pickAvatar}
-        onProfile={async (name, color, avatar) => { if (conn) await conn.reducers.setProfile({ name: name.trim(), color, avatar }); }} />}
+        onProfile={async (name, color, avatar) => { if (conn) await conn.reducers.setProfile({ name: name.trim(), color, avatar }); }}
+        onLateFindings={(found, who) => { setLate({ found, who }); sound.prompt(); }} />}
+      {modal?.kind === "findings" && late && state && <FindingsReview pid={pid} state={state} late={late} onClose={() => setModal(null)}
+        onApplied={async (s, n) => { setState(s); await plant(s); setLate(null); setModal(null); sound.sprout(); setToast(`Applied ${n} update${n === 1 ? "" : "s"} from Ruth's findings to your farm.`); setTimeout(() => setToast(""), 5000); }} />}
       {modal?.kind === "avatar" && (
         <Dialogue speaker="Choose your farmer" onClose={() => setModal(null)}>
           <AvatarPicker value={me?.avatar ?? ""} onPick={pickAvatar} />
@@ -676,8 +682,14 @@ function Valley() {
       {modal?.kind === "terms" && <TermsNews onClose={() => setModal(null)} />}
       {modal?.kind === "bazaar" && state && <Bazaar key={modal.quest?.id ?? modal.preset?.need ?? "bazaar"} state={state} preset={modal.preset} quest={modal.quest} keeper={keeperOf(modal.preset?.shopId ?? "market").name}
         searching={calls.filter((c) => c.status === "searching").map((c) => c.need)} onSearch={(req) => void startQuest(req)} onCheckout={() => setModal({ kind: "checkout" })} onClose={() => setModal(null)} />}
-      {!title && calls.length > 0 && (
+      {!title && (calls.length > 0 || (late && modal?.kind !== "intro" && modal?.kind !== "findings")) && (
         <div className="ev-calls">
+          {late && modal?.kind !== "intro" && modal?.kind !== "findings" && (
+            <div className="ev-panel ev-call ringing"><span className="ev-call-icon">🔎</span><div><b>Ruth found more</b><em>{Object.keys(late.found.facts).length} things about your benefits{late.who.employer ? ` at ${late.who.employer}` : ""}</em></div>
+              <button className="ev-btn" onClick={() => setModal({ kind: "findings" })}>Review</button>
+              <button className="ev-btn ghost" onClick={() => setLate(null)}>Dismiss</button>
+            </div>
+          )}
           {calls.map((c) => {
             const k = keeperOf(c.shopId);
             return c.status === "searching" ? (
