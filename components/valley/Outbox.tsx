@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { AppState, Packet } from "@/lib/types";
 import styles from "./Outbox.module.css";
+import { openOutside } from "@/lib/valley/popup";
 
 // Ruth's outbox. She fills in every claim (form, proof, message) and checks it; you read it, fix
 // anything, and press Submit. Nothing leaves the burrow without that press.
@@ -102,7 +103,7 @@ export function PacketReview({ pid, packet, onState, onSubmit, onClose }: {
           {done && <p className="ev-good">Submitted {new Date(packet.submittedAt!).toLocaleString("en-US")} · {packet.confirmation}</p>}
         </div>
         <div className="ev-actions">
-          <a className="ev-btn ghost" href={`/api/packets/pdf?pid=${pid}&id=${packet.id}`} target="_blank" rel="noreferrer">Open the filled form (PDF)</a>
+          <a className="ev-btn ghost" href={`/api/packets/pdf?pid=${pid}&id=${packet.id}`} target="_blank" rel="noreferrer" onClick={openOutside}>Open the filled form (PDF)</a>
           {!done && dirty && <button className="ev-btn ghost" disabled={saving} onClick={() => void save()}>{saving ? "Saving…" : "Save my changes"}</button>}
           {!done && !dirty && !packet.check.ok && <button className="ev-btn ghost" disabled={saving} onClick={async () => {
             setSaving(true); setError("");

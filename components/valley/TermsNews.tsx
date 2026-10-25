@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { LIBRARY } from "@/lib/library/catalog";
 import s from "./TermsNews.module.css";
+import { openOutside } from "@/lib/valley/popup";
 
 // The Burrow Gazette: what each plan's source page says today about the credits and limits the
 // library relies on (from the Benefit Terms Watcher actor on Apify, or the local fallback).
@@ -48,7 +49,7 @@ export function TermsNews({ onClose }: { onClose: () => void }) {
             <section key={`${p.planId}|${p.url}`} className={s.page}>
               <div className={s.head}>
                 <b>{planTitle(p.planId)}</b>
-                <a href={p.url} target="_blank" rel="noreferrer">{host(p.url)} ↗</a>
+                <a href={p.url} target="_blank" rel="noreferrer" onClick={openOutside}>{host(p.url)} ↗</a>
               </div>
               {!p.ok && <p className={s.missing}>Couldn&apos;t read this page: {p.error}</p>}
               <ul className={s.rows}>

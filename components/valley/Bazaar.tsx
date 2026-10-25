@@ -4,6 +4,9 @@ import { useState } from "react";
 import type { AppState, Quest } from "@/lib/types";
 import { shoppable } from "@/lib/market/shoppable";
 import styles from "./Outbox.module.css";
+import card from "./Bazaar.module.css";
+import { PixelIcon, iconFor } from "./PixelIcon";
+import { openOutside } from "@/lib/valley/popup";
 
 // The Benefit Bazaar: tell Ruth what you need and which unspent benefit should pay, then press
 // Search. The burrow's shopkeeper agents each search the web their own way and sell her their
@@ -58,29 +61,7 @@ export function Bazaar({ state, preset, quest: shown, searching, keeper, onSearc
             </div>
           )}
           {searching.length > 0 && !busy && <p className="ev-sub">Still searching: {searching.map((x) => `“${x}”`).join(", ")}.</p>}
-          {quest && !sent && (
-            <>
-              <div className={styles.block}>
-                <b>{shown ? "Results" : "Your last search"}: “{quest.need}” · paying with {quest.benefit.label}</b>
-                <ul className={styles.check}>
-                  {quest.agents.map((a) => <li key={a.id}>{a.keeper} ({a.strategy}): {a.offers} offer{a.offers === 1 ? "" : "s"} · {a.paid ? <>paid {a.paid.price} USDC over x402</> : <em>{a.note ?? "unpaid"}</em>}</li>)}
-                </ul>
-              </div>
-              <ul className={styles.list} style={{ display: "grid" }}>
-                {quest.offers.map((o) => (
-                  <li key={o.url} className={styles.block} style={o.url === quest.best ? { outline: "3px solid var(--ok)", padding: 8 } : { padding: 8 }}>
-                    <b>{o.url === quest.best ? "★ Ruth's pick · " : ""}{o.title}</b>
-                    <span style={{ display: "block" }}>{o.merchant} · <b>${o.price.toFixed(2)}</b>{o.livePrice != null ? " (live price, Apify)" : ""}{o.rating ? ` · ${o.rating}★${o.reviews ? ` (${o.reviews.toLocaleString("en-US")})` : ""}` : ""} · found by {o.agent}</span>
-                    <span className={o.verdict.ok ? styles.ok : styles.issue}>{o.verdict.ok ? `✓ Covered: $${o.covered.toFixed(2)} from ${quest.benefit.label}${o.outOfPocket > 0 ? `, $${o.outOfPocket.toFixed(2)} from you` : ", $0 from you"}` : `✕ ${!o.verdict.eligible ? "Not clearly covered by this benefit" : !o.verdict.fits ? "Doesn't fit your need" : "Over budget"}`} · quality {o.verdict.quality}/10</span>
-                    {o.verdict.note && <span className="ev-sub">Ruth: {o.verdict.note}</span>}
-                    <a href={o.url} target="_blank" rel="noreferrer" className="ev-link">Open at {o.merchant} ↗</a>
-                  </li>
-                ))}
-              </ul>
-              {quest.notes.map((n) => <p key={n} className="ev-sub">{n}</p>)}
-              <p className="ev-sub">Ruth doesn't buy anything. Open the pick, check it, and pay with your benefit yourself.</p>
-            </>
-          )}
+          {quest && !sent && <Results quest={quest} fresh={Boolean(shown)} />}
         </div>
         <div className="ev-actions">
           {benefits.length > 0 && !sent && <button className="ev-btn" disabled={busy || !need.trim()} onClick={search}>{busy ? "Searching…" : "Search"}</button>}
@@ -90,5 +71,55 @@ export function Bazaar({ state, preset, quest: shown, searching, keeper, onSearc
         </div>
       </div>
     </div>
+  );
+}
+
+const money = (n: number) => "$" + (n % 1 ? n.toFixed(2) : n.toFixed(0));
+
+// The finds, as shop cards: a picture, the price tag, what your benefit pays, and Ruth's tag.
+function Results({ quest, fresh }: { quest: Quest; fresh: boolean }) {
+  const offers = [...quest.offers].sort((a, b) => Number(b.verdict.ok) - Number(a.verdict.ok) || b.score - a.score);
+  const total = quest.agents.reduce((n, a) => n + a.offers, 0);
+  return (
+    <>
+      <b>{fresh ? "Here's what they found" : "Last search"}: {quest.need}</b>
+      <div className={card.agents}>
+        {quest.agents.map((a) => <span key={a.id} className={card.agent}>{a.keeper}<em>{a.offers} find{a.offers === 1 ? "" : "s"} · {a.paid ? `paid ${a.paid.price}` : "unpaid"}</em></span>)}
+      </div>
+      {!total && <p className={card.empty}>No luck this time. Try saying it another way.</p>}
+      <ul className={card.grid}>
+        {offers.map((o) => {
+          const pick = o.url === quest.best;
+          const why = !o.verdict.eligible ? "Not covered" : !o.verdict.fits ? "Not a fit" : !o.verdict.ok ? "Over budget" : "";
+          const pct = Math.round((o.covered / Math.max(o.price, 0.01)) * 100);
+          return (
+            <li key={o.url} className={`${card.card} ${pick ? card.pick : ""} ${o.verdict.ok ? "" : card.no}`}>
+              <div className={card.art}><PixelIcon name={iconFor(`${o.title} ${quest.need}`)} size={64} /></div>
+              {pick && <span className={card.ribbon}>Ruth's pick</span>}
+              {why && <span className={card.stamp}>{why}</span>}
+              <span className={card.price}>{money(o.price)}</span>
+              <div className={card.body}>
+                <span className={card.title}>{o.title}</span>
+                <div className={card.meta}>
+                  <span>{o.merchant}</span>
+                  {o.rating ? <span>★ {o.rating}{o.reviews ? ` · ${o.reviews.toLocaleString("en-US")}` : ""}</span> : null}
+                  {o.livePrice != null && <span>Live price</span>}
+                </div>
+                {o.verdict.ok && (
+                  <>
+                    <div className={card.bar}><i style={{ width: `${pct}%` }} /></div>
+                    <div className={card.split}><span>Benefit pays <b>{money(o.covered)}</b></span><span>You pay {money(o.outOfPocket)}</span></div>
+                  </>
+                )}
+                {o.verdict.note && <span className={card.tag}>{o.verdict.note}</span>}
+              </div>
+              <a className={card.view} href={o.url} target="_blank" rel="noreferrer" onClick={openOutside}>View at {o.merchant.replace(/\s*\(.*\)$/, "")}</a>
+            </li>
+          );
+        })}
+      </ul>
+      {quest.notes.map((n) => <p key={n} className={card.empty}>{n}</p>)}
+      <p className={card.empty}>Ruth never buys anything. Open the one you like and check out with your benefit.</p>
+    </>
   );
 }

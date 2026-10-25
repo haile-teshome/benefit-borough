@@ -30,6 +30,7 @@ import { AutopilotPanel, MorningReport } from "./Autopilot";
 import { VoiceCheckin } from "./VoiceCheckin";
 import { Household } from "./Household";
 import { Bazaar, type QuestRequest } from "./Bazaar";
+import { PixelIcon, iconFor } from "./PixelIcon";
 import { SHELVES, payerFor } from "@/lib/market/shelves";
 import { shoppable } from "@/lib/market/shoppable";
 import { fresh as freshRewards, type Rewards } from "@/lib/rewards";
@@ -184,6 +185,7 @@ function Valley() {
   }, [ringing?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   function answer(call: Call) {
     setCalls((c) => c.filter((x) => x.id !== call.id));
+    sound.pickup();
     const k = keeperOf(call.shopId);
     const best = call.quest?.offers.find((o) => o.url === call.quest?.best);
     const line = call.error ? `Hi, it's ${k.name}. Sorry, the search hit a snag: ${call.error}` : best ? `Hi, it's ${k.name}! We found it: ${best.title.split(/[,(]/)[0].trim()}, ${best.merchant}, $${best.price.toFixed(2)}, and your ${call.quest!.benefit.label.toLowerCase()} covers $${best.covered.toFixed(2)} of it. Ruth checked it. Want to see the others?` : `Hi, it's ${k.name}. The agents looked everywhere, but Ruth didn't approve anything for "${call.need}". Come see why.`;
@@ -585,14 +587,14 @@ function Valley() {
             {SHELVES[modal.id] && state && (
               <div className="ev-shelves">
                 <b>On the shelves</b>
-                <span className="ev-sub">Pick something you need: the burrow's agents find the best one your benefits cover, for the least money.</span>
+                <span className="ev-sub">Tap what you need. The shop's agents find the best one your benefits cover.</span>
                 <div className="ev-shelf-grid">
                   {SHELVES[modal.id].map((item) => {
                     const payer = payerFor(item, shoppable(state));
                     return (
                       <button key={item.label} disabled={!payer} title={payer ? `Paid with ${payer.label}` : "None of your unspent benefits covers this"}
                         onClick={() => payer && setModal({ kind: "bazaar", preset: { need: item.need, benefitId: payer.id, shopId: modal.id } })}>
-                        <i>{item.icon}</i><span>{item.label}</span><em>{payer ? `${payer.label.replace(/ balance$/i, "")} · $${Math.round(payer.amount)}` : "not covered"}</em>
+                        <i><PixelIcon name={iconFor(`${item.label} ${item.need}`)} size={30} /></i><span>{item.label}</span><em>{payer ? `${payer.label.replace(/ balance$/i, "")} · $${Math.round(payer.amount)}` : "not covered"}</em>
                       </button>
                     );
                   })}
@@ -636,9 +638,9 @@ function Valley() {
           {calls.map((c) => {
             const k = keeperOf(c.shopId);
             return c.status === "searching" ? (
-              <div key={c.id} className="ev-panel ev-call searching"><span>🔎</span><div><b>{k.name}'s agents are searching</b><em>“{c.need}”</em></div></div>
+              <div key={c.id} className="ev-panel ev-call searching"><span className="ev-call-icon"><PixelIcon name="bag" size={36} /></span><div><b>{k.name}'s agents are shopping</b><em>{c.need}</em></div><i className="ev-dots"><b /><b /><b /></i></div>
             ) : (
-              <div key={c.id} className={`ev-panel ev-call ${c.status}`}><span>{c.status === "ringing" ? "📞" : "☎️"}</span><div><b>{c.status === "ringing" ? `${k.name} is calling…` : `Missed call from ${k.name}`}</b><em>About “{c.need}”</em></div>
+              <div key={c.id} className={`ev-panel ev-call ${c.status}`}><span className="ev-call-icon"><PixelIcon name="phone" size={40} />{c.status === "ringing" && <i className="ev-ring-lines" />}</span><div><b>{c.status === "ringing" ? `${k.name} is calling!` : `Missed call from ${k.name}`}</b><em>{c.status === "ringing" ? "Found something for you" : "Tap to call back"}</em></div>
                 <button className="ev-btn" onClick={() => answer(c)}>{c.status === "ringing" ? "Answer" : "Call back"}</button>
                 {c.status === "ringing" && <button className="ev-btn ghost" onClick={() => setCalls((x) => x.map((y) => (y.id === c.id ? { ...y, status: "missed" as const } : y)))}>Later</button>}
               </div>

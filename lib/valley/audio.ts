@@ -79,6 +79,8 @@ class ValleyAudio {
   blip() { this.tone(520 + Math.random() * 80, this.now, 0.03, { wave: "square", vol: 0.035 }); }
   // An old-fashioned phone ring: two quick trills.
   ring() { const t = this.now; for (let i = 0; i < 2; i++) for (let j = 0; j < 8; j++) { const at = t + i * 0.55 + j * 0.05; this.tone(j % 2 ? 1046 : 1318, at, 0.045, { wave: "square", vol: 0.06 }); } }
+  // Picking up the receiver: a plastic clack, then a little "hello" chirp.
+  pickup() { const t = this.now; this.noise(t, 0.05, 0.18, this.sfxBus, 1800); this.tone(180, t, 0.06, { wave: "square", vol: 0.08 }); this.tone(660, t + 0.12, 0.08, { wave: "triangle", vol: 0.1 }); this.tone(880, t + 0.2, 0.12, { wave: "triangle", vol: 0.1 }); }
   dial() { const t = this.now; for (let i = 0; i < 2; i++) { this.tone(440, t + i * 0.5, 0.35, { wave: "sine", vol: 0.12 }); this.tone(480, t + i * 0.5, 0.35, { wave: "sine", vol: 0.12 }); } }
   coins() {
     const t = this.now;

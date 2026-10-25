@@ -68,19 +68,24 @@ export async function runQuest(pid: string, req: { benefitId: string; need: stri
 
   // 4. Ruth reviews each offer: fits the need, covered by the benefit, quality for the money.
   const rv = claudeEnabled() && pool.length ? await callStructured({
-    system: "You are Ruth, a strict reviewer. For each offer decide: does it fit the stated need (not an upsell, not 'use it up' junk); is it covered by the benefit's rule; quality 0-10 from reviews, brand and specs. Be conservative: if coverage is unclear, eligible=false. One short note each.",
+    system: "You are Ruth, a strict reviewer. For each offer decide: does it fit the stated need (not an upsell, not 'use it up' junk); is it covered by the benefit's rule; quality 0-10 from reviews, brand and specs. Be conservative: if coverage is unclear, eligible=false. Note: at most 7 words, written like a handwritten shop tag, e.g. 'Firm, well loved, great price' or 'Too big for what you need'. No dashes, no semicolons, no hedging words.",
     user: `Need: ${need}\nBenefit: ${b.label}\nCoverage rule: ${rule}\nOffers:\n${pool.map((o, i) => `${i}. ${o.title} | ${o.merchant} | $${o.price} | ${o.rating ?? "?"}★ (${o.reviews ?? "?"} reviews) | ${o.why}`).join("\n")}`,
     schema: Review, effort: "low",
   }) : null;
-  const offers: QuestOffer[] = pool.map((o, i) => {
+  const offers: QuestOffer[] = pool.map((o, i): QuestOffer => {
     const r = rv?.reviews.find((x) => x.index === i);
     const price = live[o.url] ?? o.price;
     const fits = r?.fits ?? true, eligible = r?.eligible ?? false, quality = r?.quality ?? (o.rating ? o.rating * 2 : 5);
     const ok = fits && eligible && price <= maxPrice + 0.01;
     const covered = Math.round(Math.min(price, b.amount) * 100) / 100;
     return { ...o, price, livePrice: live[o.url], verdict: { ok, fits, eligible, quality, note: r?.note ?? (claudeEnabled() ? "" : "Not reviewed (Claude offline)") + (price > maxPrice ? ` Over your $${maxPrice} budget.` : "") },
-      covered, outOfPocket: Math.round((price - covered) * 100) / 100, score: ok ? Math.round((quality * 10 - (price / maxPrice) * 30) * 10) / 10 : -1 };
-  }).sort((x, y) => y.score - x.score);
+      covered, outOfPocket: Math.round((price - covered) * 100) / 100, score: ok ? quality * 10 : -1 };
+  });
+  // Best quality for the money: every doubling of price over the cheapest approved offer costs
+  // 15 points, so a pricier pick has to be clearly better to win.
+  const cheapest = Math.min(...offers.filter((o) => o.verdict.ok).map((o) => o.price), Infinity);
+  for (const o of offers) if (o.verdict.ok) o.score = Math.round((o.score - 15 * Math.log2(o.price / cheapest)) * 10) / 10;
+  offers.sort((x, y) => y.score - x.score);
   if (!offers.length) notes.push("No agent found a real offer for that. Try describing the need differently.");
   if (!offers.some((o) => o.verdict.ok) && offers.length) notes.push("Ruth didn't approve any offer: none was clearly covered by this benefit and a good fit.");
 

@@ -392,3 +392,14 @@ a.ev-btn { text-decoration: none; display: inline-block; }
 .ev-call.ringing { animation: ev-ring 0.5s steps(2) infinite; border-color: var(--ok); }
 .ev-call.searching > span { animation: ev-ring 1.6s steps(2) infinite; }
 @keyframes ev-ring { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-3px) rotate(-1deg); } }
+.ev-call-icon { position: relative; display: grid; place-items: center; width: 48px; height: 48px; background: #fff3d6; border: 3px solid var(--wood); flex: none; }
+.ev-call.ringing .ev-call-icon { animation: ev-wiggle 0.18s steps(2) infinite; background: #ffe1ef; }
+.ev-call.ringing { animation: none; }
+.ev-ring-lines::before, .ev-ring-lines::after { content: ""; position: absolute; top: -6px; width: 8px; height: 8px; border: 3px solid var(--wood); border-color: var(--wood) transparent transparent transparent; border-radius: 50%; animation: ev-blink 0.5s steps(2) infinite; }
+.ev-ring-lines::before { left: -8px; transform: rotate(-35deg); }
+.ev-ring-lines::after { right: -8px; transform: rotate(35deg); }
+@keyframes ev-wiggle { 0% { transform: rotate(-8deg); } 100% { transform: rotate(8deg); } }
+@keyframes ev-blink { 50% { opacity: 0; } }
+.ev-dots { display: flex; gap: 3px; font-style: normal; }
+.ev-dots b { width: 6px; height: 6px; background: var(--wood); animation: ev-blink 1.2s steps(2) infinite; }
+.ev-dots b:nth-child(2) { animation-delay: 0.4s; } .ev-dots b:nth-child(3) { animation-delay: 0.8s; }

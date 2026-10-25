@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Plan, Question } from "@/lib/library/catalog";
 import type { AppState } from "@/lib/types";
+import { openOutside } from "@/lib/valley/popup";
 
 // The plan library: search a curated set of plan and card terms, pick yours, answer only the
 // questions that are personal, and plant. No uploads needed.
@@ -101,7 +102,7 @@ export function Library({ pid, onPlanted, onClose }: { pid: string; onPlanted: (
                   {open === p.id || p.questions.length <= 3 ? p.questions.map((q) => (
                     <Field key={q.key} q={q} plan={p} value={picked[p.id][q.key]} onChange={(v) => setPicked((cur) => ({ ...cur, [p.id]: { ...cur[p.id], [q.key]: v } }))} />
                   )) : <button className="ev-link" onClick={() => setOpen(p.id)}>Answer {p.questions.length} quick questions</button>}
-                  <p className="ev-lib-src">{p.checked} {p.sources.map((s) => <a key={s.url} href={s.url} target="_blank" rel="noreferrer">{s.label}</a>)}</p>
+                  <p className="ev-lib-src">{p.checked} {p.sources.map((s) => <a key={s.url} href={s.url} target="_blank" rel="noreferrer" onClick={openOutside}>{s.label}</a>)}</p>
                 </div>
               )}
             </li>
