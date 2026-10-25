@@ -116,3 +116,19 @@ class ValleyAudio {
 }
 
 export const sound = new ValleyAudio();
+
+// Spoken lines (Ruth, booking calls) via the Cartesia route; silent when muted or not configured.
+let voiceEl: HTMLAudioElement | null = null;
+export async function speak(text: string) {
+  if (sound.muted) return;
+  try {
+    const res = await fetch("/api/voice", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+    if (res.status !== 200) return;
+    playAudio(URL.createObjectURL(await res.blob()));
+  } catch { /* voice is a nicety; the text is already on screen */ }
+}
+export function playAudio(src: string) {
+  voiceEl?.pause();
+  voiceEl = new Audio(src);
+  void voiceEl.play().catch(() => {});
+}

@@ -58,9 +58,10 @@ export async function review(subject: ReviewSubject, ex: Extraction, docsText: s
     system: `You are the Reviewer for Expire. You gate every action before the user can tap it. Your job is to protect the user's money, not to help them spend it.
 Rules (cite by number):
 ${RULES.map((r, i) => `${i + 1}. ${r}`).join("\n")}
+How Expire works: you review a proposal before the user taps it. "savings" is what the ledger will record only if the action later confirms, so a proposal never books money by itself (rule 6 is enforced at dispatch, not here). payload.steps is the planned script, including the reply we expect; it is not evidence that anything happened. "Rescued" money includes forfeiting value the user chooses to send to someone else. Options tiles list their choices in candidates.
 Approve only if every rule holds. Reasons are one or two short sentences, readable at a glance.`,
     user: `Documents:\n${docsText}\n\nProposed ${subject.kind === "cart" ? "purchase" : "action"}:\n${JSON.stringify(
-      subject.kind === "cart" ? { balance: subject.balance, items: subject.items } : { title: subject.tile.title, headline: subject.tile.headline, action: subject.tile.action, do_nothing: subject.tile.doNothing },
+      subject.kind === "cart" ? { balance: subject.balance, items: subject.items } : { title: subject.tile.title, headline: subject.tile.headline, candidates: subject.tile.candidates, tradeoff: subject.tile.tradeoff, action: subject.tile.action, do_nothing: subject.tile.doNothing, do_nothing_cost: subject.tile.doNothingCost },
     )}`,
     schema: VerdictSchema,
     effort: "medium",

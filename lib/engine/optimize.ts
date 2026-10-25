@@ -128,7 +128,7 @@ export async function optimize(ex: Extraction): Promise<Tile[]> {
       tradeoff: "We don't suggest buying extra food to burn the balance. Transfers are final.",
       doNothingCost: s.surplus, doNothing: `${usd(s.surplus)} is forfeited on Dec 14 and not refunded.`,
       action: { kind: "transfer", summary: `Transfer ${usd(s.transfer)} of dining dollars to a peer`, savings: s.transfer,
-        payload: { amount: s.transfer, rail: "x402", to: "peer wallet (Cal Dining transfer program)" } },
+        payload: { amount: s.transfer, rail: "Cal Dining peer transfer", to: "a classmate you choose" } },
     });
   }
 
@@ -169,12 +169,12 @@ export async function optimize(ex: Extraction): Promise<Tile[]> {
       ...base(oe), live: false, atStake: 0,
       candidates: [
         { id: "lower", label: "Option: elect closer to what you actually spend", costToUser: 0, detail: "Less tax saved, less to forfeit." },
-        { id: "same", label: "Option: keep this year's election", costToUser: 0, detail: "More tax saved; with $640 carryover the downside is capped." },
+        { id: "same", label: "Option: keep this year's election", costToUser: 0, detail: "More tax saved; up to $640 unused carries over and anything beyond that is forfeited." },
       ],
       recommendation: "lower",
       headline: "Options, not advice: the window runs Nov 1 – Nov 21.",
       tradeoff: "Labeled options with tradeoffs (rule 5). Talk to HR or a tax professional for advice.",
-      doNothingCost: 0, doNothing: "Your current election rolls over by default at most employers; check yours.",
+      doNothingCost: 0, doNothing: "At most employers an FSA election does not carry into the next year: skip enrollment and you have no FSA in 2027. Check your plan.",
       action: { kind: "none", summary: "Static suggestion (detected tile)", savings: 0, payload: {} },
     });
   }
@@ -224,11 +224,11 @@ function statementTiles(ex: Extraction): Tile[] {
     id: "tile_bonus", category: "bank_bonus", title: "Checking bonus: route $500 of your paycheck to Chase",
     live: true, atStake: bonus.amount,
     candidates: [
-      { id: "split", label: "Send $500 of each paycheck to Chase, the rest stays at Wells Fargo", costToUser: 0, detail: "One direct deposit qualifies; it also waives the $12 monthly fee." },
+      { id: "split", label: "Send $500 of each paycheck to Chase, the rest stays at Wells Fargo", costToUser: 0, detail: "One qualifying direct deposit before Nov 8 earns the bonus." },
       { id: "nothing", label: "Do nothing", costToUser: bonus.amount, detail: "No direct deposit by Nov 8, no bonus." },
     ],
     recommendation: "split",
-    headline: `One $500 direct deposit before Nov 8 earns the ${usd(bonus.amount)} bonus and waives the monthly fee.`,
+    headline: `One $500 direct deposit before Nov 8 earns the ${usd(bonus.amount)} bonus.`,
     tradeoff: "Keep the account open 6 months after the bonus posts or it can be clawed back.",
     doNothingCost: bonus.amount, doNothing: `The ${usd(bonus.amount)} bonus window closes Nov 8.`,
     action: request("Submit a split direct-deposit form to Acme payroll", bonus.amount, { title: "Filing with Acme payroll", to: "Acme payroll portal", steps: ["Opening Acme payroll → Direct deposit", "Adding Chase Total Checking for $500 per paycheck", "Remainder stays at Wells Fargo", "Payroll: change effective with the Oct 31 paycheck"], confirmation: "DD-ACME-1031" }),
@@ -335,7 +335,7 @@ function statementTiles(ex: Extraction): Tile[] {
       recommendation: "claim",
       headline: `${usd(sum)} of prescriptions went on your personal card. Your FSA pays you back tax-free.`,
       tradeoff: "Spends FSA money you'd carry over, on care you already had. Nothing new is bought.",
-      doNothingCost: sum, doNothing: `After Mar 31, 2027 these receipts can't be claimed.`,
+      doNothingCost: sum, doNothing: `The ${usd(sum)} you already paid stays out of pocket; after Mar 31, 2027 these receipts can't be claimed.`,
       action: request("Submit prescription receipts to the FSA", sum, { title: "Filing FSA claims", to: "Acme FSA portal", steps: ["Uploading CVS receipt $64.30 (Sep 28)", "Uploading Walgreens receipt $28.15 (Oct 3)", "FSA: both claims approved, paid to your bank"], confirmation: "FSA-CLM-2026-02" }),
     }, rx);
   }
@@ -365,7 +365,7 @@ function statementTiles(ex: Extraction): Tile[] {
       recommendation: "cancel",
       headline: `${usd(sum)} is about to bill for a trial and an app you stopped opening in June.`,
       tradeoff: "Keep Hulu if you're watching it; we only flagged what's about to charge.",
-      doNothingCost: sum, doNothing: `Hulu bills Nov 2, Duolingo renews Nov 9.`,
+      doNothingCost: sum, doNothing: `${usd(sum)} bills: Hulu $17.99/month from Nov 2 and Duolingo $89.99 on Nov 9.`,
       action: request("Cancel the Hulu trial and Duolingo renewal", sum, { title: "Canceling subscriptions", to: "Hulu and Duolingo", steps: ["Hulu → Cancel trial: access continues until Nov 2, no charge", "Duolingo → Turn off auto-renew: Super ends Nov 9, no renewal"], confirmation: "SUB-CXL-2" }),
     }, subs);
   }
@@ -389,7 +389,7 @@ function statementTiles(ex: Extraction): Tile[] {
   if (cash) {
     const b = base([cash]);
     const g = idleCashGain(cash.amount, f.checking_apy_pct ?? 0, b.daysLeft);
-    add({
+    if (g.gain > 0) add({
       id: "tile_cash", category: "idle_cash", title: "Idle cash: options for checking earning 0.01%",
       live: false, atStake: g.gain,
       candidates: [
@@ -433,7 +433,7 @@ function uploadTiles(ex: Extraction): Tile[] {
     if (b.category === "dispute") return [{ ...common, id: `tile_${b.id}`, category: "dispute", title: `Dispute a duplicate charge: ${what}`,
       candidates: [{ id: "act", label: "Dispute the duplicate", costToUser: 0, detail: "Same merchant, amount and day." }],
       headline: `${what} charged you ${usd(b.amount)} twice. Dispute the copy.`, tradeoff: "Only the duplicate; check it wasn't two real orders.",
-      doNothing: `The dispute window closes ${by}.`, action: steps(`Dispute the duplicate ${what} charge`, "your card issuer", [`Selecting the duplicate ${what} charge`, "Reason: duplicate charge", "Issuer: provisional credit issued while we review"], "DSP") }];
+      doNothing: `${usd(b.amount)} stays charged; the dispute window closes ${by}.`, action: steps(`Dispute the duplicate ${what} charge`, "your card issuer", [`Selecting the duplicate ${what} charge`, "Reason: duplicate charge", "Issuer: provisional credit issued while we review"], "DSP") }];
     if (b.category === "bank_fee") return [{ ...common, id: `tile_${b.id}`, category: "bank_fee", title: `Ask for a refund: ${what}`,
       candidates: [{ id: "act", label: "Request a courtesy refund", costToUser: 0, detail: "Banks often waive an occasional fee." }],
       headline: `Ask your bank to reverse the ${usd(b.amount)} ${what.toLowerCase()}.`, tradeoff: "Refunds are discretionary; it costs nothing to ask.",
@@ -441,7 +441,7 @@ function uploadTiles(ex: Extraction): Tile[] {
     if (b.category === "annual_fee") return [{ ...common, id: `tile_${b.id}`, category: "annual_fee", title: `Annual fee posted: downgrade by ${by} if it isn't worth it`,
       candidates: [{ id: "act", label: "Downgrade to a no-fee card and get the fee back", costToUser: 0, detail: "Keeps your credit history; check the issuer's refund window." }, { id: "keep", label: "Keep the card", costToUser: b.amount, detail: "Worth it only if you'll use its credits." }],
       headline: `A ${usd(b.amount)} annual fee just posted. Most issuers refund it if you downgrade within about 30 days.`, tradeoff: "You lose the card's perks; downgrade rather than close.",
-      doNothing: `After about ${by} the fee is final.`, action: { kind: "book_call", summary: "Call the issuer to downgrade and refund the annual fee", savings: b.amount,
+      doNothing: `${usd(b.amount)} is final after about ${by}.`, action: { kind: "book_call", summary: "Call the issuer to downgrade and refund the annual fee", savings: b.amount,
         payload: { to: "your card issuer", phone: "the number on your card", patient: "you", thisYear: "a product change to a no-fee card with the annual fee refunded", nextYear: "", date: DEMO_TODAY, nextDate: "" } } }];
     if (b.category === "subscription") return [{ ...common, id: `tile_${b.id}`, category: "subscription", title: `Renews soon: ${what}`,
       candidates: [{ id: "act", label: "Cancel if you don't use it", costToUser: 0, detail: "Keep it if you do; we only see that it bills." }],
@@ -450,7 +450,7 @@ function uploadTiles(ex: Extraction): Tile[] {
     if (b.category === "fsa_claim") return [{ ...common, id: `tile_${b.id}`, category: "fsa_claim", title: `Claim from your FSA/HSA: ${what}`,
       candidates: [{ id: "act", label: "Submit the receipt to your FSA or HSA", costToUser: 0, detail: "Only if you have one and the expense is eligible." }],
       headline: `${usd(b.amount)} at ${what} went on a regular card. If you have an FSA or HSA, get it back tax-free.`, tradeoff: "Eligibility depends on the item; keep the itemized receipt.",
-      doNothing: `Most FSAs stop taking ${b.deadline.slice(0, 4)} claims around ${by}.`, action: steps(`Submit the ${what} receipt`, "your FSA/HSA portal", [`Uploading the ${what} receipt (${usd(b.amount)})`, "Claim submitted; reimbursement to your bank"], "FSA") }];
+      doNothing: `The ${usd(b.amount)} you already paid stays out of pocket (your FSA balance itself isn't forfeiting); most FSAs stop taking ${+b.deadline.slice(0, 4) - 1} claims around ${by}.`, action: steps(`Submit the ${what} receipt`, "your FSA/HSA portal", [`Uploading the ${what} receipt (${usd(b.amount)})`, "Claim submitted; reimbursement to your bank"], "FSA") }];
     return [];
   });
 }

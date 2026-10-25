@@ -6,13 +6,14 @@ import { usd } from "./engine/spans";
 import { bookingCall } from "./integrations/cartesia";
 import { requestAction } from "./integrations/request";
 import { peerTransfer } from "./integrations/transfer";
-import { load, log, save } from "./store";
+import { hydrate, load, log, save } from "./store";
 import type { AppState, DispatchResult } from "./types";
 
 const docsText = (s: AppState) => s.docs.map((d) => `[${d.name}]\n${d.text}`).join("\n\n");
 
 // Extract → Optimize → Reviewer, for every tile. The board only offers a tap on approved tiles.
 export async function scan(docs: SourceDoc[], pid?: string | null): Promise<AppState> {
+  await hydrate(pid);
   const s = load(pid);
   s.docs = docs;
   const ex = await extract(docs);
@@ -30,6 +31,7 @@ export async function scan(docs: SourceDoc[], pid?: string | null): Promise<AppS
 }
 
 export async function reviewCart(balanceId: string, items: string[], pid?: string | null) {
+  await hydrate(pid);
   const s = load(pid);
   const balance = s.extraction?.balances.find((b) => b.id === balanceId);
   if (!s.extraction || !balance) throw new Error("Scan documents first");
@@ -41,6 +43,7 @@ export async function reviewCart(balanceId: string, items: string[], pid?: strin
 }
 
 export async function dispatch(tileId: string, pid?: string | null): Promise<{ state: AppState; result: DispatchResult }> {
+  await hydrate(pid);
   const s = load(pid);
   const tile = s.tiles.find((t) => t.id === tileId);
   if (!tile) throw new Error("Unknown tile");

@@ -37,6 +37,6 @@
   "exclude": [
     "node_modules",
     "mobile",
-    "valley-server"
+    "valley-server", "convex"
   ]
 }

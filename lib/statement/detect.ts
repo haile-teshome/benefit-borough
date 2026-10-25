@@ -31,7 +31,8 @@ export function prettyMerchant(d: string) {
 export function detect(txns: Txn[], docId: string, today: string): Finding[] {
   const out: Finding[] = [];
   const charges = txns.filter((t) => t.amount > 0);
-  const lastDate = txns.map((t) => t.date).sort().at(-1) ?? today;
+  // Dispute windows run from the statement date; we read the statement today.
+  const lastDate = [today, ...txns.map((t) => t.date)].sort().at(-1)!;
   const id = (cat: string) => `up_${docId.replace(/\W/g, "")}_${cat}_${out.length}`;
 
   // Duplicate charges: same day, same description, same amount.

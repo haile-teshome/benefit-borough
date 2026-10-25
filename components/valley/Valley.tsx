@@ -7,7 +7,7 @@ import type { Player, Plot } from "@/lib/valley_bindings/types";
 import { expire } from "@/lib/valley/expire";
 import { CROP_LOOK, ELDER_POS, slotPosition, usd } from "@/lib/valley/layout";
 import type { AppState, DispatchResult, Tile, Verdict } from "@/lib/types";
-import { sound } from "@/lib/valley/audio";
+import { playAudio, sound, speak } from "@/lib/valley/audio";
 import { clockLabel, gameHour, setHour } from "@/lib/valley/clock";
 import { anchors, registerLabel, setAnchor } from "@/lib/valley/labels";
 import { AVATARS, portrait } from "@/lib/valley/pixel/animals";
@@ -234,6 +234,7 @@ function Valley() {
     if (tile.action.kind === "book_call") sound.dial(); else sound.harvest();
     try {
       const r = await expire.dispatch(pid, tileId);
+      if (r.result.audioBase64) playAudio(`data:audio/mpeg;base64,${r.result.audioBase64}`);
       for (const line of r.result.transcript) {
         sound.blip();
         setModal((m) => (m && m.kind === "run" ? { ...m, lines: [...m.lines, line] } : m));
@@ -263,6 +264,7 @@ function Valley() {
     if (r.verdict.verdict === "reject") sound.refuse(); else sound.coins();
     setRuthMood({ kind: r.verdict.verdict === "reject" ? "reject" : "approve", at: performance.now() });
     setModal({ kind: "elder", step: "verdict", verdict: r.verdict });
+    void speak(`${r.verdict.verdict === "approve" ? "Fine." : "No."} ${r.verdict.reason}`);
   }
 
   async function openGifts() {
@@ -283,7 +285,7 @@ function Valley() {
     if (!near || modal || title) return;
     sound.click();
     if (near.kind === "crop") { setModal({ kind: "crop", tileId: near.tileId }); setEmotes((e) => ({ ...e, [myHex]: { clip: "Interact", at: performance.now() } })); }
-    if (near.kind === "elder") setModal({ kind: "elder", step: "hello" });
+    if (near.kind === "elder") { setModal({ kind: "elder", step: "hello" }); void speak("I audit every harvest in this valley. Show me what you want to buy with your FSA."); }
     if (near.kind === "mailbox") void openGifts();
     if (near.kind === "place") {
       const cats = near.place.categories ?? [];

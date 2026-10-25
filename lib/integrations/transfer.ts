@@ -9,15 +9,16 @@ export async function peerTransfer(action: Action): Promise<DispatchResult> {
   const to = process.env.NESSIE_PAYEE_ACCOUNT_ID;
   if (key && from && to) {
     try {
-      const res = await fetch(`http://api.nessieisreal.com/accounts/${from}/transfers?key=${key}`, {
+      const res = await fetch(`https://api.nessieisreal.com/accounts/${from}/transfers?key=${key}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ medium: "balance", payee_id: to, amount, transaction_date: new Date().toISOString().slice(0, 10), description: "Expire: dining dollars peer transfer" }),
+        // The current Nessie API takes no payee field, so the recipient is named in the description.
+        body: JSON.stringify({ status: "completed", amount, transaction_date: new Date().toISOString().slice(0, 10), description: `Expire: dining dollars to ${action.payload.to} (${to})` }),
       });
       const body = await res.json().catch(() => ({}));
       if (res.ok) {
         const id = body?.objectCreated?._id ?? "nessie";
-        return { status: "confirmed", confirmation: `NES-${id}`, transcript: [`Nessie transfer ${id} posted: $${amount} to ${to}.`], integration: "Capital One Nessie", mocked: false };
+        return { status: "confirmed", confirmation: `NES-${id}`, transcript: [`Capital One Nessie: transfer of $${amount} posted from checking`, `Recipient: ${action.payload.to}`, `Transfer id ${id}`], integration: "Capital One Nessie", mocked: false };
       }
       console.warn(`[nessie] ${res.status}`, body);
     } catch (err) {
